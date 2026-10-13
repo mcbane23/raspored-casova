@@ -81,12 +81,13 @@ fun TodayScreen(
     LazyColumn(
         modifier.fillMaxSize(),
         contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 8.dp, bottom = 24.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         item {
             ScreenHeader(
                 title = child.name.ifBlank { "Raspored časova" },
                 subtitle = child.school.ifBlank { null },
+                compact = true,
             )
         }
         item {
@@ -146,7 +147,7 @@ fun TodayScreen(
             }
         } else {
             item {
-                Row(verticalAlignment = Alignment.Bottom, modifier = Modifier.padding(top = 8.dp)) {
+                Row(verticalAlignment = Alignment.Bottom, modifier = Modifier.padding(top = 4.dp)) {
                     SectionLabel("Časovi", Modifier.weight(1f))
                     Text(
                         "Dodirni čas za izmenu",
@@ -174,7 +175,7 @@ fun TodayScreen(
             item {
                 FilledTonalButton(
                     onClick = { editing = DayEdit(nextFreeIndex, "") },
-                    modifier = Modifier.fillMaxWidth().height(52.dp),
+                    modifier = Modifier.fillMaxWidth().height(44.dp),
                 ) {
                     Icon(Icons.Filled.Add, contentDescription = null)
                     Spacer(Modifier.width(8.dp))
@@ -283,25 +284,25 @@ private fun StatusCard(
         color = MaterialTheme.colorScheme.primary,
         shadowElevation = 4.dp,
     ) {
-        Column(Modifier.padding(24.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Column(Modifier.padding(horizontal = 20.dp, vertical = 16.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
             Text(eyebrow, style = MaterialTheme.typography.labelLarge, color = onColor.copy(alpha = 0.8f))
-            Text(title, style = MaterialTheme.typography.headlineSmall, color = onColor)
+            Text(title, style = MaterialTheme.typography.titleLarge, color = onColor)
             if (detail != null) {
-                Text(detail, style = MaterialTheme.typography.bodyLarge, color = onColor.copy(alpha = 0.85f))
+                Text(detail, style = MaterialTheme.typography.bodyMedium, color = onColor.copy(alpha = 0.85f))
             }
             if (current != null) {
                 val total = minutesBetween(current.period.start, current.period.end).coerceAtLeast(1)
                 val done = minutesBetween(current.period.start, clock)
                 LinearProgressIndicator(
                     progress = { (done.toFloat() / total).coerceIn(0f, 1f) },
-                    modifier = Modifier.fillMaxWidth().padding(top = 12.dp).height(8.dp).clip(CircleShape),
+                    modifier = Modifier.fillMaxWidth().padding(top = 8.dp).height(6.dp).clip(CircleShape),
                     color = MaterialTheme.colorScheme.secondary,
                     trackColor = onColor.copy(alpha = 0.25f),
                     drawStopIndicator = {},
                 )
             }
             if (last != null) {
-                Row(Modifier.padding(top = 12.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Row(Modifier.padding(top = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Tag("🏁 Kraj u ${last.period.end.label()}", onColor.copy(alpha = 0.18f), onColor)
                     if (child.alarmEnabled) {
                         val alarm = last.period.end.minusMinutes(child.alarmMinutesBefore.toLong())
@@ -334,7 +335,7 @@ private fun LessonRow(lesson: Lesson, label: String, state: LessonState, onClick
         Modifier.fillMaxWidth().alpha(if (state == LessonState.DONE) 0.5f else 1f),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Column(Modifier.width(56.dp)) {
+        Column(Modifier.width(48.dp)) {
             Text(lesson.period.start.label(), style = MaterialTheme.typography.titleSmall)
             Text(
                 lesson.period.end.label(),
@@ -350,8 +351,8 @@ private fun LessonRow(lesson: Lesson, label: String, state: LessonState, onClick
             border = if (isNow) BorderStroke(2.dp, MaterialTheme.colorScheme.primary) else null,
             shadowElevation = if (isNow) 0.dp else 1.dp,
         ) {
-            Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
-                SubjectBadge(lesson.subject)
+            Row(Modifier.padding(horizontal = 12.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+                SubjectBadge(lesson.subject, size = 40.dp)
                 Column(Modifier.weight(1f).padding(horizontal = 12.dp)) {
                     if (kind != null) {
                         Text(

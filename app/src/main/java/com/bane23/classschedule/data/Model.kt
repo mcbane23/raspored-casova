@@ -191,8 +191,13 @@ data class Child(
         if (shift == Shift.MORNING) copy(morning = timetable) else copy(afternoon = timetable)
 }
 
+/** App color theme; [SYSTEM] follows the phone's light or dark setting. */
+@Serializable
+enum class ThemeMode { SYSTEM, LIGHT, DARK }
+
 @Serializable
 data class AppData(
     val children: List<Child> = emptyList(),
     val selectedChildId: String? = null,
+    val theme: ThemeMode = ThemeMode.SYSTEM,
 )

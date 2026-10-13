@@ -55,6 +55,9 @@ import com.bane23.classschedule.data.Region
 import com.bane23.classschedule.data.Shift
 import com.bane23.classschedule.data.ShiftMode
 import com.bane23.classschedule.data.Timetable
+import com.bane23.classschedule.alarm.AlarmReceiver
+import com.bane23.classschedule.data.ThemeMode
+import com.bane23.classschedule.data.classesEndOn
 import com.bane23.classschedule.data.nextAlarm
 import com.bane23.classschedule.data.shiftOn
 import java.time.LocalDate
@@ -179,6 +182,15 @@ fun SettingsScreen(data: AppData, child: Child, viewModel: AppViewModel, modifie
 
         SettingsCard("📲", "Deljenje rasporeda") { ShareSection(child, viewModel) }
 
+        SettingsCard("🎨", "Izgled") {
+            PillToggle(
+                options = ThemeMode.entries,
+                selected = data.theme,
+                label = { it.label() },
+                onSelect = { viewModel.setTheme(it) },
+            )
+        }
+
         if (data.children.size > 1) {
             TextButton(onClick = { confirmDelete = true }, modifier = Modifier.fillMaxWidth()) {
                 Text("Obriši dete ${child.name}", color = MaterialTheme.colorScheme.error)
@@ -287,11 +299,25 @@ private fun BellScheduleEditor(child: Child, onChange: (Shift, Timetable) -> Uni
 
 private val ALARM_OFFSETS = listOf(0, 5, 10, 15)
 
+/** Fixed id so repeated test notifications replace each other instead of piling up. */
+private const val TEST_NOTIFICATION_ID = 4242
+
 @Composable
 private fun AlarmSettings(child: Child, viewModel: AppViewModel) {
     val context = LocalContext.current
     val permissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
         viewModel.setAlarm(child.id, granted)
+    }
+    var testBlocked by remember { mutableStateOf(false) }
+
+    fun sendTest() {
+        val end = child.classesEndOn(LocalDate.now())
+        val text = if (end != null) "Probno obaveštenje. Danas se časovi završavaju u ${end.label()}." else "Probno obaveštenje radi."
+        testBlocked = !AlarmReceiver.showNotification(context, TEST_NOTIFICATION_ID, child.name.ifBlank { "Raspored časova" }, text)
+    }
+
+    val testPermissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+        if (granted) sendTest() else testBlocked = true
     }
 
     fun enable(enabled: Boolean) {
@@ -331,6 +357,24 @@ private fun AlarmSettings(child: Child, viewModel: AppViewModel) {
             selected = child.alarmMinutesBefore,
             label = { if (it == 0) "Na kraju" else "$it min" },
             onSelect = { viewModel.setAlarmMinutesBefore(child.id, it) },
+        )
+    }
+    OutlinedButton(
+        onClick = {
+            val needsPermission = Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+                ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) !=
+                PackageManager.PERMISSION_GRANTED
+            if (needsPermission) testPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS) else sendTest()
+        },
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Text("🔔  Pošalji probno obaveštenje")
+    }
+    if (testBlocked) {
+        Text(
+            "Obaveštenja su isključena za ovu aplikaciju. Uključi ih u podešavanjima telefona.",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.error,
         )
     }
 }

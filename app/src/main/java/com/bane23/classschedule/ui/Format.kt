@@ -4,6 +4,7 @@ import com.bane23.classschedule.data.Period
 import com.bane23.classschedule.data.Region
 import com.bane23.classschedule.data.Shift
 import com.bane23.classschedule.data.ShiftMode
+import com.bane23.classschedule.data.ThemeMode
 import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.LocalTime
@@ -71,6 +72,12 @@ fun ShiftMode.label(): String = when (this) {
     ShiftMode.FIXED_AFTERNOON -> "Uvek popodne"
     ShiftMode.WEEKLY -> "Smena se menja svake nedelje"
     ShiftMode.MONTHLY -> "Smena se menja svakog meseca"
+}
+
+fun ThemeMode.label(): String = when (this) {
+    ThemeMode.SYSTEM -> "Sistemska"
+    ThemeMode.LIGHT -> "Svetla"
+    ThemeMode.DARK -> "Tamna"
 }
 
 fun LocalTime.label(): String = "%02d:%02d".format(hour, minute)
