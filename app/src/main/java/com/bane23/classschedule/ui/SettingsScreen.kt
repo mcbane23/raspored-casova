@@ -1,5 +1,10 @@
 package com.bane23.classschedule.ui
 
+import android.Manifest
+import android.content.pm.PackageManager
+import android.os.Build
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -13,15 +18,18 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -32,6 +40,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.bane23.classschedule.data.AppData
 import com.bane23.classschedule.data.Child
@@ -40,8 +49,11 @@ import com.bane23.classschedule.data.Region
 import com.bane23.classschedule.data.Shift
 import com.bane23.classschedule.data.ShiftMode
 import com.bane23.classschedule.data.Timetable
+import androidx.core.content.ContextCompat
+import com.bane23.classschedule.data.nextAlarm
 import com.bane23.classschedule.data.shiftOn
 import java.time.LocalDate
+import java.time.LocalDateTime
 
 /** Which bell time is being edited: [isStart] picks the start or the end of period [index]. */
 private data class BellEdit(val index: Int, val isStart: Boolean)
@@ -115,6 +127,9 @@ fun SettingsScreen(data: AppData, child: Child, viewModel: AppViewModel, modifie
         }
 
         HorizontalDivider()
+        AlarmSettings(child, viewModel)
+
+        HorizontalDivider()
         SectionTitle("Smene")
         ShiftMode.entries.forEach { mode ->
             Row(
@@ -138,6 +153,9 @@ fun SettingsScreen(data: AppData, child: Child, viewModel: AppViewModel, modifie
                 }
             }
         }
+
+        HorizontalDivider()
+        SubjectsEditor(child, viewModel)
 
         HorizontalDivider()
         BellScheduleEditor(child, onChange = { shift, timetable -> viewModel.setTimetable(child.id, shift, timetable) })
@@ -234,6 +252,105 @@ private fun BellScheduleEditor(child: Child, onChange: (Shift, Timetable) -> Uni
                     onChange(shift, timetable.copy(periods = periods.toMutableList().also { it[edit.index] = updated }))
                 }
                 editing = null
+            },
+        )
+    }
+}
+
+private val ALARM_OFFSETS = listOf(0, 5, 10, 15)
+
+@Composable
+private fun AlarmSettings(child: Child, viewModel: AppViewModel) {
+    val context = LocalContext.current
+    val permissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+        viewModel.setAlarm(child.id, granted)
+    }
+
+    fun enable(enabled: Boolean) {
+        val needsPermission = enabled && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+            ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) !=
+            PackageManager.PERMISSION_GRANTED
+        if (needsPermission) {
+            permissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+        } else {
+            viewModel.setAlarm(child.id, enabled)
+        }
+    }
+
+    SectionTitle("Roditeljski alarm")
+    Row(
+        Modifier.fillMaxWidth().clickable { enable(!child.alarmEnabled) },
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text("Obavesti me kad se završe časovi", Modifier.weight(1f))
+        Switch(checked = child.alarmEnabled, onCheckedChange = { enable(it) })
+    }
+    if (child.alarmEnabled) {
+        val today = LocalDate.now()
+        child.nextAlarm(LocalDateTime.now())?.let { next ->
+            val day = if (next.toLocalDate() == today) "danas" else next.toLocalDate().label().lowercase()
+            Text(
+                "Sledeće obaveštenje: $day u ${next.toLocalTime().label()}",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        Text("Koliko pre kraja poslednjeg časa:")
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            ALARM_OFFSETS.forEach { minutes ->
+                FilterChip(
+                    selected = child.alarmMinutesBefore == minutes,
+                    onClick = { viewModel.setAlarmMinutesBefore(child.id, minutes) },
+                    label = { Text(if (minutes == 0) "Na kraju" else "$minutes min") },
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun SubjectsEditor(child: Child, viewModel: AppViewModel) {
+    var expanded by rememberSaveable { mutableStateOf(false) }
+    var adding by remember { mutableStateOf(false) }
+
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Column(Modifier.weight(1f)) {
+            SectionTitle("Predmeti (${child.subjects.size})")
+            Text(
+                "Nude se u padajućoj listi kad popunjavaš raspored.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        TextButton(onClick = { expanded = !expanded }) { Text(if (expanded) "Sakrij" else "Prikaži") }
+    }
+    if (expanded) {
+        child.subjects.forEach { subject ->
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(subject, Modifier.weight(1f))
+                IconButton(onClick = { viewModel.deleteSubject(child.id, subject) }) {
+                    Icon(Icons.Filled.Delete, contentDescription = "Obriši $subject")
+                }
+            }
+        }
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            OutlinedButton(onClick = { adding = true }) {
+                Icon(Icons.Filled.Add, contentDescription = null)
+                Spacer(Modifier.width(8.dp))
+                Text("Dodaj predmet")
+            }
+            TextButton(onClick = { viewModel.resetSubjects(child.id) }) { Text("Vrati podrazumevani spisak") }
+        }
+    }
+    if (adding) {
+        TextInputDialog(
+            title = "Novi predmet",
+            label = "Naziv predmeta",
+            initial = "",
+            onDismiss = { adding = false },
+            onConfirm = {
+                viewModel.addSubject(child.id, it)
+                adding = false
             },
         )
     }

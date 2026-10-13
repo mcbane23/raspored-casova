@@ -118,6 +118,7 @@ fun App(viewModel: AppViewModel = viewModel()) {
             Tab.WEEK -> WeekScreen(
                 child = child,
                 onTimetableChange = { shift, timetable -> viewModel.setTimetable(child.id, shift, timetable) },
+                onSubjectUsed = { viewModel.addSubject(child.id, it) },
                 modifier = modifier,
             )
             Tab.CALENDAR -> CalendarScreen(

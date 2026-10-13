@@ -3,10 +3,12 @@ package com.bane23.classschedule.ui
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.bane23.classschedule.alarm.AlarmScheduler
 import com.bane23.classschedule.data.AppData
 import com.bane23.classschedule.data.CalendarEvent
 import com.bane23.classschedule.data.Child
 import com.bane23.classschedule.data.ChildRepository
+import com.bane23.classschedule.data.DEFAULT_SUBJECTS
 import com.bane23.classschedule.data.Region
 import com.bane23.classschedule.data.Shift
 import com.bane23.classschedule.data.ShiftMode
@@ -18,12 +20,26 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import java.time.LocalDate
 
+/** Adds a subject typed by hand to the child's list so it can be picked next time. */
+private fun Child.withSubject(subject: String): Child {
+    val name = subject.trim()
+    if (name.isEmpty() || subjects.any { it.equals(name, ignoreCase = true) }) return this
+    return copy(subjects = subjects + name)
+}
+
 class AppViewModel(application: Application) : AndroidViewModel(application) {
-    private val repository = ChildRepository(application)
+    private val repository = ChildRepository.get(application)
     val data: StateFlow<AppData> = repository.data
 
+    init {
+        AlarmScheduler.scheduleAll(application, data.value)
+    }
+
     private fun save(transform: (AppData) -> AppData) {
-        viewModelScope.launch { repository.update(transform) }
+        viewModelScope.launch {
+            repository.update(transform)
+            AlarmScheduler.scheduleAll(getApplication<Application>(), data.value)
+        }
     }
 
     private fun updateChild(id: String, transform: (Child) -> Child) = save { data ->
@@ -63,9 +79,17 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         it.withTimetable(shift, timetable)
     }
 
+    fun addSubject(id: String, subject: String) = updateChild(id) { it.withSubject(subject) }
+
+    fun deleteSubject(id: String, subject: String) = updateChild(id) { child ->
+        child.copy(subjects = child.subjects - subject)
+    }
+
+    fun resetSubjects(id: String) = updateChild(id) { it.copy(subjects = DEFAULT_SUBJECTS) }
+
     /** Changes one period on one date only, e.g. a substitute subject, or "" for a cancelled class. */
     fun changeDay(id: String, date: LocalDate, index: Int, subject: String) = updateChild(id) {
-        it.withDayChange(date, index, subject)
+        it.withDayChange(date, index, subject).withSubject(subject)
     }
 
     fun resetDay(id: String, date: LocalDate) = updateChild(id) { it.withoutDayChange(date) }
@@ -79,4 +103,8 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     fun deleteEvent(id: String, eventId: String) = updateChild(id) { child ->
         child.copy(customEvents = child.customEvents.filterNot { it.id == eventId })
     }
+
+    fun setAlarm(id: String, enabled: Boolean) = updateChild(id) { it.copy(alarmEnabled = enabled) }
+
+    fun setAlarmMinutesBefore(id: String, minutes: Int) = updateChild(id) { it.copy(alarmMinutesBefore = minutes) }
 }
