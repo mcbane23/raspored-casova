@@ -8,7 +8,7 @@ class MigrationTest {
 
     @Test
     fun oldDataLosesTheFormerExtraClassSubjects() {
-        val old = AppData(children = listOf(Child(name = "Ana", subjects = oldList)))
+        val old = AppData(children = listOf(Child(name = "Ana", referenceEpochDay = 0, subjects = oldList)))
 
         val migrated = old.migrated()
 
@@ -18,7 +18,7 @@ class MigrationTest {
 
     @Test
     fun subjectsAddedByHandAfterMigrationStay() {
-        val current = AppData(children = listOf(Child(name = "Ana", subjects = oldList)), dataVersion = CURRENT_DATA_VERSION)
+        val current = AppData(children = listOf(Child(name = "Ana", referenceEpochDay = 0, subjects = oldList)), dataVersion = CURRENT_DATA_VERSION)
 
         assertEquals(oldList, current.migrated().children.single().subjects)
     }
