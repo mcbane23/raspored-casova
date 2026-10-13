@@ -58,7 +58,8 @@ fun TodayScreen(
     val date = LocalDate.ofEpochDay(epochDay)
     val isToday = date == LocalDate.now()
     val lessons = child.lessonsOn(date)
-    val periods = child.timetable(child.shiftOn(date)).periods
+    val timetable = child.timetable(child.shiftOn(date))
+    val periods = timetable.periods
     val nextFreeIndex = child.subjectsOn(date).size
 
     Column(modifier.fillMaxSize().padding(16.dp)) {
@@ -130,7 +131,7 @@ fun TodayScreen(
                         .clickable { editing = DayEdit(lesson.index, lesson.subject) },
                 ) {
                     Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-                        Text("${lesson.index + 1}.", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                        Text(timetable.periodNumber(lesson.index), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                         Spacer(Modifier.width(16.dp))
                         Column {
                             Text(lesson.subject, style = MaterialTheme.typography.titleMedium)
@@ -154,7 +155,7 @@ fun TodayScreen(
     editing?.let { edit ->
         val isNew = edit.subject.isEmpty()
         SubjectPickerDialog(
-            title = "${edit.index + 1}. čas, ${date.label()}",
+            title = "${timetable.periodLabel(edit.index)}, ${date.label()}",
             initial = edit.subject,
             subjects = child.subjects,
             onDismiss = { editing = null },

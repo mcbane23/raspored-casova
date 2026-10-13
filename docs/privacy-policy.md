@@ -1,6 +1,6 @@
 # Privacy Policy – Raspored časova
 
-_Last updated: 13 October 2026_
+_Last updated: 13 October 2026 (QR sharing added)_
 
 Raspored časova ("the app") is developed by Bane (GitHub: mcbane23). This policy explains what the app does with
 your data.
@@ -19,6 +19,14 @@ third-party SDKs that collect data. The app does not request internet access.
 
 - **Notifications** – used only to show the "classes are over" reminder you turn on in Settings.
 - **Run at startup** – used only to restore that reminder after the phone restarts.
+- **Camera** – used only while you scan a timetable QR code shared from another phone. Camera images are not
+  saved or sent anywhere.
+
+## Sharing a timetable
+
+When you choose "Prikaži QR kod", the app shows the child's name, school, timetable, bell times, shift settings,
+calendar events and subject list as a QR code on your screen. Nothing leaves the phone unless someone scans that
+code; sharing happens only between the two phones.
 
 ## Backups
 
@@ -45,5 +53,6 @@ through the Google Play listing.
 Sve što uneseš u aplikaciju (imena dece, škola, raspored, predmeti, zvona, događaji, alarm) čuva se **samo na
 tvom telefonu**. Aplikacija nema nalog, server ni analitiku, ne šalje i ne deli nikakve podatke i ne koristi
 internet. Dozvola za obaveštenja služi samo za podsetnik o kraju nastave, a dozvola za pokretanje pri uključivanju
-telefona samo da se taj podsetnik vrati posle restarta. Podaci se brišu deinstalacijom aplikacije ili brisanjem
+telefona samo da se taj podsetnik vrati posle restarta. Kamera se koristi samo dok skeniraš QR kod rasporeda sa
+drugog telefona; slike se ne čuvaju niti šalju. Podaci se brišu deinstalacijom aplikacije ili brisanjem
 njene memorije u podešavanjima telefona.

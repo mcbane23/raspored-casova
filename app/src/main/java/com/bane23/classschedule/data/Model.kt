@@ -35,9 +35,30 @@ val DEFAULT_SUBJECTS: List<String> = listOf(
     "Verska nastava",
     "Građansko vaspitanje",
     "Čas odeljenskog starešine",
-    "Dopunska nastava",
-    "Dodatna nastava",
 )
+
+/**
+ * Optional classes held for a single subject. Stored inside the lesson text as "Dopunska: Matematika" so the
+ * timetable format stays a plain list of strings.
+ */
+enum class ExtraClass(val prefix: String) {
+    REMEDIAL("Dopunska"),
+    ADVANCED("Dodatna"),
+    ;
+
+    fun lesson(subject: String): String = "$prefix: ${subject.trim()}"
+
+    companion object {
+        /** Splits a lesson into its optional-class kind (null for a regular class) and the subject. */
+        fun parse(lesson: String): Pair<ExtraClass?, String> {
+            entries.forEach { kind ->
+                val start = "${kind.prefix}: "
+                if (lesson.startsWith(start)) return kind to lesson.removePrefix(start)
+            }
+            return null to lesson
+        }
+    }
+}
 
 @Serializable
 enum class Shift { MORNING, AFTERNOON }
@@ -72,7 +93,42 @@ data class Period(val startMinute: Int, val endMinute: Int) {
 data class Timetable(
     val periods: List<Period>,
     val lessons: List<List<String>> = SCHOOL_DAYS.map { emptyList() },
+    /** The first period is a "pretčas" held before the 1st class. */
+    val hasPreClass: Boolean = false,
 ) {
+    /** "Pretčas" for the pre-class, otherwise "1. čas", "2. čas", ... */
+    fun periodLabel(index: Int): String = when {
+        hasPreClass && index == 0 -> "Pretčas"
+        hasPreClass -> "$index. čas"
+        else -> "${index + 1}. čas"
+    }
+
+    /** Short form for lists: "P" for the pre-class, otherwise "1.", "2.", ... */
+    fun periodNumber(index: Int): String = when {
+        hasPreClass && index == 0 -> "P"
+        hasPreClass -> "$index."
+        else -> "${index + 1}."
+    }
+
+    /** Adds or removes the pre-class, shifting the subjects so the regular classes keep their places. */
+    fun withPreClass(enabled: Boolean): Timetable {
+        if (enabled == hasPreClass) return this
+        if (enabled) {
+            val firstStart = periods.firstOrNull()?.startMinute ?: (14 * 60)
+            val start = (firstStart - 50).coerceAtLeast(0)
+            return copy(
+                periods = listOf(Period(start, start + 45)) + periods,
+                lessons = lessons.map { if (it.isEmpty()) it else listOf("") + it },
+                hasPreClass = true,
+            )
+        }
+        return copy(
+            periods = periods.drop(1),
+            lessons = lessons.map { it.drop(1).dropLastWhile { s -> s.isBlank() } },
+            hasPreClass = false,
+        )
+    }
+
     fun lessonsFor(day: DayOfWeek): List<String> = SCHOOL_DAYS.indexOf(day).let { lessons.getOrNull(it) }.orEmpty()
 
     fun withLesson(day: DayOfWeek, periodIndex: Int, subject: String): Timetable {

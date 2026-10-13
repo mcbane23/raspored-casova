@@ -22,6 +22,12 @@ Add a new `SchoolYear` there each summer once the ministry publishes the next ye
 
 - **Subjects:** each child has an editable subject list (Serbian primary-school subjects by default); the timetable
   and one-day changes pick subjects from a drop-down list, and a subject typed by hand is added to the list.
+- **Pre-class and optional classes:** each shift can have a "pretčas" before the 1st class, and any period can be
+  marked as optional remedial ("Dopunska") or advanced ("Dodatna") teaching for a chosen subject, e.g. Tuesday morning
+  "Dopunska: Srpski jezik", Tuesday afternoon "Dopunska: Matematika".
+- **QR sharing:** Settings shows the selected child's timetable, bell times, shifts, calendar events and subjects as a
+  QR code; another phone scans it and adds it as a new child or replaces an existing one. One-day changes and alarm
+  settings are not shared. The code is deflate-compressed JSON (`data/ShareCodec.kt`).
 - **Parent alarm:** an optional notification when the day's last class ends (or 5/10/15 minutes before), following
   the shift, the school calendar and one-day changes. It uses inexact alarms, so no exact-alarm permission is needed.
 

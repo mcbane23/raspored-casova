@@ -9,6 +9,7 @@ import com.bane23.classschedule.data.CalendarEvent
 import com.bane23.classschedule.data.Child
 import com.bane23.classschedule.data.ChildRepository
 import com.bane23.classschedule.data.DEFAULT_SUBJECTS
+import com.bane23.classschedule.data.ExtraClass
 import com.bane23.classschedule.data.Region
 import com.bane23.classschedule.data.Shift
 import com.bane23.classschedule.data.ShiftMode
@@ -19,10 +20,11 @@ import com.bane23.classschedule.data.withoutDayChange
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import java.time.LocalDate
+import java.util.UUID
 
 /** Adds a subject typed by hand to the child's list so it can be picked next time. */
 private fun Child.withSubject(subject: String): Child {
-    val name = subject.trim()
+    val name = ExtraClass.parse(subject.trim()).second.trim()
     if (name.isEmpty() || subjects.any { it.equals(name, ignoreCase = true) }) return this
     return copy(subjects = subjects + name)
 }
@@ -107,4 +109,23 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     fun setAlarm(id: String, enabled: Boolean) = updateChild(id) { it.copy(alarmEnabled = enabled) }
 
     fun setAlarmMinutesBefore(id: String, minutes: Int) = updateChild(id) { it.copy(alarmMinutesBefore = minutes) }
+
+    /** Adds a child received by QR code, or copies its timetable and settings onto the child [replaceId]. */
+    fun importChild(shared: Child, replaceId: String?) = save { data ->
+        if (replaceId == null) {
+            val added = shared.copy(id = UUID.randomUUID().toString())
+            return@save data.copy(children = data.children + added, selectedChildId = added.id)
+        }
+        data.copy(
+            children = data.children.map {
+                if (it.id != replaceId) it
+                else shared.copy(
+                    id = it.id,
+                    overrides = it.overrides,
+                    alarmEnabled = it.alarmEnabled,
+                    alarmMinutesBefore = it.alarmMinutesBefore,
+                )
+            },
+        )
+    }
 }

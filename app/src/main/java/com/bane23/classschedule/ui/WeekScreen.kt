@@ -94,7 +94,7 @@ fun WeekScreen(
                                     .clickable { editing = WeekEdit(day, index, subject) }
                                     .padding(horizontal = 16.dp, vertical = 10.dp),
                             ) {
-                                Text("${index + 1}.", Modifier.width(32.dp))
+                                Text(timetable.periodNumber(index), Modifier.width(32.dp))
                                 Text(
                                     period.label(),
                                     Modifier.width(112.dp),
@@ -117,7 +117,7 @@ fun WeekScreen(
 
     editing?.let { edit ->
         SubjectPickerDialog(
-            title = "${edit.day.label()}, ${edit.index + 1}. čas (${shift.shortLabel().lowercase()})",
+            title = "${edit.day.label()}, ${timetable.periodLabel(edit.index)} (${shift.shortLabel().lowercase()})",
             initial = edit.subject,
             subjects = child.subjects,
             onDismiss = { editing = null },

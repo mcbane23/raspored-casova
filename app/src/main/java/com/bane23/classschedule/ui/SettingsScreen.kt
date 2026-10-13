@@ -127,6 +127,9 @@ fun SettingsScreen(data: AppData, child: Child, viewModel: AppViewModel, modifie
         }
 
         HorizontalDivider()
+        ShareSection(child, viewModel)
+
+        HorizontalDivider()
         AlarmSettings(child, viewModel)
 
         HorizontalDivider()
@@ -209,9 +212,16 @@ private fun BellScheduleEditor(child: Child, onChange: (Shift, Timetable) -> Uni
             FilterChip(selected = shift == s, onClick = { shift = s }, label = { Text(s.shortLabel()) })
         }
     }
+    Row(
+        Modifier.fillMaxWidth().clickable { onChange(shift, timetable.withPreClass(!timetable.hasPreClass)) },
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text("Pretčas pre 1. časa", Modifier.weight(1f))
+        Switch(checked = timetable.hasPreClass, onCheckedChange = { onChange(shift, timetable.withPreClass(it)) })
+    }
     periods.forEachIndexed { index, period ->
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Text("${index + 1}. čas", Modifier.width(72.dp))
+            Text(timetable.periodLabel(index), Modifier.width(72.dp))
             TextButton(onClick = { editing = BellEdit(index, isStart = true) }) { Text(period.start.label()) }
             Text("–")
             TextButton(onClick = { editing = BellEdit(index, isStart = false) }) { Text(period.end.label()) }
@@ -230,14 +240,17 @@ private fun BellScheduleEditor(child: Child, onChange: (Shift, Timetable) -> Uni
             }
         }
     }
-    TextButton(onClick = { onChange(shift, timetable.copy(periods = Timetable.defaultFor(shift).periods)) }) {
+    TextButton(onClick = {
+        val reset = timetable.withPreClass(false).copy(periods = Timetable.defaultFor(shift).periods)
+        onChange(shift, reset.withPreClass(timetable.hasPreClass))
+    }) {
         Text("Vrati uobičajena zvona")
     }
 
     editing?.let { edit ->
         val period = periods[edit.index]
         TimeInputDialog(
-            title = "${edit.index + 1}. čas, ${if (edit.isStart) "početak" else "kraj"}",
+            title = "${timetable.periodLabel(edit.index)}, ${if (edit.isStart) "početak" else "kraj"}",
             initialMinute = if (edit.isStart) period.startMinute else period.endMinute,
             onDismiss = { editing = null },
             onConfirm = { minute ->
