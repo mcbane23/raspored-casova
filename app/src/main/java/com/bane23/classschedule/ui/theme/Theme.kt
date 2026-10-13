@@ -13,71 +13,70 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
-// A fixed, friendly palette instead of the phone's dynamic colors, so the app looks the same for every child and
-// parent: a calm off-white base, dark ink for text, indigo for actions and sunny yellow for highlights.
+// Pastel palettes based on Catppuccin (https://catppuccin.com, MIT): "Latte" for the light theme and "Mocha" for
+// the dark one. Both use one family of soft, low-contrast accents (lavender, teal, yellow) on calm neutral bases,
+// so colored cards and buttons stay close to each other instead of competing.
 
 private val LightColors = lightColorScheme(
-    primary = Color(0xFF4F5BD5),
+    primary = Color(0xFF7287FD), // Latte lavender
     onPrimary = Color.White,
-    primaryContainer = Color(0xFFE3E6FD),
-    onPrimaryContainer = Color(0xFF1A2275),
-    secondary = Color(0xFFF2A100),
-    onSecondary = Color(0xFF2B1D00),
-    secondaryContainer = Color(0xFFFFF0CC),
-    onSecondaryContainer = Color(0xFF5A3D00),
-    tertiary = Color(0xFF16A394),
+    primaryContainer = Color(0xFFE2E6FE),
+    onPrimaryContainer = Color(0xFF3B4483),
+    secondary = Color(0xFFDF8E1D), // Latte yellow
+    onSecondary = Color.White,
+    secondaryContainer = Color(0xFFF8EBD3),
+    onSecondaryContainer = Color(0xFF6E4A14),
+    tertiary = Color(0xFF179299), // Latte teal
     onTertiary = Color.White,
-    tertiaryContainer = Color(0xFFD3F4EF),
-    onTertiaryContainer = Color(0xFF00413A),
-    background = Color(0xFFF5F6FB),
-    onBackground = Color(0xFF1C1F2E),
-    surface = Color(0xFFF5F6FB),
-    onSurface = Color(0xFF1C1F2E),
-    surfaceVariant = Color(0xFFEBEDF5),
-    onSurfaceVariant = Color(0xFF5F6478),
+    tertiaryContainer = Color(0xFFD5EFEC),
+    onTertiaryContainer = Color(0xFF145A5E),
+    background = Color(0xFFEFF1F5), // base
+    onBackground = Color(0xFF4C4F69), // text
+    surface = Color(0xFFEFF1F5),
+    onSurface = Color(0xFF4C4F69),
+    surfaceVariant = Color(0xFFE6E9EF), // mantle
+    onSurfaceVariant = Color(0xFF6C6F85), // subtext0
     surfaceBright = Color.White,
     surfaceContainerLowest = Color.White,
     surfaceContainerLow = Color.White,
     surfaceContainer = Color.White,
-    surfaceContainerHigh = Color(0xFFF0F1F8),
-    surfaceContainerHighest = Color(0xFFEBEDF5),
-    outline = Color(0xFFC6C9D8),
-    outlineVariant = Color(0xFFE2E4EE),
-    error = Color(0xFFD93F3F),
-    errorContainer = Color(0xFFFDE3E3),
+    surfaceContainerHigh = Color(0xFFE6E9EF),
+    surfaceContainerHighest = Color(0xFFDCE0E8), // crust
+    outline = Color(0xFFACB0BE), // surface2
+    outlineVariant = Color(0xFFCCD0DA), // surface0
+    error = Color(0xFFD20F39),
+    errorContainer = Color(0xFFF8D7DE),
 )
 
-// Dark mode keeps the same indigo / yellow / teal identity at a deeper tone so colored cards stay readable with white
-// text, and cards are lighter than the background so they stand out without shadows.
 private val DarkColors = darkColorScheme(
-    primary = Color(0xFF7C86F7),
-    onPrimary = Color.White,
-    primaryContainer = Color(0xFF2C3275),
-    onPrimaryContainer = Color(0xFFDDE0FF),
-    secondary = Color(0xFFFFC94D),
-    onSecondary = Color(0xFF3F2A00),
-    secondaryContainer = Color(0xFF4A3A12),
-    onSecondaryContainer = Color(0xFFFFE6A8),
-    tertiary = Color(0xFF1C9E8F),
-    onTertiary = Color.White,
-    tertiaryContainer = Color(0xFF113F3A),
-    onTertiaryContainer = Color(0xFFB8F0E7),
-    background = Color(0xFF111319),
-    onBackground = Color(0xFFE7E8F0),
-    surface = Color(0xFF111319),
-    onSurface = Color(0xFFE7E8F0),
-    surfaceVariant = Color(0xFF262A38),
-    onSurfaceVariant = Color(0xFFA8ADC2),
-    surfaceBright = Color(0xFF3A3F53),
-    surfaceContainerLowest = Color(0xFF1C1F2B),
-    surfaceContainerLow = Color(0xFF1C1F2B),
-    surfaceContainer = Color(0xFF1C1F2B),
-    surfaceContainerHigh = Color(0xFF232634),
-    surfaceContainerHighest = Color(0xFF2A2E3D),
-    outline = Color(0xFF4A4F64),
-    outlineVariant = Color(0xFF2E3242),
-    error = Color(0xFFFF8A80),
-    errorContainer = Color(0xFF5C1A1A),
+    primary = Color(0xFFB4BEFE), // Mocha lavender
+    onPrimary = Color(0xFF1E1E2E),
+    primaryContainer = Color(0xFF3A3D5E),
+    onPrimaryContainer = Color(0xFFD5DAFF),
+    secondary = Color(0xFFF9E2AF), // Mocha yellow
+    onSecondary = Color(0xFF1E1E2E),
+    secondaryContainer = Color(0xFF4A4436),
+    onSecondaryContainer = Color(0xFFF9E2AF),
+    tertiary = Color(0xFF94E2D5), // Mocha teal
+    onTertiary = Color(0xFF1E1E2E),
+    tertiaryContainer = Color(0xFF2E4A4B),
+    onTertiaryContainer = Color(0xFFC2F0E8),
+    background = Color(0xFF1E1E2E), // base
+    onBackground = Color(0xFFCDD6F4), // text
+    surface = Color(0xFF1E1E2E),
+    onSurface = Color(0xFFCDD6F4),
+    surfaceVariant = Color(0xFF313244), // surface0
+    onSurfaceVariant = Color(0xFFA6ADC8), // subtext0
+    surfaceBright = Color(0xFF45475A), // surface1
+    surfaceContainerLowest = Color(0xFF28283B),
+    surfaceContainerLow = Color(0xFF28283B),
+    surfaceContainer = Color(0xFF28283B),
+    surfaceContainerHigh = Color(0xFF313244),
+    surfaceContainerHighest = Color(0xFF45475A),
+    outline = Color(0xFF6C7086), // overlay0
+    outlineVariant = Color(0xFF45475A),
+    error = Color(0xFFF38BA8),
+    errorContainer = Color(0xFF5A2E3C),
 )
 
 private val AppShapes = Shapes(

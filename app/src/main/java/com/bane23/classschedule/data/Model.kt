@@ -184,6 +184,8 @@ data class Child(
     val alarmEnabled: Boolean = false,
     /** How many minutes before the end of the last class the notification comes (0 = at the end). */
     val alarmMinutesBefore: Int = 0,
+    /** Ring like an alarm clock (alarm volume, repeating) instead of the school-bell notification sound. */
+    val alarmSound: Boolean = false,
 ) {
     fun timetable(shift: Shift): Timetable = if (shift == Shift.MORNING) morning else afternoon
 

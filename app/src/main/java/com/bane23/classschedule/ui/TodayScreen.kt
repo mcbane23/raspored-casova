@@ -276,13 +276,13 @@ private fun StatusCard(
             "Bravo! Danas je bilo ${lessons.size} ${lessonsWord(lessons.size)}.",
         )
     }
-    val onColor = MaterialTheme.colorScheme.onPrimary
+    val onColor = MaterialTheme.colorScheme.onPrimaryContainer
 
     Surface(
         modifier = Modifier.fillMaxWidth(),
         shape = MaterialTheme.shapes.extraLarge,
-        color = MaterialTheme.colorScheme.primary,
-        shadowElevation = 4.dp,
+        color = MaterialTheme.colorScheme.primaryContainer,
+        shadowElevation = 0.dp,
     ) {
         Column(Modifier.padding(horizontal = 20.dp, vertical = 16.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
             Text(eyebrow, style = MaterialTheme.typography.labelLarge, color = onColor.copy(alpha = 0.8f))
@@ -296,17 +296,17 @@ private fun StatusCard(
                 LinearProgressIndicator(
                     progress = { (done.toFloat() / total).coerceIn(0f, 1f) },
                     modifier = Modifier.fillMaxWidth().padding(top = 8.dp).height(6.dp).clip(CircleShape),
-                    color = MaterialTheme.colorScheme.secondary,
-                    trackColor = onColor.copy(alpha = 0.25f),
+                    color = MaterialTheme.colorScheme.primary,
+                    trackColor = onColor.copy(alpha = 0.12f),
                     drawStopIndicator = {},
                 )
             }
             if (last != null) {
                 Row(Modifier.padding(top = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Tag("🏁 Kraj u ${last.period.end.label()}", onColor.copy(alpha = 0.18f), onColor)
+                    Tag("🏁 Kraj u ${last.period.end.label()}", onColor.copy(alpha = 0.1f), onColor)
                     if (child.alarmEnabled) {
                         val alarm = last.period.end.minusMinutes(child.alarmMinutesBefore.toLong())
-                        Tag("🔔 ${alarm.label()}", onColor.copy(alpha = 0.18f), onColor)
+                        Tag("🔔 ${alarm.label()}", onColor.copy(alpha = 0.1f), onColor)
                     }
                 }
             }

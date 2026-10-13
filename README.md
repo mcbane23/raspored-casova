@@ -29,10 +29,11 @@ Add a new `SchoolYear` there each summer once the ministry publishes the next ye
   QR code; another phone scans it and adds it as a new child or replaces an existing one. One-day changes and alarm
   settings are not shared. The code is deflate-compressed JSON (`data/ShareCodec.kt`).
 - **Parent alarm:** an optional notification when the day's last class ends (or 5/10/15 minutes before), following
-  the shift, the school calendar and one-day changes. It uses inexact alarms, so no exact-alarm permission is needed.
+  the shift, the school calendar and one-day changes. It uses inexact alarms, so no exact-alarm permission is needed. By default it plays a short school-bell chime
+  (`res/raw/school_bell.wav`, generated for this app); the "Zvuk alarma" switch makes it ring with the phone's alarm
+  tone at alarm volume, repeating until the notification is opened or dismissed.
 
-**Design:** a fixed, friendly palette (off-white base, indigo actions, sunny-yellow highlights) in light and dark
-mode, rounded cards and a colored emoji badge per subject (`ui/Components.kt`) so younger children can recognize
+**Design:** pastel palettes based on [Catppuccin](https://catppuccin.com) (Latte for light, Mocha for dark), rounded cards and a colored emoji badge per subject (`ui/Components.kt`) so younger children can recognize
 classes without reading. The Today tab opens with a status card (current class with a progress bar, break, or
 "classes are over"), the Week tab shows one weekday at a time, and the Calendar tab leads with a countdown to the
 next break. Settings has a theme choice (System, Light, Dark; System by default) and a button that sends a

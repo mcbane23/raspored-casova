@@ -81,6 +81,15 @@ fun SettingsScreen(data: AppData, child: Child, viewModel: AppViewModel, modifie
     ) {
         ScreenHeader("Podešavanja", "Sve što važi za: $childName")
 
+        SettingsCard("🎨", "Izgled") {
+            PillToggle(
+                options = ThemeMode.entries,
+                selected = data.theme,
+                label = { it.label() },
+                onSelect = { viewModel.setTheme(it) },
+            )
+        }
+
         SettingsCard("👨‍👩‍👧", "Deca") {
             data.children.forEach { c ->
                 val selected = c.id == child.id
@@ -182,14 +191,6 @@ fun SettingsScreen(data: AppData, child: Child, viewModel: AppViewModel, modifie
 
         SettingsCard("📲", "Deljenje rasporeda") { ShareSection(child, viewModel) }
 
-        SettingsCard("🎨", "Izgled") {
-            PillToggle(
-                options = ThemeMode.entries,
-                selected = data.theme,
-                label = { it.label() },
-                onSelect = { viewModel.setTheme(it) },
-            )
-        }
 
         if (data.children.size > 1) {
             TextButton(onClick = { confirmDelete = true }, modifier = Modifier.fillMaxWidth()) {
@@ -313,7 +314,13 @@ private fun AlarmSettings(child: Child, viewModel: AppViewModel) {
     fun sendTest() {
         val end = child.classesEndOn(LocalDate.now())
         val text = if (end != null) "Probno obaveštenje. Danas se časovi završavaju u ${end.label()}." else "Probno obaveštenje radi."
-        testBlocked = !AlarmReceiver.showNotification(context, TEST_NOTIFICATION_ID, child.name.ifBlank { "Raspored časova" }, text)
+        testBlocked = !AlarmReceiver.showNotification(
+            context,
+            TEST_NOTIFICATION_ID,
+            child.name.ifBlank { "Raspored časova" },
+            text,
+            alarmSound = child.alarmSound,
+        )
     }
 
     val testPermissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
@@ -358,6 +365,19 @@ private fun AlarmSettings(child: Child, viewModel: AppViewModel) {
             label = { if (it == 0) "Na kraju" else "$it min" },
             onSelect = { viewModel.setAlarmMinutesBefore(child.id, it) },
         )
+        Row(
+            Modifier.fillMaxWidth().clickable { viewModel.setAlarmSound(child.id, !child.alarmSound) },
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Column(Modifier.weight(1f)) {
+                Text("Zvuk alarma")
+                Hint(
+                    if (child.alarmSound) "Glasan alarm koji zvoni dok ne otvoriš obaveštenje"
+                    else "Isključeno: obaveštenje sa zvukom školskog zvona",
+                )
+            }
+            Switch(checked = child.alarmSound, onCheckedChange = { viewModel.setAlarmSound(child.id, it) })
+        }
     }
     OutlinedButton(
         onClick = {

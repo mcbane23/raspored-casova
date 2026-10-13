@@ -122,32 +122,32 @@ private fun CountdownCard(next: CalendarEvent, today: LocalDate) {
     Surface(
         modifier = Modifier.fillMaxWidth(),
         shape = MaterialTheme.shapes.extraLarge,
-        color = colors.tertiary,
-        shadowElevation = 4.dp,
+        color = colors.tertiaryContainer,
+        shadowElevation = 0.dp,
     ) {
         Row(Modifier.padding(24.dp), verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Text(
                     if (ongoing) "Sada je" else "Do sledećeg odmora",
                     style = MaterialTheme.typography.labelLarge,
-                    color = colors.onTertiary.copy(alpha = 0.8f),
+                    color = colors.onTertiaryContainer.copy(alpha = 0.8f),
                 )
-                Text(next.title, style = MaterialTheme.typography.headlineSmall, color = colors.onTertiary)
+                Text(next.title, style = MaterialTheme.typography.headlineSmall, color = colors.onTertiaryContainer)
                 Text(
                     if (ongoing) "Traje do ${dateRangeLabel(next.end, next.end)} 🎉" else dateRangeLabel(next.start, next.end),
                     style = MaterialTheme.typography.bodyLarge,
-                    color = colors.onTertiary.copy(alpha = 0.85f),
+                    color = colors.onTertiaryContainer.copy(alpha = 0.85f),
                 )
             }
             if (ongoing) {
                 Text(eventEmoji(next.title), fontSize = 48.sp)
             } else {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text("$days", fontSize = 48.sp, lineHeight = 52.sp, style = MaterialTheme.typography.headlineMedium, color = colors.onTertiary)
+                    Text("$days", fontSize = 48.sp, lineHeight = 52.sp, style = MaterialTheme.typography.headlineMedium, color = colors.onTertiaryContainer)
                     Text(
                         inDaysLabel(days).removePrefix("za $days "),
                         style = MaterialTheme.typography.labelLarge,
-                        color = colors.onTertiary.copy(alpha = 0.8f),
+                        color = colors.onTertiaryContainer.copy(alpha = 0.8f),
                     )
                 }
             }
