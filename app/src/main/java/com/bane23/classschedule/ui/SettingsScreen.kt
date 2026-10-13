@@ -146,6 +146,8 @@ fun ChildSettingsScreen(
     var confirmDelete by remember { mutableStateOf(false) }
     var showQr by remember { mutableStateOf(false) }
     val setAlarm = rememberAlarmSwitch(viewModel)
+    val batteryRestricted = rememberBatteryRestricted()
+    val context = LocalContext.current
     val today = LocalDate.now()
     val current = child.shiftOn(today)
     val fixed = child.shiftMode == ShiftMode.FIXED_MORNING || child.shiftMode == ShiftMode.FIXED_AFTERNOON
@@ -247,6 +249,16 @@ fun ChildSettingsScreen(
                     Hint(
                         if (child.alarmSound) "Zvoni kao budilnik dok ne otvoriš obaveštenje."
                         else "Obaveštenje sa kratkim zvukom školskog zvona.",
+                    )
+                }
+                if (batteryRestricted) {
+                    RowDivider()
+                    SettingsRow(
+                        title = "Isključi uštedu baterije",
+                        subtitle = "Da alarm stigne i kad je aplikacija zatvorena. Izaberi „Bez ograničenja”.",
+                        emoji = "🔋",
+                        chevron = true,
+                        onClick = { openBatterySettings(context) },
                     )
                 }
             }
