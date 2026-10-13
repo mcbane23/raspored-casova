@@ -23,11 +23,12 @@ class ChildRepository private constructor(context: Context) {
         val stored = runCatching { json.decodeFromString(AppData.serializer(), file.readText()) }.getOrNull()
         if (stored != null && stored.children.isNotEmpty()) {
             val today = LocalDate.now()
-            return stored.copy(children = stored.children.map { it.withoutPastChanges(today) })
+            val current = stored.migrated()
+            return current.copy(children = current.children.map { it.withoutPastChanges(today) })
         }
         // First launch: start with one child so the app is usable right away.
         val first = Child(name = "Dete", referenceEpochDay = LocalDate.now().toEpochDay())
-        return AppData(children = listOf(first), selectedChildId = first.id)
+        return AppData(children = listOf(first), selectedChildId = first.id, dataVersion = CURRENT_DATA_VERSION)
     }
 
     suspend fun update(transform: (AppData) -> AppData) {

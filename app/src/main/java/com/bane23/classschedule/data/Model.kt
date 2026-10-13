@@ -195,4 +195,20 @@ data class Child(
 data class AppData(
     val children: List<Child> = emptyList(),
     val selectedChildId: String? = null,
+    /** Format version of the saved data; files written before versioning count as 1. */
+    val dataVersion: Int = 1,
 )
+
+const val CURRENT_DATA_VERSION = 2
+
+/** Subjects that older versions put in every list before remedial and advanced classes became lesson types. */
+private val LEGACY_EXTRA_SUBJECTS = setOf("Dopunska nastava", "Dodatna nastava")
+
+/** Brings data saved by an older app version up to date. */
+fun AppData.migrated(): AppData {
+    var data = this
+    if (data.dataVersion < 2) {
+        data = data.copy(children = data.children.map { it.copy(subjects = it.subjects - LEGACY_EXTRA_SUBJECTS) })
+    }
+    return data.copy(dataVersion = CURRENT_DATA_VERSION)
+}
