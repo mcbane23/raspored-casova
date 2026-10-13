@@ -27,6 +27,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -103,7 +104,7 @@ fun SubjectBadge(lesson: String, size: Dp = 48.dp) {
         Modifier
             .size(size)
             .clip(RoundedCornerShape(size / 3))
-            .background(style.color.copy(alpha = 0.16f)),
+            .background(style.color.copy(alpha = if (isDarkTheme()) 0.3f else 0.16f)),
         contentAlignment = Alignment.Center,
     ) {
         Text(style.emoji, fontSize = (size.value * 0.46f).sp)
@@ -148,13 +149,17 @@ fun AppCard(
     }
 }
 
-/** Large page title with an optional muted subtitle. */
+/** Large page title with an optional muted subtitle; [compact] is a smaller version for the busy Today tab. */
 @Composable
-fun ScreenHeader(title: String, subtitle: String? = null, modifier: Modifier = Modifier) {
-    Column(modifier.padding(top = 8.dp, bottom = 8.dp)) {
-        Text(title, style = MaterialTheme.typography.headlineMedium)
+fun ScreenHeader(title: String, subtitle: String? = null, modifier: Modifier = Modifier, compact: Boolean = false) {
+    Column(modifier.padding(top = if (compact) 4.dp else 8.dp, bottom = if (compact) 0.dp else 8.dp)) {
+        Text(title, style = if (compact) MaterialTheme.typography.headlineSmall else MaterialTheme.typography.headlineMedium)
         if (subtitle != null) {
-            Text(subtitle, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(
+                subtitle,
+                style = if (compact) MaterialTheme.typography.bodyMedium else MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
         }
     }
 }
@@ -197,7 +202,7 @@ fun <T> PillToggle(options: List<T>, selected: T, label: (T) -> String, onSelect
                 onClick = { onSelect(option) },
                 modifier = Modifier.weight(1f).heightIn(min = 44.dp),
                 shape = CircleShape,
-                color = if (isSelected) MaterialTheme.colorScheme.surfaceContainerLowest else Color.Transparent,
+                color = if (isSelected) MaterialTheme.colorScheme.surfaceBright else Color.Transparent,
                 shadowElevation = if (isSelected) 1.dp else 0.dp,
             ) {
                 Box(contentAlignment = Alignment.Center) {
@@ -246,6 +251,10 @@ fun EmptyState(emoji: String, title: String, hint: String? = null, modifier: Mod
         }
     }
 }
+
+/** True when the app is drawn with the dark palette (by the phone setting or the in-app theme choice). */
+@Composable
+fun isDarkTheme(): Boolean = MaterialTheme.colorScheme.background.luminance() < 0.5f
 
 /** The current time, refreshed every 15 seconds so "now" highlights and countdowns stay correct. */
 @Composable

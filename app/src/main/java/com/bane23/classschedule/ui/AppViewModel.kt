@@ -13,6 +13,7 @@ import com.bane23.classschedule.data.ExtraClass
 import com.bane23.classschedule.data.Region
 import com.bane23.classschedule.data.Shift
 import com.bane23.classschedule.data.ShiftMode
+import com.bane23.classschedule.data.ThemeMode
 import com.bane23.classschedule.data.Timetable
 import com.bane23.classschedule.data.shiftOn
 import com.bane23.classschedule.data.withDayChange
@@ -49,6 +50,8 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun selectChild(id: String) = save { it.copy(selectedChildId = id) }
+
+    fun setTheme(theme: ThemeMode) = save { it.copy(theme = theme) }
 
     fun addChild(name: String) {
         val child = Child(name = name.trim().ifEmpty { "Dete" }, referenceEpochDay = LocalDate.now().toEpochDay())

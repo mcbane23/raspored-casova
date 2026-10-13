@@ -35,7 +35,8 @@ Add a new `SchoolYear` there each summer once the ministry publishes the next ye
 mode, rounded cards and a colored emoji badge per subject (`ui/Components.kt`) so younger children can recognize
 classes without reading. The Today tab opens with a status card (current class with a progress bar, break, or
 "classes are over"), the Week tab shows one weekday at a time, and the Calendar tab leads with a countdown to the
-next break.
+next break. Settings has a theme choice (System, Light, Dark; System by default) and a button that sends a
+test parent notification.
 
 Data is stored locally on the phone (`data.json` in the app's private storage).
 

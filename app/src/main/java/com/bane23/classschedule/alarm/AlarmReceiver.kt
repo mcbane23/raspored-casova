@@ -33,39 +33,41 @@ class AlarmReceiver : BroadcastReceiver() {
             } else {
                 "Časovi se završavaju u ${end.label()}."
             }
-            notify(context, child.id.hashCode(), child.name, text)
+            showNotification(context, child.id.hashCode(), child.name, text)
         }
         AlarmScheduler.schedule(context, child)
     }
 
-    private fun notify(context: Context, id: Int, title: String, text: String) {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
-            ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) !=
-            PackageManager.PERMISSION_GRANTED
-        ) {
-            return
-        }
-        ensureChannel(context)
-        val open = PendingIntent.getActivity(
-            context,
-            0,
-            Intent(context, MainActivity::class.java),
-            PendingIntent.FLAG_IMMUTABLE,
-        )
-        val notification = NotificationCompat.Builder(context, CHANNEL_ID)
-            .setSmallIcon(R.drawable.ic_notification)
-            .setContentTitle(title)
-            .setContentText(text)
-            .setContentIntent(open)
-            .setAutoCancel(true)
-            .setPriority(NotificationCompat.PRIORITY_HIGH)
-            .setCategory(NotificationCompat.CATEGORY_REMINDER)
-            .build()
-        NotificationManagerCompat.from(context).notify(id, notification)
-    }
-
     companion object {
         private const val CHANNEL_ID = "classes_over"
+
+        /** Posts a notification on the "classes over" channel; returns false when notifications are not allowed. */
+        fun showNotification(context: Context, id: Int, title: String, text: String): Boolean {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+                ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) !=
+                PackageManager.PERMISSION_GRANTED
+            ) {
+                return false
+            }
+            ensureChannel(context)
+            val open = PendingIntent.getActivity(
+                context,
+                0,
+                Intent(context, MainActivity::class.java),
+                PendingIntent.FLAG_IMMUTABLE,
+            )
+            val notification = NotificationCompat.Builder(context, CHANNEL_ID)
+                .setSmallIcon(R.drawable.ic_notification)
+                .setContentTitle(title)
+                .setContentText(text)
+                .setContentIntent(open)
+                .setAutoCancel(true)
+                .setPriority(NotificationCompat.PRIORITY_HIGH)
+                .setCategory(NotificationCompat.CATEGORY_REMINDER)
+                .build()
+            NotificationManagerCompat.from(context).notify(id, notification)
+            return true
+        }
 
         fun ensureChannel(context: Context) {
             val channel = NotificationChannel(CHANNEL_ID, "Kraj nastave", NotificationManager.IMPORTANCE_HIGH)
