@@ -30,6 +30,7 @@ Checklist and texts for the Google Play Console listing.
 
 - `POST_NOTIFICATIONS` – the optional "classes are over" reminder.
 - `RECEIVE_BOOT_COMPLETED` – reschedules that reminder after a restart.
+- `CAMERA` (from the zxing-android-embedded scanner) – scanning a shared timetable QR code.
 
 The app uses inexact alarms (`AlarmManager.setWindow`), so it needs no exact-alarm permission or declaration.
 
@@ -54,7 +55,9 @@ sledećeg raspusta. Podržani su centralna Srbija i Vojvodina, kao i raniji kraj
 • Događaji škole – dodajte Dan škole, školsku slavu ili druge slobodne dane.
 • Roditeljski alarm – obaveštenje kad se završi poslednji čas (ili nekoliko minuta ranije).
 • Više dece – svako dete ima svoj raspored, smenu i kalendar.
-• Spisak predmeta – izaberite predmet iz liste umesto kucanja.
+• Spisak predmeta – izaberite predmet iz liste umesto kucanja, uz dopunsku i dodatnu nastavu iz bilo kog predmeta.
+• Pretčas – za smene koje počinju pretčasom.
+• Deljenje QR kodom – pošaljite popunjen raspored detetu ili drugom roditelju skeniranjem QR koda.
 
 Bez naloga, bez reklama i bez interneta: svi podaci ostaju samo na vašem telefonu.
 
