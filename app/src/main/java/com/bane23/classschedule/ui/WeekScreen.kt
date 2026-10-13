@@ -38,6 +38,7 @@ private data class WeekEdit(val day: DayOfWeek, val index: Int, val subject: Str
 fun WeekScreen(
     child: Child,
     onTimetableChange: (Shift, Timetable) -> Unit,
+    onSubjectUsed: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val currentShift = child.shiftOn(LocalDate.now())
@@ -115,13 +116,18 @@ fun WeekScreen(
     }
 
     editing?.let { edit ->
-        TextInputDialog(
+        SubjectPickerDialog(
             title = "${edit.day.label()}, ${edit.index + 1}. čas (${shift.shortLabel().lowercase()})",
-            label = "Predmet (prazno = slobodan čas)",
             initial = edit.subject,
+            subjects = child.subjects,
             onDismiss = { editing = null },
             onConfirm = {
                 onTimetableChange(shift, timetable.withLesson(edit.day, edit.index, it))
+                onSubjectUsed(it)
+                editing = null
+            },
+            extraAction = if (edit.subject.isEmpty()) null else "Slobodan čas (obriši predmet)" to {
+                onTimetableChange(shift, timetable.withLesson(edit.day, edit.index, ""))
                 editing = null
             },
         )

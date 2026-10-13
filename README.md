@@ -20,7 +20,15 @@ Serbian.
 The official calendar lives in `app/src/main/java/com/bane23/classschedule/data/SchoolCalendar.kt` (`SCHOOL_YEARS`).
 Add a new `SchoolYear` there each summer once the ministry publishes the next year's calendar.
 
+- **Subjects:** each child has an editable subject list (Serbian primary-school subjects by default); the timetable
+  and one-day changes pick subjects from a drop-down list, and a subject typed by hand is added to the list.
+- **Parent alarm:** an optional notification when the day's last class ends (or 5/10/15 minutes before), following
+  the shift, the school calendar and one-day changes. It uses inexact alarms, so no exact-alarm permission is needed.
+
 Data is stored locally on the phone (`data.json` in the app's private storage).
+
+See [docs/google-play.md](docs/google-play.md) for the Play Console checklist and listing texts, and
+[docs/privacy-policy.md](docs/privacy-policy.md) for the privacy policy.
 
 ## Build
 

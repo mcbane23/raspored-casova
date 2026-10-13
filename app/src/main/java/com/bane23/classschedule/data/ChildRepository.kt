@@ -11,8 +11,8 @@ import kotlinx.serialization.json.Json
 import java.io.File
 import java.time.LocalDate
 
-/** Keeps all app data in one small JSON file in the app's private storage. */
-class ChildRepository(context: Context) {
+/** Keeps all app data in one small JSON file in the app's private storage. Use [get] for the shared instance. */
+class ChildRepository private constructor(context: Context) {
     private val file = File(context.filesDir, "data.json")
     private val json = Json { ignoreUnknownKeys = true; encodeDefaults = true }
 
@@ -37,6 +37,14 @@ class ChildRepository(context: Context) {
             val tmp = File(file.parentFile, "${file.name}.tmp")
             tmp.writeText(json.encodeToString(AppData.serializer(), snapshot))
             tmp.renameTo(file)
+        }
+    }
+
+    companion object {
+        @Volatile private var instance: ChildRepository? = null
+
+        fun get(context: Context): ChildRepository = instance ?: synchronized(this) {
+            instance ?: ChildRepository(context.applicationContext).also { instance = it }
         }
     }
 }

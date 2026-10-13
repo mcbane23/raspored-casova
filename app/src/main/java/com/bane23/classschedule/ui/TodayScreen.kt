@@ -153,10 +153,10 @@ fun TodayScreen(
 
     editing?.let { edit ->
         val isNew = edit.subject.isEmpty()
-        TextInputDialog(
+        SubjectPickerDialog(
             title = "${edit.index + 1}. čas, ${date.label()}",
-            label = "Predmet",
             initial = edit.subject,
+            subjects = child.subjects,
             onDismiss = { editing = null },
             onConfirm = {
                 onChangeDay(date, edit.index, it)

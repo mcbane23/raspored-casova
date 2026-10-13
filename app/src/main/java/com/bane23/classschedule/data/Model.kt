@@ -14,8 +14,58 @@ val SCHOOL_DAYS: List<DayOfWeek> = listOf(
     DayOfWeek.FRIDAY,
 )
 
+/** Subjects of Serbian primary school (grades 1–8), offered until the parent edits the list. */
+val DEFAULT_SUBJECTS: List<String> = listOf(
+    "Srpski jezik",
+    "Matematika",
+    "Engleski jezik",
+    "Svet oko nas",
+    "Priroda i društvo",
+    "Likovna kultura",
+    "Muzička kultura",
+    "Fizičko i zdravstveno vaspitanje",
+    "Istorija",
+    "Geografija",
+    "Biologija",
+    "Fizika",
+    "Hemija",
+    "Tehnika i tehnologija",
+    "Informatika i računarstvo",
+    "Drugi strani jezik",
+    "Verska nastava",
+    "Građansko vaspitanje",
+    "Čas odeljenskog starešine",
+    "Dopunska nastava",
+    "Dodatna nastava",
+)
+
 @Serializable
 enum class Shift { MORNING, AFTERNOON }
+
+/** Subjects of Serbian primary school (grades 1–8), offered until the parent edits the list. */
+val DEFAULT_SUBJECTS: List<String> = listOf(
+    "Srpski jezik",
+    "Matematika",
+    "Engleski jezik",
+    "Svet oko nas",
+    "Priroda i društvo",
+    "Likovna kultura",
+    "Muzička kultura",
+    "Fizičko i zdravstveno vaspitanje",
+    "Istorija",
+    "Geografija",
+    "Biologija",
+    "Fizika",
+    "Hemija",
+    "Tehnika i tehnologija",
+    "Informatika i računarstvo",
+    "Drugi strani jezik",
+    "Verska nastava",
+    "Građansko vaspitanje",
+    "Čas odeljenskog starešine",
+    "Dopunska nastava",
+    "Dodatna nastava",
+)
 
 @Serializable
 enum class ShiftMode {
@@ -97,6 +147,12 @@ data class Child(
     val finalGrade: Boolean = false,
     /** Events the parent added for this child's school, e.g. the school's slava or a day without classes. */
     val customEvents: List<CalendarEvent> = emptyList(),
+    /** Subjects offered when filling in the timetable. */
+    val subjects: List<String> = DEFAULT_SUBJECTS,
+    /** Notify the parent when the day's last class ends. */
+    val alarmEnabled: Boolean = false,
+    /** How many minutes before the end of the last class the notification comes (0 = at the end). */
+    val alarmMinutesBefore: Int = 0,
 ) {
     fun timetable(shift: Shift): Timetable = if (shift == Shift.MORNING) morning else afternoon
 
