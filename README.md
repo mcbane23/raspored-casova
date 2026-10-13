@@ -23,19 +23,46 @@ Svaki push/merge na `main` pokreće `.github/workflows/build-release.yml`, koji:
 Pull request-ovi prolaze isti build (bez potpisivanja i bez objavljivanja). Build fajlovi se nikad ne čuvaju u
 repozitorijumu niti kao Actions artefakti.
 
-### Ključ za potpisivanje
+### Ključevi za potpisivanje
 
-U **Settings → Secrets and variables → Actions** dodati:
+**Debug APK** se potpisuje ključem `app/debug.keystore` koji je u repozitorijumu (nije tajna, lozinka `android`).
+Zato svaki novi debug APK može da se instalira preko prethodnog. Debug verzija ima ID
+`com.bane23.classschedule.debug`, pa može da stoji na telefonu pored prave verzije.
 
-| Secret | Vrednost |
-| --- | --- |
-| `SIGNING_KEYSTORE_BASE64` | keystore fajl kodiran u base64 (`base64 -w0 upload.jks`) |
-| `SIGNING_STORE_PASSWORD` | lozinka keystore-a |
-| `SIGNING_KEY_ALIAS` | alias ključa |
-| `SIGNING_KEY_PASSWORD` | lozinka ključa |
+**Release AAB** se potpisuje tvojim ključem za otpremanje (upload key), koji se čuva samo u GitHub secrets.
 
-Novi ključ za otpremanje se pravi ovako:
+1. Napravi keystore (jednom, na svom računaru; potreban je JDK):
 
-```bash
-keytool -genkeypair -v -keystore upload.jks -alias upload -keyalg RSA -keysize 2048 -validity 10000
-```
+   ```bash
+   keytool -genkeypair -v -keystore upload.jks -alias upload \
+     -keyalg RSA -keysize 2048 -validity 10000
+   ```
+
+   Zapamti lozinku keystore-a i lozinku ključa (mogu biti iste). Fajl `upload.jks` sačuvaj na sigurnom mestu
+   van repozitorijuma; bez njega ne možeš da otpremiš nove verzije dok ga Google ne zameni.
+
+2. Pretvori keystore u base64 tekst:
+
+   ```bash
+   # Linux
+   base64 -w0 upload.jks > upload.jks.b64
+   # macOS
+   base64 -i upload.jks -o upload.jks.b64
+   # Windows (PowerShell)
+   [Convert]::ToBase64String([IO.File]::ReadAllBytes("upload.jks")) | Out-File upload.jks.b64 -NoNewline
+   ```
+
+3. Na GitHub-u otvori repozitorijum → **Settings → Secrets and variables → Actions → New repository secret**
+   i dodaj četiri secrets:
+
+   | Secret | Vrednost |
+   | --- | --- |
+   | `SIGNING_KEYSTORE_BASE64` | ceo sadržaj fajla `upload.jks.b64` |
+   | `SIGNING_STORE_PASSWORD` | lozinka keystore-a |
+   | `SIGNING_KEY_ALIAS` | alias ključa (`upload` iz komande gore) |
+   | `SIGNING_KEY_PASSWORD` | lozinka ključa |
+
+4. Obriši `upload.jks.b64` sa računara.
+
+Pri prvoj objavi na Google Play uključi **Play App Signing**; Google tada čuva konačni ključ aplikacije, a ovaj
+ključ služi samo za otpremanje.

@@ -1,4 +1,4 @@
-package io.github.mcbane23.rasporedcasova.ui.theme
+package com.bane23.classschedule.ui.theme
 
 import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme

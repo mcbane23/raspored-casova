@@ -1,4 +1,4 @@
-package io.github.mcbane23.rasporedcasova
+package com.bane23.classschedule
 
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -19,7 +19,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import io.github.mcbane23.rasporedcasova.ui.theme.RasporedCasovaTheme
+import com.bane23.classschedule.ui.theme.RasporedCasovaTheme
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {

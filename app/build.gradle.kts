@@ -12,11 +12,11 @@ val appVersionName = (findProperty("versionName") as String?) ?: "1.0.0-dev"
 val keystorePath: String? = System.getenv("SIGNING_KEYSTORE_PATH")
 
 android {
-    namespace = "io.github.mcbane23.rasporedcasova"
+    namespace = "com.bane23.classschedule"
     compileSdk = 36
 
     defaultConfig {
-        applicationId = "io.github.mcbane23.rasporedcasova"
+        applicationId = "com.bane23.classschedule"
         minSdk = 26
         targetSdk = 36
         versionCode = appVersionCode
@@ -24,6 +24,13 @@ android {
     }
 
     signingConfigs {
+        // Shared debug key (committed, not secret) so every CI debug APK installs over the previous one.
+        getByName("debug") {
+            storeFile = file("debug.keystore")
+            storePassword = "android"
+            keyAlias = "androiddebugkey"
+            keyPassword = "android"
+        }
         if (keystorePath != null) {
             create("release") {
                 storeFile = file(keystorePath)
@@ -36,6 +43,7 @@ android {
 
     buildTypes {
         debug {
+            signingConfig = signingConfigs.getByName("debug")
             applicationIdSuffix = ".debug"
             versionNameSuffix = "-debug"
         }
