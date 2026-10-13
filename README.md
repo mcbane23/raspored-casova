@@ -1,47 +1,59 @@
-# Raspored časova
+# Raspored časova (Class Schedule)
 
-Android aplikacija za praćenje rasporeda časova, školskog kalendara (praznici i raspusti) i roditeljskog
-obaveštenja kada se časovi za taj dan završe. Podržava prepodnevnu i popodnevnu smenu.
+An Android app for following a child's class schedule, the school calendar (holidays and breaks) and a parent
+notification when classes end for the day. It supports separate morning and afternoon shifts. The app's UI is in
+Serbian.
+
+## Features
+
+- **Danas (Today):** the selected day's classes with bell times and the current shift. Tapping a class changes or
+  cancels it for that day only (e.g. Serbian instead of English, or no PE), and a class can be added for that day
+  only. Changes for past days are removed automatically.
+- **Nedelja (Week):** the regular Monday–Friday timetable, kept separately for the morning and afternoon shift.
+- **Podešavanja (Settings):** multiple children (one by default), school, shift rotation (always morning, always
+  afternoon, alternating weekly or monthly, with a choice of which shift is current) and bell times for each shift.
+
+Data is stored locally on the phone (`data.json` in the app's private storage).
 
 ## Build
 
 ```bash
 ./gradlew assembleDebug     # debug APK
-./gradlew bundleRelease     # release AAB (nepotpisan bez podešenog ključa)
+./gradlew bundleRelease     # release AAB (unsigned unless a signing key is configured)
 ```
 
-Potrebni su JDK 17 i Android SDK (API 36).
+Requires JDK 17 and the Android SDK (API 36).
 
-## Automatski release
+## Automatic releases
 
-Svaki push/merge na `main` pokreće `.github/workflows/build-release.yml`, koji:
+Every push/merge to `main` runs `.github/workflows/build-release.yml`, which:
 
-1. pravi debug APK i potpisan release AAB (AAB samo ako su podešeni secrets za potpisivanje, vidi dole),
-2. objavljuje GitHub Release `v1.0.<broj builda>` sa ta dva fajla,
-3. briše starije release-ove (i njihove tagove) tako da ostanu samo poslednja 3.
+1. builds a debug APK and a signed release AAB (the AAB only when the signing secrets are set, see below),
+2. publishes a GitHub Release `v1.0.<build number>` with those files,
+3. deletes older releases (and their tags) so only the latest 3 remain.
 
-Pull request-ovi prolaze isti build (bez potpisivanja i bez objavljivanja). Build fajlovi se nikad ne čuvaju u
-repozitorijumu niti kao Actions artefakti.
+Pull requests run the same build without signing or publishing. Build outputs are never stored in the repository or
+as Actions artifacts.
 
-### Ključevi za potpisivanje
+### Signing keys
 
-**Debug APK** se potpisuje ključem `app/debug.keystore` koji je u repozitorijumu (nije tajna, lozinka `android`).
-Zato svaki novi debug APK može da se instalira preko prethodnog. Debug verzija ima ID
-`com.bane23.classschedule.debug`, pa može da stoji na telefonu pored prave verzije.
+The **debug APK** is signed with `app/debug.keystore`, which is committed to the repository (it is not secret; the
+password is `android`). This keeps the signature stable, so each new debug APK installs over the previous one. The
+debug build has the ID `com.bane23.classschedule.debug`, so it can be installed next to the release version.
 
-**Release AAB** se potpisuje tvojim ključem za otpremanje (upload key), koji se čuva samo u GitHub secrets.
+The **release AAB** is signed with your upload key, which is kept only in GitHub secrets.
 
-1. Napravi keystore (jednom, na svom računaru; potreban je JDK):
+1. Create a keystore (once, on your computer; requires a JDK):
 
    ```bash
    keytool -genkeypair -v -keystore upload.jks -alias upload \
      -keyalg RSA -keysize 2048 -validity 10000
    ```
 
-   Zapamti lozinku keystore-a i lozinku ključa (mogu biti iste). Fajl `upload.jks` sačuvaj na sigurnom mestu
-   van repozitorijuma; bez njega ne možeš da otpremiš nove verzije dok ga Google ne zameni.
+   Remember the keystore password and the key password (they can be the same). Keep `upload.jks` somewhere safe
+   outside the repository; without it you cannot upload new versions until Google resets the upload key.
 
-2. Pretvori keystore u base64 tekst:
+2. Encode the keystore as base64 text:
 
    ```bash
    # Linux
@@ -52,17 +64,17 @@ Zato svaki novi debug APK može da se instalira preko prethodnog. Debug verzija 
    [Convert]::ToBase64String([IO.File]::ReadAllBytes("upload.jks")) | Out-File upload.jks.b64 -NoNewline
    ```
 
-3. Na GitHub-u otvori repozitorijum → **Settings → Secrets and variables → Actions → New repository secret**
-   i dodaj četiri secrets:
+3. On GitHub, open the repository → **Settings → Secrets and variables → Actions → New repository secret** and add
+   four secrets:
 
-   | Secret | Vrednost |
+   | Secret | Value |
    | --- | --- |
-   | `SIGNING_KEYSTORE_BASE64` | ceo sadržaj fajla `upload.jks.b64` |
-   | `SIGNING_STORE_PASSWORD` | lozinka keystore-a |
-   | `SIGNING_KEY_ALIAS` | alias ključa (`upload` iz komande gore) |
-   | `SIGNING_KEY_PASSWORD` | lozinka ključa |
+   | `SIGNING_KEYSTORE_BASE64` | the full contents of `upload.jks.b64` |
+   | `SIGNING_STORE_PASSWORD` | the keystore password |
+   | `SIGNING_KEY_ALIAS` | the key alias (`upload` in the command above) |
+   | `SIGNING_KEY_PASSWORD` | the key password |
 
-4. Obriši `upload.jks.b64` sa računara.
+4. Delete `upload.jks.b64` from your computer.
 
-Pri prvoj objavi na Google Play uključi **Play App Signing**; Google tada čuva konačni ključ aplikacije, a ovaj
-ključ služi samo za otpremanje.
+When publishing to Google Play for the first time, enable **Play App Signing**; Google then holds the app signing
+key and this key is used only for uploads.
