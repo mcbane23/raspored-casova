@@ -36,37 +36,39 @@ import com.bane23.classschedule.data.ExtraClass
 import kotlinx.coroutines.delay
 import java.time.LocalDateTime
 
+// Subject and avatar colors are the Catppuccin Mocha pastel accents, used as soft tints behind emoji.
+
 /** Emoji and color that make a subject recognizable at a glance, even for children who don't read well yet. */
 data class SubjectStyle(val emoji: String, val color: Color)
 
 private val SUBJECT_STYLES: List<Pair<String, SubjectStyle>> = listOf(
-    "srpski" to SubjectStyle("📖", Color(0xFFEF5D5D)),
-    "matemat" to SubjectStyle("🔢", Color(0xFF4F7CFF)),
-    "engleski" to SubjectStyle("🇬🇧", Color(0xFF2FA3D6)),
-    "strani" to SubjectStyle("🗣️", Color(0xFF2FA3D6)),
-    "svet oko nas" to SubjectStyle("🌱", Color(0xFF34B36B)),
-    "priroda" to SubjectStyle("🌍", Color(0xFF34B36B)),
-    "likovn" to SubjectStyle("🎨", Color(0xFFE5579B)),
-    "muzič" to SubjectStyle("🎵", Color(0xFF9B5DE5)),
-    "muzic" to SubjectStyle("🎵", Color(0xFF9B5DE5)),
-    "fizičk" to SubjectStyle("⚽", Color(0xFFF28C28)),
-    "fizick" to SubjectStyle("⚽", Color(0xFFF28C28)),
-    "istorij" to SubjectStyle("🏛️", Color(0xFFB7791F)),
-    "geograf" to SubjectStyle("🗺️", Color(0xFF16A394)),
-    "biolog" to SubjectStyle("🦋", Color(0xFF4CAF50)),
-    "fizika" to SubjectStyle("🧲", Color(0xFF5C6BC0)),
-    "hemij" to SubjectStyle("🧪", Color(0xFF00ACC1)),
-    "tehni" to SubjectStyle("🛠️", Color(0xFF78849E)),
-    "informat" to SubjectStyle("💻", Color(0xFF3F51B5)),
-    "verska" to SubjectStyle("🕊️", Color(0xFF8D6E63)),
-    "građansk" to SubjectStyle("🤝", Color(0xFF26A69A)),
-    "gradjansk" to SubjectStyle("🤝", Color(0xFF26A69A)),
-    "odeljensk" to SubjectStyle("🏫", Color(0xFF7E57C2)),
+    "srpski" to SubjectStyle("📖", Color(0xFFF38BA8)),
+    "matemat" to SubjectStyle("🔢", Color(0xFF89B4FA)),
+    "engleski" to SubjectStyle("🇬🇧", Color(0xFF74C7EC)),
+    "strani" to SubjectStyle("🗣️", Color(0xFF74C7EC)),
+    "svet oko nas" to SubjectStyle("🌱", Color(0xFFA6E3A1)),
+    "priroda" to SubjectStyle("🌍", Color(0xFFA6E3A1)),
+    "likovn" to SubjectStyle("🎨", Color(0xFFF5C2E7)),
+    "muzič" to SubjectStyle("🎵", Color(0xFFCBA6F7)),
+    "muzic" to SubjectStyle("🎵", Color(0xFFCBA6F7)),
+    "fizičk" to SubjectStyle("⚽", Color(0xFFFAB387)),
+    "fizick" to SubjectStyle("⚽", Color(0xFFFAB387)),
+    "istorij" to SubjectStyle("🏛️", Color(0xFFF9E2AF)),
+    "geograf" to SubjectStyle("🗺️", Color(0xFF94E2D5)),
+    "biolog" to SubjectStyle("🦋", Color(0xFFA6E3A1)),
+    "fizika" to SubjectStyle("🧲", Color(0xFFB4BEFE)),
+    "hemij" to SubjectStyle("🧪", Color(0xFF89DCEB)),
+    "tehni" to SubjectStyle("🛠️", Color(0xFFBAC2DE)),
+    "informat" to SubjectStyle("💻", Color(0xFF89B4FA)),
+    "verska" to SubjectStyle("🕊️", Color(0xFFF2CDCD)),
+    "građansk" to SubjectStyle("🤝", Color(0xFF94E2D5)),
+    "gradjansk" to SubjectStyle("🤝", Color(0xFF94E2D5)),
+    "odeljensk" to SubjectStyle("🏫", Color(0xFFCBA6F7)),
 )
 
 private val FALLBACK_COLORS = listOf(
-    Color(0xFF4F7CFF), Color(0xFFEF5D5D), Color(0xFF34B36B), Color(0xFFF28C28),
-    Color(0xFF9B5DE5), Color(0xFF16A394), Color(0xFFE5579B), Color(0xFFB7791F),
+    Color(0xFF89B4FA), Color(0xFFF38BA8), Color(0xFFA6E3A1), Color(0xFFFAB387),
+    Color(0xFFCBA6F7), Color(0xFF94E2D5), Color(0xFFF5C2E7), Color(0xFFF9E2AF),
 )
 
 /** Style for a lesson text; optional classes ("Dopunska: Matematika") take their subject's style. */
@@ -104,7 +106,7 @@ fun SubjectBadge(lesson: String, size: Dp = 48.dp) {
         Modifier
             .size(size)
             .clip(RoundedCornerShape(size / 3))
-            .background(style.color.copy(alpha = if (isDarkTheme()) 0.3f else 0.16f)),
+            .background(style.color.copy(alpha = if (isDarkTheme()) 0.22f else 0.45f)),
         contentAlignment = Alignment.Center,
     ) {
         Text(style.emoji, fontSize = (size.value * 0.46f).sp)
@@ -121,7 +123,7 @@ fun ChildAvatar(name: String, size: Dp = 36.dp) {
     ) {
         Text(
             name.trim().take(1).uppercase().ifEmpty { "?" },
-            color = Color.White,
+            color = Color(0xFF1E1E2E),
             style = MaterialTheme.typography.titleMedium,
         )
     }

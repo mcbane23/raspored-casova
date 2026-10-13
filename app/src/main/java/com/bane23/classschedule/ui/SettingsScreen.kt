@@ -81,6 +81,15 @@ fun SettingsScreen(data: AppData, child: Child, viewModel: AppViewModel, modifie
     ) {
         ScreenHeader("Podešavanja", "Sve što važi za: $childName")
 
+        SettingsCard("🎨", "Izgled") {
+            PillToggle(
+                options = ThemeMode.entries,
+                selected = data.theme,
+                label = { it.label() },
+                onSelect = { viewModel.setTheme(it) },
+            )
+        }
+
         SettingsCard("👨‍👩‍👧", "Deca") {
             data.children.forEach { c ->
                 val selected = c.id == child.id
@@ -182,14 +191,6 @@ fun SettingsScreen(data: AppData, child: Child, viewModel: AppViewModel, modifie
 
         SettingsCard("📲", "Deljenje rasporeda") { ShareSection(child, viewModel) }
 
-        SettingsCard("🎨", "Izgled") {
-            PillToggle(
-                options = ThemeMode.entries,
-                selected = data.theme,
-                label = { it.label() },
-                onSelect = { viewModel.setTheme(it) },
-            )
-        }
 
         if (data.children.size > 1) {
             TextButton(onClick = { confirmDelete = true }, modifier = Modifier.fillMaxWidth()) {
