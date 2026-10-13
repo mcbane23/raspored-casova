@@ -10,8 +10,15 @@ Serbian.
   cancels it for that day only (e.g. Serbian instead of English, or no PE), and a class can be added for that day
   only. Changes for past days are removed automatically.
 - **Nedelja (Week):** the regular Monday–Friday timetable, kept separately for the morning and afternoon shift.
+- **Kalendar (Calendar):** the official Serbian primary-school calendar (breaks, days off, swapped days) with a
+  countdown to the next break, plus the school's own events (e.g. Dan škole, school slava) added per child. Days
+  without classes show no lessons on the Today tab.
 - **Podešavanja (Settings):** multiple children (one by default), school, shift rotation (always morning, always
-  afternoon, alternating weekly or monthly, with a choice of which shift is current) and bell times for each shift.
+  afternoon, alternating weekly or monthly, with a choice of which shift is current), bell times for each shift,
+  calendar region (Central Serbia or Vojvodina) and whether the child is in 8th grade (earlier end of classes).
+
+The official calendar lives in `app/src/main/java/com/bane23/classschedule/data/SchoolCalendar.kt` (`SCHOOL_YEARS`).
+Add a new `SchoolYear` there each summer once the ministry publishes the next year's calendar.
 
 Data is stored locally on the phone (`data.json` in the app's private storage).
 

@@ -17,9 +17,14 @@ fun Child.shiftOn(date: LocalDate): Shift {
     return if (Math.floorMod(periodsApart, 2L) == 0L) referenceShift else referenceShift.other()
 }
 
-/** The regular subjects for [date] from the timetable, one per period ("" for a free period). */
-fun Child.regularSubjectsOn(date: LocalDate): List<String> =
-    if (date.dayOfWeek !in SCHOOL_DAYS) emptyList() else timetable(shiftOn(date)).lessonsFor(date.dayOfWeek)
+/**
+ * The regular subjects for [date] from the timetable, one per period ("" for a free period). Empty on days without
+ * classes (weekends, breaks, holidays); on a swapped day it uses the timetable of the day named by the calendar.
+ */
+fun Child.regularSubjectsOn(date: LocalDate): List<String> = when (val info = dayInfo(date)) {
+    is DayInfo.NoClasses -> emptyList()
+    is DayInfo.SchoolDay -> timetable(shiftOn(date)).lessonsFor(info.timetableDay)
+}
 
 fun Child.overrideOn(date: LocalDate): DayOverride? = overrides.find { it.epochDay == date.toEpochDay() }
 
@@ -29,9 +34,8 @@ fun Child.subjectsOn(date: LocalDate): List<String> = overrideOn(date)?.lessons 
 /** A lesson actually held on a date: its period number (0-based), bell times and subject. */
 data class Lesson(val index: Int, val period: Period, val subject: String)
 
-/** The lessons a child has on [date], with bell times and one-off changes applied; empty on weekends. */
+/** The lessons a child has on [date], with bell times, the school calendar and one-off changes applied. */
 fun Child.lessonsOn(date: LocalDate): List<Lesson> {
-    if (date.dayOfWeek !in SCHOOL_DAYS) return emptyList()
     val periods = timetable(shiftOn(date)).periods
     return subjectsOn(date).mapIndexedNotNull { i, subject ->
         val period = periods.getOrNull(i)

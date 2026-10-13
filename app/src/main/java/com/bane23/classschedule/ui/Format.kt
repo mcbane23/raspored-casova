@@ -1,6 +1,7 @@
 package com.bane23.classschedule.ui
 
 import com.bane23.classschedule.data.Period
+import com.bane23.classschedule.data.Region
 import com.bane23.classschedule.data.Shift
 import com.bane23.classschedule.data.ShiftMode
 import java.time.DayOfWeek
@@ -25,6 +26,22 @@ private val MONTHS = listOf(
 )
 
 fun LocalDate.label(): String = "${dayOfWeek.label()}, $dayOfMonth. ${MONTHS[monthValue - 1]}"
+
+/** "11. novembar", or "11–13. novembar" / "31. decembar – 15. januar" for ranges. */
+fun dateRangeLabel(start: LocalDate, end: LocalDate): String = when {
+    start == end -> "${start.dayOfMonth}. ${MONTHS[start.monthValue - 1]}"
+    start.month == end.month && start.year == end.year ->
+        "${start.dayOfMonth}–${end.dayOfMonth}. ${MONTHS[start.monthValue - 1]}"
+    else -> "${start.dayOfMonth}. ${MONTHS[start.monthValue - 1]} – ${end.dayOfMonth}. ${MONTHS[end.monthValue - 1]}"
+}
+
+fun Region.label(): String = if (this == Region.CENTRAL_SERBIA) "Centralna Srbija" else "Vojvodina"
+
+/** "za 1 dan", "za 5 dana", "za 21 dan" (Serbian plural agrees with the last digit). */
+fun inDaysLabel(days: Long): String {
+    val word = if (days % 10 == 1L && days % 100 != 11L) "dan" else "dana"
+    return "za $days $word"
+}
 
 fun Shift.label(): String = if (this == Shift.MORNING) "Prepodnevna smena" else "Popodnevna smena"
 
