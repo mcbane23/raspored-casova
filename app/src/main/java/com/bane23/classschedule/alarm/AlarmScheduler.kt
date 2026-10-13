@@ -4,6 +4,7 @@ import android.app.AlarmManager
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
+import android.os.Build
 import com.bane23.classschedule.data.AppData
 import com.bane23.classschedule.data.Child
 import com.bane23.classschedule.data.nextAlarm
@@ -11,11 +12,12 @@ import java.time.LocalDateTime
 import java.time.ZoneId
 
 /**
- * Schedules one "classes are over" alarm per child. Alarms are inexact (a window of a few minutes) so the app needs
- * no exact-alarm permission; that precision is enough to tell a parent school is out.
+ * Schedules one "classes are over" alarm per child. Alarms survive the app being closed and are allowed to fire in
+ * Doze. They are exact where the phone allows it without asking (Android 11 and older, or when the user granted
+ * "Alarms & reminders"); otherwise Android may delay them by a few minutes, which is fine for telling a parent
+ * school is out.
  */
 object AlarmScheduler {
-    private const val WINDOW_MILLIS = 3 * 60 * 1000L
     const val EXTRA_CHILD_ID = "childId"
 
     fun scheduleAll(context: Context, data: AppData) {
@@ -31,7 +33,12 @@ object AlarmScheduler {
             return
         }
         val triggerAt = next.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
-        alarmManager.setWindow(AlarmManager.RTC_WAKEUP, triggerAt, WINDOW_MILLIS, intent)
+        val exactAllowed = Build.VERSION.SDK_INT < Build.VERSION_CODES.S || alarmManager.canScheduleExactAlarms()
+        if (exactAllowed) {
+            alarmManager.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, triggerAt, intent)
+        } else {
+            alarmManager.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, triggerAt, intent)
+        }
     }
 
     private fun pendingIntent(context: Context, childId: String): PendingIntent {

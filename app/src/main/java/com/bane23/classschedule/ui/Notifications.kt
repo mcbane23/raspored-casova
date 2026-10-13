@@ -1,9 +1,13 @@
 package com.bane23.classschedule.ui
 
 import android.Manifest
+import android.content.ActivityNotFoundException
 import android.content.Context
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
+import android.os.PowerManager
+import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.Composable
@@ -12,6 +16,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
+import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.core.content.ContextCompat
 import com.bane23.classschedule.alarm.AlarmReceiver
 import com.bane23.classschedule.data.Child
@@ -71,4 +76,29 @@ fun rememberTestNotification(child: Child): TestNotification {
         send = { if (needsNotificationPermission(context)) launcher.launch(Manifest.permission.POST_NOTIFICATIONS) else show() },
         blocked = blocked,
     )
+}
+
+/**
+ * Whether battery optimization may hold back the parent alarm. Rechecked each time the screen comes back, so the
+ * warning disappears after the user changes the setting.
+ */
+@Composable
+fun rememberBatteryRestricted(): Boolean {
+    val context = LocalContext.current
+    var restricted by remember { mutableStateOf(false) }
+    LifecycleResumeEffect(Unit) {
+        val power = context.getSystemService(PowerManager::class.java)
+        restricted = power != null && !power.isIgnoringBatteryOptimizations(context.packageName)
+        onPauseOrDispose { }
+    }
+    return restricted
+}
+
+/** Opens the phone's battery optimization list, where the user can set the app to "not optimized". */
+fun openBatterySettings(context: Context) {
+    try {
+        context.startActivity(Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS))
+    } catch (_: ActivityNotFoundException) {
+        context.startActivity(Intent(Settings.ACTION_SETTINGS))
+    }
 }

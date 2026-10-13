@@ -32,7 +32,7 @@ Checklist and texts for the Google Play Console listing.
 - `RECEIVE_BOOT_COMPLETED` – reschedules that reminder after a restart.
 - `CAMERA` (from the zxing-android-embedded scanner) – scanning a shared timetable QR code.
 
-The app uses inexact alarms (`AlarmManager.setWindow`), so it needs no exact-alarm permission or declaration.
+The app uses `setAndAllowWhileIdle` (or `setExactAndAllowWhileIdle` where exact alarms are already allowed), so it needs no exact-alarm permission or declaration. It does not request `REQUEST_IGNORE_BATTERY_OPTIMIZATIONS`; Settings only links to the system battery optimization list.
 
 ## Store listing (Serbian)
 
