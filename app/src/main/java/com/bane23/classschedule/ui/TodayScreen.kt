@@ -85,7 +85,7 @@ fun TodayScreen(
     ) {
         item {
             ScreenHeader(
-                title = if (child.name.isBlank()) "Zdravo! 👋" else "Zdravo, ${child.name}! 👋",
+                title = child.name.ifBlank { "Raspored časova" },
                 subtitle = child.school.ifBlank { null },
             )
         }
