@@ -3,6 +3,7 @@ package com.bane23.classschedule.data
 import kotlinx.serialization.json.Json
 import java.io.ByteArrayOutputStream
 import java.util.Base64
+import java.util.UUID
 import java.util.zip.Deflater
 import java.util.zip.Inflater
 
@@ -44,5 +45,6 @@ object ShareCodec {
         }
         inflater.end()
         json.decodeFromString(Child.serializer(), out.toString(Charsets.UTF_8.name()))
+            .copy(id = UUID.randomUUID().toString())
     }.getOrNull()
 }
