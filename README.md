@@ -16,7 +16,7 @@ Potrebni su JDK 17 i Android SDK (API 36).
 
 Svaki push/merge na `main` pokreće `.github/workflows/build-release.yml`, koji:
 
-1. pravi debug APK i potpisan release AAB,
+1. pravi debug APK i potpisan release AAB (AAB samo ako su podešeni secrets za potpisivanje, vidi dole),
 2. objavljuje GitHub Release `v1.0.<broj builda>` sa ta dva fajla,
 3. briše starije release-ove (i njihove tagove) tako da ostanu samo poslednja 3.
 

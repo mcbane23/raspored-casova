@@ -46,13 +46,14 @@ jobs:
           SIGNING_KEYSTORE_BASE64: ${{ secrets.SIGNING_KEYSTORE_BASE64 }}
         run: |
           if [ -z "$SIGNING_KEYSTORE_BASE64" ]; then
-            echo "::error::Secret SIGNING_KEYSTORE_BASE64 nije podesen, release AAB ne moze da se potpise. Pogledaj README."
-            exit 1
+            echo "::warning::Secret SIGNING_KEYSTORE_BASE64 nije podesen, release ce imati samo debug APK. Pogledaj README."
+            exit 0
           fi
           echo "$SIGNING_KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/upload.jks"
           echo "SIGNING_KEYSTORE_PATH=$RUNNER_TEMP/upload.jks" >> "$GITHUB_ENV"
 
       - name: Build release AAB
+        if: env.IS_RELEASE != 'true' || env.SIGNING_KEYSTORE_PATH != ''
         env:
           SIGNING_STORE_PASSWORD: ${{ secrets.SIGNING_STORE_PASSWORD }}
           SIGNING_KEY_ALIAS: ${{ secrets.SIGNING_KEY_ALIAS }}
@@ -70,7 +71,9 @@ jobs:
         run: |
           mkdir -p dist
           cp app/build/outputs/apk/debug/app-debug.apk "dist/raspored-casova-$VERSION_NAME-debug.apk"
-          cp app/build/outputs/bundle/release/app-release.aab "dist/raspored-casova-$VERSION_NAME.aab"
+          if [ -n "$SIGNING_KEYSTORE_PATH" ]; then
+            cp app/build/outputs/bundle/release/app-release.aab "dist/raspored-casova-$VERSION_NAME.aab"
+          fi
           gh release create "v$VERSION_NAME" dist/* \
             --target "$GITHUB_SHA" \
             --title "Raspored časova $VERSION_NAME" \
