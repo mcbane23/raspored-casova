@@ -6,11 +6,9 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -30,10 +28,33 @@ import com.google.zxing.qrcode.decoder.ErrorCorrectionLevel
 import com.journeyapps.barcodescanner.ScanContract
 import com.journeyapps.barcodescanner.ScanOptions
 
-/** Share the selected child's timetable as a QR code, or scan one from another phone. */
+/** Shows [child]'s timetable as a QR code for another phone to scan. */
 @Composable
-fun ShareSection(child: Child, viewModel: AppViewModel) {
-    var showing by remember { mutableStateOf(false) }
+fun QrCodeDialog(child: Child, onDismiss: () -> Unit) {
+    val bitmap = remember(child) { qrBitmap(ShareCodec.encode(child), 720) }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Raspored: ${child.name}") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Image(bitmap.asImageBitmap(), contentDescription = "QR kod rasporeda", Modifier.size(280.dp))
+                Text(
+                    "Na drugom telefonu: Podešavanja → Uvezi raspored sa QR koda. Deli se raspored, zvona, smene, " +
+                        "kalendar, predmeti i šta se nosi; jednodnevne izmene i alarm ostaju samo ovde.",
+                    style = MaterialTheme.typography.bodySmall,
+                )
+            }
+        },
+        confirmButton = { TextButton(onClick = onDismiss) { Text("Zatvori") } },
+    )
+}
+
+/**
+ * Scans a timetable QR code from another phone; the result is added as a new child or replaces [replaceable].
+ * Returns the function that opens the scanner.
+ */
+@Composable
+fun rememberQrImport(viewModel: AppViewModel, replaceable: Child?): () -> Unit {
     var scanned by remember { mutableStateOf<Child?>(null) }
     var scanFailed by remember { mutableStateOf(false) }
     val scanner = rememberLauncherForActivityResult(ScanContract()) { result ->
@@ -42,46 +63,14 @@ fun ShareSection(child: Child, viewModel: AppViewModel) {
         if (decoded == null) scanFailed = true else scanned = decoded
     }
 
-    Hint("Pokaži QR kod detetu ili drugom roditelju; oni ga skeniraju u svojoj aplikaciji.")
-    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        FilledTonalButton(onClick = { showing = true }, modifier = Modifier.weight(1f)) { Text("Prikaži QR") }
-        FilledTonalButton(modifier = Modifier.weight(1f), onClick = {
-            scanner.launch(
-                ScanOptions()
-                    .setDesiredBarcodeFormats(ScanOptions.QR_CODE)
-                    .setPrompt("Skeniraj QR kod rasporeda")
-                    .setBeepEnabled(false)
-                    .setOrientationLocked(false),
-            )
-        }) { Text("Skeniraj QR") }
-    }
-
-    if (showing) {
-        val bitmap = remember(child) { qrBitmap(ShareCodec.encode(child), 720) }
-        AlertDialog(
-            onDismissRequest = { showing = false },
-            title = { Text("Raspored: ${child.name}") },
-            text = {
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Image(bitmap.asImageBitmap(), contentDescription = "QR kod rasporeda", Modifier.size(280.dp))
-                    Text(
-                        "Na drugom telefonu: Podešavanja → Skeniraj QR. Deli se raspored, zvona, smene, " +
-                            "kalendar i predmeti; jednodnevne izmene i alarm ostaju samo ovde.",
-                        style = MaterialTheme.typography.bodySmall,
-                    )
-                }
-            },
-            confirmButton = { TextButton(onClick = { showing = false }) { Text("Zatvori") } },
-        )
-    }
-
     scanned?.let { shared ->
         AlertDialog(
             onDismissRequest = { scanned = null },
             title = { Text("Uvezi raspored: ${shared.name}") },
             text = {
                 Text(
-                    "Možeš ga dodati kao novo dete ili njime zameniti raspored za ${child.name} " +
+                    if (replaceable == null) "Raspored će biti dodat kao novo dete."
+                    else "Možeš ga dodati kao novo dete ili njime zameniti raspored za ${replaceable.name} " +
                         "(ime, škola, raspored, zvona, smene, kalendar i predmeti).",
                 )
             },
@@ -91,10 +80,12 @@ fun ShareSection(child: Child, viewModel: AppViewModel) {
                         viewModel.importChild(shared, replaceId = null)
                         scanned = null
                     }) { Text("Dodaj kao novo dete") }
-                    TextButton(onClick = {
-                        viewModel.importChild(shared, replaceId = child.id)
-                        scanned = null
-                    }) { Text("Zameni za ${child.name}") }
+                    if (replaceable != null) {
+                        TextButton(onClick = {
+                            viewModel.importChild(shared, replaceId = replaceable.id)
+                            scanned = null
+                        }) { Text("Zameni za ${replaceable.name}") }
+                    }
                     TextButton(onClick = { scanned = null }) { Text("Odustani") }
                 }
             },
@@ -107,6 +98,16 @@ fun ShareSection(child: Child, viewModel: AppViewModel) {
             title = { Text("Nepoznat QR kod") },
             text = { Text("Ovaj QR kod nije raspored iz aplikacije Raspored časova.") },
             confirmButton = { TextButton(onClick = { scanFailed = false }) { Text("U redu") } },
+        )
+    }
+
+    return {
+        scanner.launch(
+            ScanOptions()
+                .setDesiredBarcodeFormats(ScanOptions.QR_CODE)
+                .setPrompt("Skeniraj QR kod rasporeda")
+                .setBeepEnabled(false)
+                .setOrientationLocked(false),
         )
     }
 }

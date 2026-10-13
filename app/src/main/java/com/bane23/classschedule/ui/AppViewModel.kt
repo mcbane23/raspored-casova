@@ -17,6 +17,8 @@ import com.bane23.classschedule.data.ThemeMode
 import com.bane23.classschedule.data.Timetable
 import com.bane23.classschedule.data.shiftOn
 import com.bane23.classschedule.data.withDayChange
+import com.bane23.classschedule.data.withPackNote
+import com.bane23.classschedule.data.withPacked
 import com.bane23.classschedule.data.withoutDayChange
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
@@ -115,6 +117,13 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
 
     fun setAlarmSound(id: String, alarmSound: Boolean) = updateChild(id) { it.copy(alarmSound = alarmSound) }
 
+    fun setPackNote(id: String, subject: String, note: String) = updateChild(id) { it.withPackNote(subject, note) }
+
+    /** Ticks a subject on or off in the packing list for the school day [date]. */
+    fun setPacked(id: String, date: LocalDate, subject: String, packed: Boolean) = updateChild(id) {
+        it.withPacked(date, subject, packed)
+    }
+
     /** Adds a child received by QR code, or copies its timetable and settings onto the child [replaceId]. */
     fun importChild(shared: Child, replaceId: String?) = save { data ->
         if (replaceId == null) {
@@ -130,6 +139,8 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
                     alarmEnabled = it.alarmEnabled,
                     alarmMinutesBefore = it.alarmMinutesBefore,
                     alarmSound = it.alarmSound,
+                    packedForEpochDay = it.packedForEpochDay,
+                    packed = it.packed,
                 )
             },
         )
