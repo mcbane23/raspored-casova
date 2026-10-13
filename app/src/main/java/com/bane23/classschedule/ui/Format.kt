@@ -65,7 +65,7 @@ fun inDaysLabel(days: Long): String {
 
 fun Shift.label(): String = if (this == Shift.MORNING) "Prepodnevna smena" else "Popodnevna smena"
 
-fun Shift.shortLabel(): String = if (this == Shift.MORNING) "Prepodne" else "Popodne"
+fun Shift.shortLabel(): String = if (this == Shift.MORNING) "Pre podne" else "Popodne"
 
 fun Shift.icon(): String = if (this == Shift.MORNING) "☀️" else "🌙"
 
@@ -83,7 +83,7 @@ fun lessonsCount(count: Int): String = "$count ${lessonsWord(count)}"
 fun daysCount(days: Long): String = if (days % 10 == 1L && days % 100 != 11L) "$days dan" else "$days dana"
 
 fun ShiftMode.label(): String = when (this) {
-    ShiftMode.FIXED_MORNING -> "Uvek prepodne"
+    ShiftMode.FIXED_MORNING -> "Uvek pre podne"
     ShiftMode.FIXED_AFTERNOON -> "Uvek popodne"
     ShiftMode.WEEKLY -> "Smena se menja svake nedelje"
     ShiftMode.MONTHLY -> "Smena se menja svakog meseca"
