@@ -34,7 +34,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.bane23.classschedule.data.Child
-import com.bane23.classschedule.data.SCHOOL_DAYS
+import com.bane23.classschedule.data.DayInfo
+import com.bane23.classschedule.data.dayInfo
 import com.bane23.classschedule.data.lessonsOn
 import com.bane23.classschedule.data.overrideOn
 import com.bane23.classschedule.data.regularSubjectsOn
@@ -78,12 +79,16 @@ fun TodayScreen(
             }
         }
 
-        if (date.dayOfWeek !in SCHOOL_DAYS) {
-            EmptyMessage("Vikend je, nema nastave.")
+        val info = child.dayInfo(date)
+        if (info is DayInfo.NoClasses && child.overrideOn(date) == null) {
+            EmptyMessage("Nema nastave: ${info.reason}.")
             return@Column
         }
 
         Text(child.shiftOn(date).label(), style = MaterialTheme.typography.titleSmall)
+        if (info is DayInfo.SchoolDay && info.note != null) {
+            Text(info.note, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.primary)
+        }
 
         if (child.overrideOn(date) != null) {
             Card(

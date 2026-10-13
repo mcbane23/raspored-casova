@@ -92,6 +92,11 @@ data class Child(
     val morning: Timetable = Timetable.defaultFor(Shift.MORNING),
     val afternoon: Timetable = Timetable.defaultFor(Shift.AFTERNOON),
     val overrides: List<DayOverride> = emptyList(),
+    val region: Region = Region.CENTRAL_SERBIA,
+    /** 8th grade finishes classes earlier and has the final exam. */
+    val finalGrade: Boolean = false,
+    /** Events the parent added for this child's school, e.g. the school's slava or a day without classes. */
+    val customEvents: List<CalendarEvent> = emptyList(),
 ) {
     fun timetable(shift: Shift): Timetable = if (shift == Shift.MORNING) morning else afternoon
 

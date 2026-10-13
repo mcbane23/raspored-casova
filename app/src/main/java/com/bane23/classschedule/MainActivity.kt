@@ -7,6 +7,7 @@ import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Home
@@ -33,6 +34,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.bane23.classschedule.ui.AppViewModel
+import com.bane23.classschedule.ui.CalendarScreen
 import com.bane23.classschedule.ui.SettingsScreen
 import com.bane23.classschedule.ui.TodayScreen
 import com.bane23.classschedule.ui.WeekScreen
@@ -52,7 +54,8 @@ class MainActivity : ComponentActivity() {
 
 private enum class Tab(val label: String, val icon: ImageVector) {
     TODAY("Danas", Icons.Filled.Home),
-    WEEK("Nedelja", Icons.Filled.DateRange),
+    WEEK("Nedelja", Icons.AutoMirrored.Filled.List),
+    CALENDAR("Kalendar", Icons.Filled.DateRange),
     SETTINGS("Podešavanja", Icons.Filled.Settings),
 }
 
@@ -115,6 +118,12 @@ fun App(viewModel: AppViewModel = viewModel()) {
             Tab.WEEK -> WeekScreen(
                 child = child,
                 onTimetableChange = { shift, timetable -> viewModel.setTimetable(child.id, shift, timetable) },
+                modifier = modifier,
+            )
+            Tab.CALENDAR -> CalendarScreen(
+                child = child,
+                onAddEvent = { viewModel.addEvent(child.id, it) },
+                onDeleteEvent = { viewModel.deleteEvent(child.id, it) },
                 modifier = modifier,
             )
             Tab.SETTINGS -> SettingsScreen(data = data, child = child, viewModel = viewModel, modifier = modifier)

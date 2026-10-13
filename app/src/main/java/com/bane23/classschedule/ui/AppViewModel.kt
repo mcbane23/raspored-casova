@@ -4,8 +4,10 @@ import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.bane23.classschedule.data.AppData
+import com.bane23.classschedule.data.CalendarEvent
 import com.bane23.classschedule.data.Child
 import com.bane23.classschedule.data.ChildRepository
+import com.bane23.classschedule.data.Region
 import com.bane23.classschedule.data.Shift
 import com.bane23.classschedule.data.ShiftMode
 import com.bane23.classschedule.data.Timetable
@@ -67,4 +69,14 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun resetDay(id: String, date: LocalDate) = updateChild(id) { it.withoutDayChange(date) }
+
+    fun setRegion(id: String, region: Region) = updateChild(id) { it.copy(region = region) }
+
+    fun setFinalGrade(id: String, finalGrade: Boolean) = updateChild(id) { it.copy(finalGrade = finalGrade) }
+
+    fun addEvent(id: String, event: CalendarEvent) = updateChild(id) { it.copy(customEvents = it.customEvents + event) }
+
+    fun deleteEvent(id: String, eventId: String) = updateChild(id) { child ->
+        child.copy(customEvents = child.customEvents.filterNot { it.id == eventId })
+    }
 }

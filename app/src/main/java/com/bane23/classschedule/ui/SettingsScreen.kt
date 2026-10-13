@@ -14,6 +14,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -35,6 +36,7 @@ import androidx.compose.ui.unit.dp
 import com.bane23.classschedule.data.AppData
 import com.bane23.classschedule.data.Child
 import com.bane23.classschedule.data.Period
+import com.bane23.classschedule.data.Region
 import com.bane23.classschedule.data.Shift
 import com.bane23.classschedule.data.ShiftMode
 import com.bane23.classschedule.data.Timetable
@@ -93,6 +95,24 @@ fun SettingsScreen(data: AppData, child: Child, viewModel: AppViewModel, modifie
             singleLine = true,
             modifier = Modifier.fillMaxWidth(),
         )
+
+        Text("Školski kalendar")
+        Region.entries.forEach { region ->
+            Row(
+                Modifier.fillMaxWidth().clickable { viewModel.setRegion(child.id, region) },
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                RadioButton(selected = child.region == region, onClick = { viewModel.setRegion(child.id, region) })
+                Text(region.label())
+            }
+        }
+        Row(
+            Modifier.fillMaxWidth().clickable { viewModel.setFinalGrade(child.id, !child.finalGrade) },
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Checkbox(checked = child.finalGrade, onCheckedChange = { viewModel.setFinalGrade(child.id, it) })
+            Text("Osmi razred (ranije završava nastavu)")
+        }
 
         HorizontalDivider()
         SectionTitle("Smene")
