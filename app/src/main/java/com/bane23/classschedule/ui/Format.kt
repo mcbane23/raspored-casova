@@ -20,12 +20,31 @@ fun DayOfWeek.label(): String = when (this) {
     DayOfWeek.SUNDAY -> "Nedelja"
 }
 
+fun DayOfWeek.shortLabel(): String = label().take(3)
+
 private val MONTHS = listOf(
     "januar", "februar", "mart", "april", "maj", "jun",
     "jul", "avgust", "septembar", "oktobar", "novembar", "decembar",
 )
 
 fun LocalDate.label(): String = "${dayOfWeek.label()}, $dayOfMonth. ${MONTHS[monthValue - 1]}"
+
+/** "okt" for calendar date badges. */
+fun LocalDate.monthShortLabel(): String = MONTHS[monthValue - 1].take(3)
+
+/** "Oktobar 2026" for month headers. */
+fun LocalDate.monthYearLabel(): String = "${MONTHS[monthValue - 1].replaceFirstChar { it.uppercase() }} $year"
+
+/** "45 min", "1 h", "1 h 20 min". */
+fun durationLabel(minutes: Long): String {
+    val h = minutes / 60
+    val m = minutes % 60
+    return when {
+        h == 0L -> "$m min"
+        m == 0L -> "$h h"
+        else -> "$h h $m min"
+    }
+}
 
 /** "11. novembar", or "11–13. novembar" / "31. decembar – 15. januar" for ranges. */
 fun dateRangeLabel(start: LocalDate, end: LocalDate): String = when {

@@ -10,7 +10,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -42,15 +42,10 @@ fun ShareSection(child: Child, viewModel: AppViewModel) {
         if (decoded == null) scanFailed = true else scanned = decoded
     }
 
-    Text("Deljenje rasporeda", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
-    Text(
-        "Pokaži QR kod detetu ili drugom roditelju; oni ga skeniraju u svojoj aplikaciji.",
-        style = MaterialTheme.typography.bodySmall,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
-    )
+    Hint("Pokaži QR kod detetu ili drugom roditelju; oni ga skeniraju u svojoj aplikaciji.")
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        OutlinedButton(onClick = { showing = true }) { Text("Prikaži QR kod") }
-        OutlinedButton(onClick = {
+        FilledTonalButton(onClick = { showing = true }, modifier = Modifier.weight(1f)) { Text("Prikaži QR") }
+        FilledTonalButton(modifier = Modifier.weight(1f), onClick = {
             scanner.launch(
                 ScanOptions()
                     .setDesiredBarcodeFormats(ScanOptions.QR_CODE)
@@ -58,7 +53,7 @@ fun ShareSection(child: Child, viewModel: AppViewModel) {
                     .setBeepEnabled(false)
                     .setOrientationLocked(false),
             )
-        }) { Text("Skeniraj QR kod") }
+        }) { Text("Skeniraj QR") }
     }
 
     if (showing) {
@@ -70,7 +65,7 @@ fun ShareSection(child: Child, viewModel: AppViewModel) {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Image(bitmap.asImageBitmap(), contentDescription = "QR kod rasporeda", Modifier.size(280.dp))
                     Text(
-                        "Na drugom telefonu: Podešavanja → Skeniraj QR kod. Deli se raspored, zvona, smene, " +
+                        "Na drugom telefonu: Podešavanja → Skeniraj QR. Deli se raspored, zvona, smene, " +
                             "kalendar i predmeti; jednodnevne izmene i alarm ostaju samo ovde.",
                         style = MaterialTheme.typography.bodySmall,
                     )
