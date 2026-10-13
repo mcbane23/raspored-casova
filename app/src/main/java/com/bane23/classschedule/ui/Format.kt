@@ -67,6 +67,21 @@ fun Shift.label(): String = if (this == Shift.MORNING) "Prepodnevna smena" else 
 
 fun Shift.shortLabel(): String = if (this == Shift.MORNING) "Prepodne" else "Popodne"
 
+fun Shift.icon(): String = if (this == Shift.MORNING) "☀️" else "🌙"
+
+/** "1 čas", "3 časa", "6 časova". */
+fun lessonsWord(count: Int): String = when {
+    count % 10 == 1 && count % 100 != 11 -> "čas"
+    count % 10 in 2..4 && count % 100 !in 12..14 -> "časa"
+    else -> "časova"
+}
+
+/** "5 časova", "1 čas". */
+fun lessonsCount(count: Int): String = "$count ${lessonsWord(count)}"
+
+/** "1 dan", "5 dana", "21 dan". */
+fun daysCount(days: Long): String = if (days % 10 == 1L && days % 100 != 11L) "$days dan" else "$days dana"
+
 fun ShiftMode.label(): String = when (this) {
     ShiftMode.FIXED_MORNING -> "Uvek prepodne"
     ShiftMode.FIXED_AFTERNOON -> "Uvek popodne"
@@ -75,9 +90,9 @@ fun ShiftMode.label(): String = when (this) {
 }
 
 fun ThemeMode.label(): String = when (this) {
-    ThemeMode.SYSTEM -> "Sistemska"
-    ThemeMode.LIGHT -> "Svetla"
-    ThemeMode.DARK -> "Tamna"
+    ThemeMode.SYSTEM -> "📱 Telefon"
+    ThemeMode.LIGHT -> "☀️ Svetla"
+    ThemeMode.DARK -> "🌙 Tamna"
 }
 
 fun LocalTime.label(): String = "%02d:%02d".format(hour, minute)

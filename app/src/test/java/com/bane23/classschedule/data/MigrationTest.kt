@@ -24,6 +24,15 @@ class MigrationTest {
     }
 
     @Test
+    fun oldSystemThemeBecomesLight() {
+        val old = AppData(theme = ThemeMode.SYSTEM, dataVersion = 2)
+        assertEquals(ThemeMode.LIGHT, old.migrated().theme)
+
+        val chosenLater = AppData(theme = ThemeMode.SYSTEM, dataVersion = CURRENT_DATA_VERSION)
+        assertEquals(ThemeMode.SYSTEM, chosenLater.migrated().theme)
+    }
+
+    @Test
     fun defaultListHasNoExtraClassSubjects() {
         assertEquals(emptyList<String>(), DEFAULT_SUBJECTS.filter { it.startsWith("Dopunska") || it.startsWith("Dodatna") })
     }

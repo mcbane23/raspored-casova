@@ -186,6 +186,12 @@ data class Child(
     val alarmMinutesBefore: Int = 0,
     /** Ring like an alarm clock (alarm volume, repeating) instead of the school-bell notification sound. */
     val alarmSound: Boolean = false,
+    /** What to bring for a subject (e.g. "patike i majica"), keyed by subject name; shown in the packing list. */
+    val packNotes: Map<String, String> = emptyMap(),
+    /** School day the [packed] ticks belong to; ticks for any other day are ignored. */
+    val packedForEpochDay: Long = 0,
+    /** Subjects already ticked off in the packing list for [packedForEpochDay]. */
+    val packed: List<String> = emptyList(),
 ) {
     fun timetable(shift: Shift): Timetable = if (shift == Shift.MORNING) morning else afternoon
 
@@ -193,7 +199,7 @@ data class Child(
         if (shift == Shift.MORNING) copy(morning = timetable) else copy(afternoon = timetable)
 }
 
-/** App color theme; [SYSTEM] follows the phone's light or dark setting. */
+/** App color theme; [SYSTEM] follows the phone's light or dark setting. Light is the default. */
 @Serializable
 enum class ThemeMode { SYSTEM, LIGHT, DARK }
 
@@ -201,12 +207,12 @@ enum class ThemeMode { SYSTEM, LIGHT, DARK }
 data class AppData(
     val children: List<Child> = emptyList(),
     val selectedChildId: String? = null,
-    val theme: ThemeMode = ThemeMode.SYSTEM,
+    val theme: ThemeMode = ThemeMode.LIGHT,
     /** Format version of the saved data; files written before versioning count as 1. */
     val dataVersion: Int = 1,
 )
 
-const val CURRENT_DATA_VERSION = 2
+const val CURRENT_DATA_VERSION = 3
 
 /** Subjects that older versions put in every list before remedial and advanced classes became lesson types. */
 private val LEGACY_EXTRA_SUBJECTS = setOf("Dopunska nastava", "Dodatna nastava")
@@ -216,6 +222,10 @@ fun AppData.migrated(): AppData {
     var data = this
     if (data.dataVersion < 2) {
         data = data.copy(children = data.children.map { it.copy(subjects = it.subjects - LEGACY_EXTRA_SUBJECTS) })
+    }
+    if (data.dataVersion < 3) {
+        // The light theme became the default; data saved earlier always has the old System default written out.
+        if (data.theme == ThemeMode.SYSTEM) data = data.copy(theme = ThemeMode.LIGHT)
     }
     return data.copy(dataVersion = CURRENT_DATA_VERSION)
 }

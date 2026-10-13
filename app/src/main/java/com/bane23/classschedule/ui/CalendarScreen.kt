@@ -38,6 +38,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.bane23.classschedule.data.CalendarEvent
@@ -50,10 +52,16 @@ import java.time.temporal.ChronoUnit
 
 private const val MILLIS_PER_DAY = 24L * 60 * 60 * 1000
 
-/** Upcoming breaks, holidays and school events for the selected child, grouped by month, plus the child's own events. */
+/**
+ * The "Raspust" tab: a big countdown to the next break, then every coming break, day off and school event for the
+ * selected child. Events the parent added can be deleted.
+ */
 @Composable
 fun CalendarScreen(
+    children: List<Child>,
     child: Child,
+    onSelectChild: (String) -> Unit,
+    onOpenSettings: () -> Unit,
     onAddEvent: (CalendarEvent) -> Unit,
     onDeleteEvent: (String) -> Unit,
     modifier: Modifier = Modifier,
@@ -62,44 +70,37 @@ fun CalendarScreen(
     var adding by remember { mutableStateOf(false) }
     val customIds = child.customEvents.map { it.id }.toSet()
     val upcoming = child.calendarEvents().filter { it.endEpochDay >= today.toEpochDay() }
-    val byMonth = upcoming.groupBy { it.start.withDayOfMonth(1) }
     val year = schoolYearOf(today)
 
     LazyColumn(
         modifier.fillMaxSize(),
-        contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 8.dp, bottom = 24.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
+        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 24.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
         item {
-            ScreenHeader(
-                title = "Kalendar",
-                subtitle = if (year != null) "Školska godina ${year.label}" else "Kalendar za ovu školsku godinu još nije dodat",
-            )
+            ChildTopRow(children, child.id, onSelectChild, title = "Raspust") { SettingsButton(onOpenSettings) }
         }
-        child.nextDayOff(today)?.let { next ->
+        val next = child.nextDayOff(today)
+        if (next != null) {
             item { CountdownCard(next, today) }
         }
-        item {
-            FilledTonalButton(onClick = { adding = true }, modifier = Modifier.fillMaxWidth().height(52.dp)) {
-                Icon(Icons.Filled.Add, contentDescription = null)
-                Spacer(Modifier.width(8.dp))
-                Text("Dodaj događaj škole")
-            }
+        if (year == null) {
+            item { NoteBanner("ℹ️", "Kalendar za ovu školsku godinu još nije dodat u aplikaciju.") }
         }
+        item { SectionLabel("Slobodni dani i događaji") }
         if (upcoming.isEmpty()) {
-            item { EmptyState("📅", "Nema predstojećih događaja", "Dodaj Dan škole, školsku slavu ili izlet.") }
+            item { AppCard { EmptyState("📅", "Nema predstojećih događaja", "Dodaj Dan škole, školsku slavu ili izlet.") } }
         }
-        byMonth.forEach { (month, events) ->
-            item(key = "month-${month.toEpochDay()}") { SectionLabel(month.monthYearLabel()) }
-            items(events, key = { it.id }) { event ->
-                EventRow(
-                    event = event,
-                    isCustom = event.id in customIds,
-                    isNow = event.covers(today),
-                    onDelete = { onDeleteEvent(event.id) },
-                )
+        items(upcoming, key = { "${it.id}-${it.startEpochDay}" }) { event ->
+            EventTicket(event, today) {
+                if (event.id in customIds) {
+                    IconButton(onClick = { onDeleteEvent(event.id) }) {
+                        Icon(Icons.Filled.Delete, contentDescription = "Obriši događaj", tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                }
             }
         }
+        item { DashedButton("+ Dodaj događaj škole", onClick = { adding = true }) }
     }
 
     if (adding) {
@@ -113,99 +114,26 @@ fun CalendarScreen(
     }
 }
 
-/** Big, friendly countdown to the next break: the number children care about most. */
+/** Big countdown to the next break: the number children care about most. */
 @Composable
 private fun CountdownCard(next: CalendarEvent, today: LocalDate) {
-    val colors = MaterialTheme.colorScheme
     val ongoing = next.covers(today)
     val days = ChronoUnit.DAYS.between(today, next.start)
-    Surface(
-        modifier = Modifier.fillMaxWidth(),
-        shape = MaterialTheme.shapes.extraLarge,
-        color = colors.tertiaryContainer,
-        shadowElevation = 0.dp,
-    ) {
-        Row(Modifier.padding(24.dp), verticalAlignment = Alignment.CenterVertically) {
-            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                Text(
-                    if (ongoing) "Sada je" else "Do sledećeg odmora",
-                    style = MaterialTheme.typography.labelLarge,
-                    color = colors.onTertiaryContainer.copy(alpha = 0.8f),
-                )
-                Text(next.title, style = MaterialTheme.typography.headlineSmall, color = colors.onTertiaryContainer)
-                Text(
-                    if (ongoing) "Traje do ${dateRangeLabel(next.end, next.end)} 🎉" else dateRangeLabel(next.start, next.end),
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = colors.onTertiaryContainer.copy(alpha = 0.85f),
-                )
-            }
+    Surface(modifier = Modifier.fillMaxWidth(), shape = MaterialTheme.shapes.extraLarge, color = heroColorOf(HolidayAmber)) {
+        Column(
+            Modifier.fillMaxWidth().padding(vertical = 18.dp, horizontal = 16.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
             if (ongoing) {
-                Text(eventEmoji(next.title), fontSize = 48.sp)
+                Text("Sada je", style = MaterialTheme.typography.titleSmall, color = Color.White.copy(alpha = 0.9f))
+                Text(eventEmoji(next.title), fontSize = 56.sp)
+                Text(next.title, style = MaterialTheme.typography.headlineSmall, color = Color.White, textAlign = TextAlign.Center)
+                Text("Traje do ${dateRangeLabel(next.end, next.end)} 🎉", style = MaterialTheme.typography.bodyLarge, color = Color.White)
             } else {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text("$days", fontSize = 48.sp, lineHeight = 52.sp, style = MaterialTheme.typography.headlineMedium, color = colors.onTertiaryContainer)
-                    Text(
-                        inDaysLabel(days).removePrefix("za $days "),
-                        style = MaterialTheme.typography.labelLarge,
-                        color = colors.onTertiaryContainer.copy(alpha = 0.8f),
-                    )
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun EventRow(event: CalendarEvent, isCustom: Boolean, isNow: Boolean, onDelete: () -> Unit) {
-    val colors = MaterialTheme.colorScheme
-    AppCard(contentPadding = PaddingValues(start = 12.dp, end = 4.dp, top = 12.dp, bottom = 12.dp)) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            DateBadge(event.start, highlighted = isNow)
-            Column(Modifier.weight(1f).padding(horizontal = 12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                Text("${eventEmoji(event.title)} ${event.title}", style = MaterialTheme.typography.titleMedium)
-                Text(
-                    dateRangeLabel(event.start, event.end),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = colors.onSurfaceVariant,
-                )
-                if (event.noClasses) {
-                    Tag("Nema nastave", colors.tertiaryContainer, colors.onTertiaryContainer)
-                } else {
-                    Tag("Nastava se održava", colors.surfaceVariant, colors.onSurfaceVariant)
-                }
-            }
-            if (isCustom) {
-                IconButton(onClick = onDelete) {
-                    Icon(Icons.Filled.Delete, contentDescription = "Obriši događaj", tint = colors.onSurfaceVariant)
-                }
-            } else {
-                Spacer(Modifier.width(8.dp))
-            }
-        }
-    }
-}
-
-/** Day number over a short month name, like a tear-off calendar page. */
-@Composable
-private fun DateBadge(date: LocalDate, highlighted: Boolean) {
-    val colors = MaterialTheme.colorScheme
-    Surface(
-        modifier = Modifier.size(56.dp),
-        shape = MaterialTheme.shapes.medium,
-        color = if (highlighted) colors.primary else colors.primaryContainer,
-    ) {
-        Box(contentAlignment = Alignment.Center) {
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Text(
-                    "${date.dayOfMonth}",
-                    style = MaterialTheme.typography.titleLarge,
-                    color = if (highlighted) colors.onPrimary else colors.onPrimaryContainer,
-                )
-                Text(
-                    date.monthShortLabel(),
-                    style = MaterialTheme.typography.labelSmall,
-                    color = if (highlighted) colors.onPrimary else colors.onPrimaryContainer,
-                )
+                Text("${eventEmoji(next.title)} ${next.title} za", style = MaterialTheme.typography.titleSmall, color = Color.White.copy(alpha = 0.9f), textAlign = TextAlign.Center)
+                Text("$days", fontSize = 72.sp, lineHeight = 76.sp, style = MaterialTheme.typography.displaySmall, color = Color.White)
+                Text(daysCount(days).removePrefix("$days "), style = MaterialTheme.typography.titleMedium, color = Color.White)
+                Text(dateRangeLabel(next.start, next.end), style = MaterialTheme.typography.bodyMedium, color = Color.White.copy(alpha = 0.9f))
             }
         }
     }

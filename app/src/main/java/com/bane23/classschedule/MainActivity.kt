@@ -4,31 +4,16 @@ import android.graphics.Color as AndroidColor
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.SystemBarStyle
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.isSystemInDarkTheme
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.statusBarsPadding
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.List
-import androidx.compose.material.icons.filled.DateRange
-import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -37,19 +22,22 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.bane23.classschedule.data.Child
 import com.bane23.classschedule.data.ThemeMode
 import com.bane23.classschedule.ui.AppViewModel
+import com.bane23.classschedule.ui.BellsScreen
 import com.bane23.classschedule.ui.CalendarScreen
-import com.bane23.classschedule.ui.ChildAvatar
-import com.bane23.classschedule.ui.SettingsScreen
+import com.bane23.classschedule.ui.ChildSettingsScreen
+import com.bane23.classschedule.ui.FamilyScreen
+import com.bane23.classschedule.ui.SettingsHomeScreen
+import com.bane23.classschedule.ui.SettingsPage
+import com.bane23.classschedule.ui.SubjectsScreen
 import com.bane23.classschedule.ui.TodayScreen
 import com.bane23.classschedule.ui.WeekScreen
+import com.bane23.classschedule.ui.rememberAlarmSwitch
 import com.bane23.classschedule.ui.theme.RasporedCasovaTheme
 
 class MainActivity : ComponentActivity() {
@@ -83,101 +71,145 @@ class MainActivity : ComponentActivity() {
 private val LIGHT_SCRIM = AndroidColor.argb(0xe6, 0xFF, 0xFF, 0xFF)
 private val DARK_SCRIM = AndroidColor.argb(0x80, 0x1b, 0x1b, 0x1b)
 
-private enum class Tab(val label: String, val icon: ImageVector) {
-    TODAY("Danas", Icons.Filled.Home),
-    WEEK("Nedelja", Icons.AutoMirrored.Filled.List),
-    CALENDAR("Kalendar", Icons.Filled.DateRange),
-    SETTINGS("Podešavanja", Icons.Filled.Settings),
+private enum class Tab(val label: String, val emoji: String) {
+    FAMILY("Porodica", "👨‍👩‍👧"),
+    TODAY("Danas", "🏠"),
+    WEEK("Nedelja", "📅"),
+    BREAKS("Raspust", "🏖️"),
+}
+
+/** Settings pages are kept as short strings ("home", "child:<id>", ...) so they survive rotation. */
+private fun SettingsPage.route(): String = when (this) {
+    SettingsPage.Home -> "home"
+    is SettingsPage.ChildPage -> "child:$childId"
+    is SettingsPage.Bells -> "bells:$childId"
+    is SettingsPage.Subjects -> "subjects:$childId"
+}
+
+private fun settingsPage(route: String?): SettingsPage? {
+    if (route == null) return null
+    val id = route.substringAfter(':', "")
+    return when (route.substringBefore(':')) {
+        "home" -> SettingsPage.Home
+        "child" -> SettingsPage.ChildPage(id)
+        "bells" -> SettingsPage.Bells(id)
+        "subjects" -> SettingsPage.Subjects(id)
+        else -> null
+    }
+}
+
+/** Where the back button leads from a settings page. */
+private fun SettingsPage.parent(): SettingsPage? = when (this) {
+    SettingsPage.Home -> null
+    is SettingsPage.ChildPage -> SettingsPage.Home
+    is SettingsPage.Bells -> SettingsPage.ChildPage(childId)
+    is SettingsPage.Subjects -> SettingsPage.ChildPage(childId)
 }
 
 @Composable
 fun App(viewModel: AppViewModel = viewModel()) {
     val data by viewModel.data.collectAsState()
-    var tab by rememberSaveable { mutableStateOf(Tab.TODAY) }
+    val family = data.children.size > 1
+    var tab by rememberSaveable { mutableStateOf(if (family) Tab.FAMILY else Tab.TODAY) }
+    var settingsRoute by rememberSaveable { mutableStateOf<String?>(null) }
     val child = data.children.find { it.id == data.selectedChildId } ?: data.children.first()
+    val shownTab = if (tab == Tab.FAMILY && !family) Tab.TODAY else tab
+    val page = settingsPage(settingsRoute)
+    val setAlarm = rememberAlarmSwitch(viewModel)
+    fun openSettings(next: SettingsPage?) { settingsRoute = next?.route() }
+
+    BackHandler(enabled = page != null) { openSettings(page?.parent()) }
 
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
-        topBar = {
-            if (data.children.size > 1) {
-                ChildSwitcher(
-                    children = data.children,
-                    selectedId = child.id,
-                    onSelect = { viewModel.selectChild(it) },
-                )
-            }
-        },
         bottomBar = {
-            NavigationBar(containerColor = MaterialTheme.colorScheme.surfaceContainerLowest, tonalElevation = 0.dp) {
-                Tab.entries.forEach { t ->
-                    NavigationBarItem(
-                        selected = tab == t,
-                        onClick = { tab = t },
-                        icon = { Icon(t.icon, contentDescription = null) },
-                        label = { Text(t.label) },
-                        colors = NavigationBarItemDefaults.colors(
-                            indicatorColor = MaterialTheme.colorScheme.primaryContainer,
-                            selectedIconColor = MaterialTheme.colorScheme.primary,
-                            selectedTextColor = MaterialTheme.colorScheme.primary,
-                        ),
-                    )
+            if (page == null) {
+                NavigationBar(containerColor = MaterialTheme.colorScheme.surfaceContainerLowest, tonalElevation = 0.dp) {
+                    Tab.entries.filter { it != Tab.FAMILY || family }.forEach { t ->
+                        NavigationBarItem(
+                            selected = shownTab == t,
+                            onClick = { tab = t },
+                            icon = { Text(t.emoji, fontSize = 22.sp) },
+                            label = { Text(t.label, style = MaterialTheme.typography.labelLarge) },
+                            colors = NavigationBarItemDefaults.colors(
+                                indicatorColor = MaterialTheme.colorScheme.primaryContainer,
+                                selectedTextColor = MaterialTheme.colorScheme.primary,
+                                unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                            ),
+                        )
+                    }
                 }
             }
         },
     ) { innerPadding ->
         val modifier = Modifier.padding(innerPadding)
-        when (tab) {
-            Tab.TODAY -> TodayScreen(
-                child = child,
-                onChangeDay = { date, index, subject -> viewModel.changeDay(child.id, date, index, subject) },
-                onResetDay = { date -> viewModel.resetDay(child.id, date) },
-                modifier = modifier,
-            )
-            Tab.WEEK -> WeekScreen(
-                child = child,
-                onTimetableChange = { shift, timetable -> viewModel.setTimetable(child.id, shift, timetable) },
-                onSubjectUsed = { viewModel.addSubject(child.id, it) },
-                modifier = modifier,
-            )
-            Tab.CALENDAR -> CalendarScreen(
-                child = child,
-                onAddEvent = { viewModel.addEvent(child.id, it) },
-                onDeleteEvent = { viewModel.deleteEvent(child.id, it) },
-                modifier = modifier,
-            )
-            Tab.SETTINGS -> SettingsScreen(data = data, child = child, viewModel = viewModel, modifier = modifier)
-        }
-    }
-}
+        val settingsChild = when (page) {
+            is SettingsPage.ChildPage -> page.childId
+            is SettingsPage.Bells -> page.childId
+            is SettingsPage.Subjects -> page.childId
+            else -> null
+        }?.let { id -> data.children.find { it.id == id } }
 
-/** Row of children at the top (shown only with two or more), so a child can tap their own name. */
-@Composable
-private fun ChildSwitcher(children: List<Child>, selectedId: String, onSelect: (String) -> Unit) {
-    Row(
-        Modifier
-            .fillMaxWidth()
-            .statusBarsPadding()
-            .horizontalScroll(rememberScrollState())
-            .padding(start = 20.dp, end = 20.dp, top = 12.dp),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
-        children.forEach { c ->
-            val selected = c.id == selectedId
-            Surface(
-                onClick = { onSelect(c.id) },
-                shape = CircleShape,
-                color = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceContainerLowest,
-                shadowElevation = 1.dp,
-            ) {
-                Row(Modifier.padding(start = 4.dp, end = 16.dp, top = 4.dp, bottom = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-                    ChildAvatar(c.name, size = 32.dp)
-                    Spacer(Modifier.width(8.dp))
-                    Text(
-                        c.name.ifBlank { "Bez imena" },
-                        style = MaterialTheme.typography.labelLarge,
-                        color = if (selected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface,
-                    )
-                }
+        when {
+            page == SettingsPage.Home || (page != null && settingsChild == null) -> SettingsHomeScreen(
+                data = data,
+                selected = child,
+                viewModel = viewModel,
+                onBack = { openSettings(null) },
+                onOpenChild = { openSettings(SettingsPage.ChildPage(it)) },
+                modifier = modifier,
+            )
+            page is SettingsPage.ChildPage && settingsChild != null -> ChildSettingsScreen(
+                data = data,
+                child = settingsChild,
+                viewModel = viewModel,
+                onBack = { openSettings(SettingsPage.Home) },
+                onOpenBells = { openSettings(SettingsPage.Bells(settingsChild.id)) },
+                onOpenSubjects = { openSettings(SettingsPage.Subjects(settingsChild.id)) },
+                modifier = modifier,
+            )
+            page is SettingsPage.Bells && settingsChild != null ->
+                BellsScreen(settingsChild, viewModel, onBack = { openSettings(page.parent()) }, modifier = modifier)
+            page is SettingsPage.Subjects && settingsChild != null ->
+                SubjectsScreen(settingsChild, viewModel, onBack = { openSettings(page.parent()) }, modifier = modifier)
+            else -> when (shownTab) {
+                Tab.FAMILY -> FamilyScreen(
+                    children = data.children,
+                    onOpenChild = {
+                        viewModel.selectChild(it)
+                        tab = Tab.TODAY
+                    },
+                    onOpenSettings = { openSettings(SettingsPage.Home) },
+                    onAlarmChange = setAlarm,
+                    modifier = modifier,
+                )
+                Tab.TODAY -> TodayScreen(
+                    children = data.children,
+                    child = child,
+                    onSelectChild = { viewModel.selectChild(it) },
+                    onOpenSettings = { openSettings(SettingsPage.Home) },
+                    onChangeDay = { date, index, subject -> viewModel.changeDay(child.id, date, index, subject) },
+                    onResetDay = { date -> viewModel.resetDay(child.id, date) },
+                    onPacked = { date, subject, packed -> viewModel.setPacked(child.id, date, subject, packed) },
+                    modifier = modifier,
+                )
+                Tab.WEEK -> WeekScreen(
+                    children = data.children,
+                    child = child,
+                    onSelectChild = { viewModel.selectChild(it) },
+                    onTimetableChange = { shift, timetable -> viewModel.setTimetable(child.id, shift, timetable) },
+                    onSubjectUsed = { viewModel.addSubject(child.id, it) },
+                    modifier = modifier,
+                )
+                Tab.BREAKS -> CalendarScreen(
+                    children = data.children,
+                    child = child,
+                    onSelectChild = { viewModel.selectChild(it) },
+                    onOpenSettings = { openSettings(SettingsPage.Home) },
+                    onAddEvent = { viewModel.addEvent(child.id, it) },
+                    onDeleteEvent = { viewModel.deleteEvent(child.id, it) },
+                    modifier = modifier,
+                )
             }
         }
     }

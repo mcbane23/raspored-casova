@@ -1,19 +1,30 @@
 package com.bane23.classschedule.ui
 
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -27,49 +38,59 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.bane23.classschedule.data.Child
 import com.bane23.classschedule.data.ExtraClass
 import kotlinx.coroutines.delay
 import java.time.LocalDateTime
 
-// Subject and avatar colors are the Catppuccin Mocha pastel accents, used as soft tints behind emoji.
-
 /** Emoji and color that make a subject recognizable at a glance, even for children who don't read well yet. */
 data class SubjectStyle(val emoji: String, val color: Color)
 
+// Saturated subject colors: shown as soft tints behind emoji, and in full on the "now" card.
 private val SUBJECT_STYLES: List<Pair<String, SubjectStyle>> = listOf(
-    "srpski" to SubjectStyle("📖", Color(0xFFF38BA8)),
-    "matemat" to SubjectStyle("🔢", Color(0xFF89B4FA)),
-    "engleski" to SubjectStyle("🇬🇧", Color(0xFF74C7EC)),
-    "strani" to SubjectStyle("🗣️", Color(0xFF74C7EC)),
-    "svet oko nas" to SubjectStyle("🌱", Color(0xFFA6E3A1)),
-    "priroda" to SubjectStyle("🌍", Color(0xFFA6E3A1)),
-    "likovn" to SubjectStyle("🎨", Color(0xFFF5C2E7)),
-    "muzič" to SubjectStyle("🎵", Color(0xFFCBA6F7)),
-    "muzic" to SubjectStyle("🎵", Color(0xFFCBA6F7)),
-    "fizičk" to SubjectStyle("⚽", Color(0xFFFAB387)),
-    "fizick" to SubjectStyle("⚽", Color(0xFFFAB387)),
-    "istorij" to SubjectStyle("🏛️", Color(0xFFF9E2AF)),
-    "geograf" to SubjectStyle("🗺️", Color(0xFF94E2D5)),
-    "biolog" to SubjectStyle("🦋", Color(0xFFA6E3A1)),
-    "fizika" to SubjectStyle("🧲", Color(0xFFB4BEFE)),
-    "hemij" to SubjectStyle("🧪", Color(0xFF89DCEB)),
-    "tehni" to SubjectStyle("🛠️", Color(0xFFBAC2DE)),
-    "informat" to SubjectStyle("💻", Color(0xFF89B4FA)),
-    "verska" to SubjectStyle("🕊️", Color(0xFFF2CDCD)),
-    "građansk" to SubjectStyle("🤝", Color(0xFF94E2D5)),
-    "gradjansk" to SubjectStyle("🤝", Color(0xFF94E2D5)),
-    "odeljensk" to SubjectStyle("🏫", Color(0xFFCBA6F7)),
+    "srpski" to SubjectStyle("📖", Color(0xFFE5484D)),
+    "matemat" to SubjectStyle("🔢", Color(0xFF3E7BFA)),
+    "engleski" to SubjectStyle("🇬🇧", Color(0xFF0E9CC0)),
+    "strani" to SubjectStyle("🗣️", Color(0xFF0E9CC0)),
+    "svet oko nas" to SubjectStyle("🌱", Color(0xFF2FA86A)),
+    "priroda" to SubjectStyle("🌍", Color(0xFF2FA86A)),
+    "likovn" to SubjectStyle("🎨", Color(0xFFD6409F)),
+    "muzič" to SubjectStyle("🎵", Color(0xFF8E4EC6)),
+    "muzic" to SubjectStyle("🎵", Color(0xFF8E4EC6)),
+    "fizičk" to SubjectStyle("⚽", Color(0xFFF07F1A)),
+    "fizick" to SubjectStyle("⚽", Color(0xFFF07F1A)),
+    "istorij" to SubjectStyle("🏛️", Color(0xFFC2911A)),
+    "geograf" to SubjectStyle("🗺️", Color(0xFF21A0A0)),
+    "biolog" to SubjectStyle("🦋", Color(0xFF45A350)),
+    "fizika" to SubjectStyle("🧲", Color(0xFF6E56CF)),
+    "hemij" to SubjectStyle("🧪", Color(0xFF0B95B5)),
+    "tehni" to SubjectStyle("🛠️", Color(0xFF6B7A90)),
+    "informat" to SubjectStyle("💻", Color(0xFF5B6CF0)),
+    "verska" to SubjectStyle("🕊️", Color(0xFFA9805A)),
+    "građansk" to SubjectStyle("🤝", Color(0xFF1A9E99)),
+    "gradjansk" to SubjectStyle("🤝", Color(0xFF1A9E99)),
+    "odeljensk" to SubjectStyle("🏫", Color(0xFF7563D8)),
 )
 
 private val FALLBACK_COLORS = listOf(
-    Color(0xFF89B4FA), Color(0xFFF38BA8), Color(0xFFA6E3A1), Color(0xFFFAB387),
-    Color(0xFFCBA6F7), Color(0xFF94E2D5), Color(0xFFF5C2E7), Color(0xFFF9E2AF),
+    Color(0xFFE5484D), Color(0xFF3E7BFA), Color(0xFF2FA86A), Color(0xFFF07F1A),
+    Color(0xFF8E4EC6), Color(0xFF0E9CC0), Color(0xFFD6409F), Color(0xFFC2911A),
 )
+
+/** Colors of the full-width status card when no subject sets it. */
+val AccentOrange = Color(0xFFE8620C)
+val BreakTeal = Color(0xFF14A38B)
+val DoneGreen = Color(0xFF2FA86A)
+val HolidayAmber = Color(0xFFE98B2A)
 
 /** Style for a lesson text; optional classes ("Dopunska: Matematika") take their subject's style. */
 fun subjectStyle(lesson: String): SubjectStyle {
@@ -78,6 +99,11 @@ fun subjectStyle(lesson: String): SubjectStyle {
     val color = FALLBACK_COLORS[Math.floorMod(subject.hashCode(), FALLBACK_COLORS.size)]
     return SubjectStyle("📚", color)
 }
+
+/** Avatar color for a child, stable for a given name. */
+fun childColor(name: String): Color = listOf(
+    Color(0xFFD6409F), Color(0xFF3E7BFA), Color(0xFF2FA86A), Color(0xFF8E4EC6), Color(0xFFF07F1A), Color(0xFF0E9CC0),
+)[Math.floorMod(name.trim().hashCode(), 6)]
 
 /** Emoji for a calendar event, picked from words in its title. */
 fun eventEmoji(title: String): String {
@@ -98,120 +124,137 @@ fun eventEmoji(title: String): String {
     }
 }
 
-/** Rounded tile with a subject's emoji on a soft tint of its color. */
+/** A soft tint of [color] on the card surface; stronger in the dark theme so it stays visible. */
 @Composable
-fun SubjectBadge(lesson: String, size: Dp = 48.dp) {
+fun tintOf(color: Color, light: Float = 0.18f, dark: Float = 0.30f): Color =
+    lerp(MaterialTheme.colorScheme.surfaceContainerLowest, color, if (isDarkTheme()) dark else light)
+
+/** Background of the big status card: the color itself, slightly deepened (light) or blended into the night (dark). */
+@Composable
+fun heroColorOf(color: Color): Color =
+    if (isDarkTheme()) lerp(MaterialTheme.colorScheme.surfaceContainerLowest, color, 0.42f) else lerp(color, Color.Black, 0.16f)
+
+/** Rounded tile with a subject's emoji on a tint of its color; [done] shows a check instead. */
+@Composable
+fun SubjectBadge(lesson: String, size: Dp = 48.dp, done: Boolean = false, shape: RoundedCornerShape = RoundedCornerShape(size / 3)) {
     val style = subjectStyle(lesson)
     Box(
-        Modifier
-            .size(size)
-            .clip(RoundedCornerShape(size / 3))
-            .background(style.color.copy(alpha = if (isDarkTheme()) 0.22f else 0.45f)),
+        Modifier.size(size).clip(shape).background(tintOf(style.color, 0.30f, 0.38f)),
         contentAlignment = Alignment.Center,
     ) {
-        Text(style.emoji, fontSize = (size.value * 0.46f).sp)
+        Text(if (done) "✓" else style.emoji, fontSize = (size.value * 0.48f).sp, color = MaterialTheme.colorScheme.onSurface)
     }
 }
 
 /** Colored circle with the first letter of a child's name. */
 @Composable
 fun ChildAvatar(name: String, size: Dp = 36.dp) {
-    val color = FALLBACK_COLORS[Math.floorMod(name.hashCode(), FALLBACK_COLORS.size)]
     Box(
-        Modifier.size(size).clip(CircleShape).background(color),
+        Modifier.size(size).clip(CircleShape).background(childColor(name)),
         contentAlignment = Alignment.Center,
     ) {
         Text(
             name.trim().take(1).uppercase().ifEmpty { "?" },
-            color = Color(0xFF1E1E2E),
+            color = Color.White,
+            fontSize = (size.value * 0.46f).sp,
             style = MaterialTheme.typography.titleMedium,
         )
     }
 }
 
-/** White card with soft corners used for every grouped block in the app. */
+/** Flat card on the tinted background, used for every grouped block in the app. */
 @Composable
 fun AppCard(
     modifier: Modifier = Modifier,
     color: Color = MaterialTheme.colorScheme.surfaceContainerLowest,
     onClick: (() -> Unit)? = null,
-    contentPadding: PaddingValues = PaddingValues(20.dp),
+    contentPadding: PaddingValues = PaddingValues(horizontal = 16.dp, vertical = 14.dp),
+    verticalArrangement: Arrangement.Vertical = Arrangement.spacedBy(8.dp),
     content: @Composable ColumnScope.() -> Unit,
 ) {
-    Surface(
-        modifier = modifier.fillMaxWidth(),
-        shape = MaterialTheme.shapes.large,
-        color = color,
-        shadowElevation = 1.dp,
-    ) {
+    Surface(modifier = modifier.fillMaxWidth(), shape = MaterialTheme.shapes.large, color = color) {
         Column(
             (if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier).padding(contentPadding),
+            verticalArrangement = verticalArrangement,
             content = content,
         )
     }
 }
 
-/** Large page title with an optional muted subtitle; [compact] is a smaller version for the busy Today tab. */
+/** Large page title with an optional muted line above it (e.g. the date). */
 @Composable
-fun ScreenHeader(title: String, subtitle: String? = null, modifier: Modifier = Modifier, compact: Boolean = false) {
-    Column(modifier.padding(top = if (compact) 4.dp else 8.dp, bottom = if (compact) 0.dp else 8.dp)) {
-        Text(title, style = if (compact) MaterialTheme.typography.headlineSmall else MaterialTheme.typography.headlineMedium)
-        if (subtitle != null) {
-            Text(
-                subtitle,
-                style = if (compact) MaterialTheme.typography.bodyMedium else MaterialTheme.typography.bodyLarge,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
+fun ScreenHeader(title: String, overline: String? = null, modifier: Modifier = Modifier) {
+    Column(modifier) {
+        if (overline != null) {
+            Text(overline, style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
+        Text(title, style = MaterialTheme.typography.headlineMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
     }
 }
 
-/** Small uppercase-free label above a group of items. */
+/** Small uppercase label above a group of items. */
 @Composable
 fun SectionLabel(text: String, modifier: Modifier = Modifier) {
     Text(
-        text,
-        style = MaterialTheme.typography.titleMedium,
-        modifier = modifier.padding(top = 8.dp),
+        text.uppercase(),
+        style = MaterialTheme.typography.labelMedium,
+        letterSpacing = 0.8.sp,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        modifier = modifier.padding(start = 6.dp, top = 6.dp),
     )
 }
 
-/** Muted helper line under a section. */
+/** Muted helper line. */
 @Composable
 fun Hint(text: String, modifier: Modifier = Modifier) {
-    Text(
-        text,
-        style = MaterialTheme.typography.bodyMedium,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
-        modifier = modifier,
-    )
+    Text(text, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = modifier)
 }
 
-/** Two or more options in one rounded track; the selected one is a raised white pill. */
+/**
+ * Two or more options in one rounded track. On the page background the selected option is filled with the accent;
+ * inside a card ([onCard]) the track is the page color and the selected option a raised card-colored pill.
+ */
 @Composable
-fun <T> PillToggle(options: List<T>, selected: T, label: (T) -> String, onSelect: (T) -> Unit, modifier: Modifier = Modifier) {
+fun <T> PillToggle(
+    options: List<T>,
+    selected: T,
+    label: (T) -> String,
+    onSelect: (T) -> Unit,
+    modifier: Modifier = Modifier,
+    onCard: Boolean = false,
+) {
+    val colors = MaterialTheme.colorScheme
     Row(
         modifier
             .fillMaxWidth()
-            .clip(CircleShape)
-            .background(MaterialTheme.colorScheme.surfaceVariant)
-            .padding(4.dp),
-        horizontalArrangement = Arrangement.spacedBy(4.dp),
+            .clip(if (onCard) MaterialTheme.shapes.small else CircleShape)
+            .background(if (onCard) colors.background else colors.surfaceContainerLowest)
+            .padding(3.dp),
+        horizontalArrangement = Arrangement.spacedBy(2.dp),
     ) {
         options.forEach { option ->
             val isSelected = option == selected
             Surface(
                 onClick = { onSelect(option) },
-                modifier = Modifier.weight(1f).heightIn(min = 44.dp),
-                shape = CircleShape,
-                color = if (isSelected) MaterialTheme.colorScheme.surfaceBright else Color.Transparent,
-                shadowElevation = if (isSelected) 1.dp else 0.dp,
+                modifier = Modifier.weight(1f).heightIn(min = 40.dp),
+                shape = if (onCard) RoundedCornerShape(11.dp) else CircleShape,
+                color = when {
+                    !isSelected -> Color.Transparent
+                    onCard -> colors.surfaceBright
+                    else -> colors.primary
+                },
+                shadowElevation = if (isSelected && onCard) 1.dp else 0.dp,
             ) {
-                Box(contentAlignment = Alignment.Center) {
+                Box(contentAlignment = Alignment.Center, modifier = Modifier.padding(horizontal = 4.dp, vertical = 6.dp)) {
                     Text(
                         label(option),
                         style = MaterialTheme.typography.labelLarge,
-                        color = if (isSelected) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant,
+                        textAlign = TextAlign.Center,
+                        color = when {
+                            !isSelected -> colors.onSurfaceVariant
+                            onCard -> colors.onSurface
+                            else -> colors.onPrimary
+                        },
                     )
                 }
             }
@@ -219,17 +262,15 @@ fun <T> PillToggle(options: List<T>, selected: T, label: (T) -> String, onSelect
     }
 }
 
-/** Small rounded tag, e.g. "Prepodne" or "Nema nastave". */
+/** Small rounded tag, e.g. "Nema nastave". */
 @Composable
 fun Tag(text: String, container: Color, content: Color, modifier: Modifier = Modifier) {
     Text(
         text,
         style = MaterialTheme.typography.labelMedium,
         color = content,
-        modifier = modifier
-            .clip(CircleShape)
-            .background(container)
-            .padding(horizontal = 12.dp, vertical = 6.dp),
+        maxLines = 1,
+        modifier = modifier.clip(CircleShape).background(container).padding(horizontal = 10.dp, vertical = 3.dp),
     )
 }
 
@@ -237,20 +278,180 @@ fun Tag(text: String, container: Color, content: Color, modifier: Modifier = Mod
 @Composable
 fun EmptyState(emoji: String, title: String, hint: String? = null, modifier: Modifier = Modifier) {
     Column(
-        modifier.fillMaxWidth().padding(vertical = 32.dp, horizontal = 24.dp),
+        modifier.fillMaxWidth().padding(vertical = 24.dp, horizontal = 16.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(8.dp),
+        verticalArrangement = Arrangement.spacedBy(6.dp),
     ) {
-        Text(emoji, fontSize = 56.sp)
+        Text(emoji, fontSize = 52.sp)
         Text(title, style = MaterialTheme.typography.titleLarge, textAlign = TextAlign.Center)
         if (hint != null) {
-            Text(
-                hint,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                textAlign = TextAlign.Center,
-            )
+            Text(hint, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = TextAlign.Center)
         }
+    }
+}
+
+/** Round button that opens the parents' settings. */
+@Composable
+fun SettingsButton(onClick: () -> Unit) {
+    Surface(onClick = onClick, shape = CircleShape, color = MaterialTheme.colorScheme.surfaceContainerLowest, modifier = Modifier.size(44.dp)) {
+        Box(contentAlignment = Alignment.Center) {
+            Icon(Icons.Filled.Settings, contentDescription = "Podešavanja", tint = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+    }
+}
+
+/** Round back button for the settings pages. */
+@Composable
+fun BackButton(onClick: () -> Unit) {
+    Surface(onClick = onClick, shape = CircleShape, color = MaterialTheme.colorScheme.surfaceContainerLowest, modifier = Modifier.size(44.dp)) {
+        Box(contentAlignment = Alignment.Center) {
+            Text("‹", fontSize = 28.sp, color = MaterialTheme.colorScheme.onSurface, modifier = Modifier.padding(bottom = 4.dp))
+        }
+    }
+}
+
+/**
+ * Top row of a main tab: name pills to switch between children (only with two or more, so a child can tap their
+ * own name), or [title] with one child; [trailing] sits on the right.
+ */
+@Composable
+fun ChildTopRow(
+    children: List<Child>,
+    selectedId: String,
+    onSelect: (String) -> Unit,
+    title: String,
+    trailing: @Composable RowScope.() -> Unit,
+) {
+    Row(Modifier.fillMaxWidth().padding(top = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+        if (children.size > 1) {
+            Row(
+                Modifier.weight(1f).horizontalScroll(rememberScrollState()),
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+            ) {
+                children.forEach { c ->
+                    val selected = c.id == selectedId
+                    Surface(
+                        onClick = { onSelect(c.id) },
+                        shape = CircleShape,
+                        color = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceContainerLowest,
+                    ) {
+                        Row(Modifier.padding(start = 4.dp, end = 12.dp, top = 4.dp, bottom = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                            ChildAvatar(c.name, size = 30.dp)
+                            Spacer(Modifier.width(6.dp))
+                            Text(
+                                c.name.ifBlank { "Bez imena" },
+                                style = MaterialTheme.typography.labelLarge,
+                                color = if (selected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface,
+                            )
+                        }
+                    }
+                }
+            }
+        } else {
+            Text(title, style = MaterialTheme.typography.headlineMedium, modifier = Modifier.weight(1f), maxLines = 1, overflow = TextOverflow.Ellipsis)
+        }
+        Spacer(Modifier.width(8.dp))
+        trailing()
+    }
+}
+
+/**
+ * The big colored card at the top of a screen: an [eyebrow] line, a large [emoji] and [title], a [detail] line and,
+ * optionally, a ring counting down [ringMinutes] with [ringProgress] of the time already gone.
+ */
+@Composable
+fun HeroCard(
+    color: Color,
+    eyebrow: String,
+    emoji: String,
+    title: String,
+    detail: String?,
+    ringMinutes: Long? = null,
+    ringProgress: Float = 0f,
+    onClick: (() -> Unit)? = null,
+) {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = MaterialTheme.shapes.extraLarge,
+        color = heroColorOf(color),
+        contentColor = Color.White,
+    ) {
+        Column(
+            (if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier).padding(horizontal = 18.dp, vertical = 14.dp),
+            verticalArrangement = Arrangement.spacedBy(2.dp),
+        ) {
+            Text(eyebrow.uppercase(), style = MaterialTheme.typography.labelLarge, letterSpacing = 0.8.sp, color = Color.White.copy(alpha = 0.9f))
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(emoji, fontSize = 46.sp)
+                Spacer(Modifier.width(12.dp))
+                Column(Modifier.weight(1f)) {
+                    Text(title, style = MaterialTheme.typography.headlineSmall, color = Color.White)
+                    if (detail != null) {
+                        Text(detail, style = MaterialTheme.typography.bodyLarge, color = Color.White.copy(alpha = 0.92f))
+                    }
+                }
+                if (ringMinutes != null) {
+                    Spacer(Modifier.width(8.dp))
+                    CountdownRing(ringMinutes, ringProgress)
+                }
+            }
+        }
+    }
+}
+
+/** Ring that empties as time passes, with the minutes left in the middle. */
+@Composable
+private fun CountdownRing(minutes: Long, progress: Float) {
+    Box(Modifier.size(64.dp), contentAlignment = Alignment.Center) {
+        Canvas(Modifier.size(58.dp)) {
+            val stroke = Stroke(width = 7.dp.toPx(), cap = StrokeCap.Round)
+            drawArc(Color.White.copy(alpha = 0.25f), 0f, 360f, useCenter = false, style = stroke)
+            drawArc(Color.White, -90f, 360f * (1f - progress.coerceIn(0f, 1f)), useCenter = false, style = stroke)
+        }
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Text(if (minutes > 99) "${minutes / 60}h" else "$minutes", style = MaterialTheme.typography.titleLarge, color = Color.White, lineHeight = 20.sp)
+            if (minutes <= 99) Text("min", style = MaterialTheme.typography.labelSmall, color = Color.White, lineHeight = 11.sp)
+        }
+    }
+}
+
+/** Soft banner for notes such as a swapped timetable day or a one-day change. */
+@Composable
+fun NoteBanner(emoji: String, text: String, action: (@Composable () -> Unit)? = null) {
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .clip(MaterialTheme.shapes.medium)
+            .background(MaterialTheme.colorScheme.primaryContainer)
+            .padding(start = 14.dp, end = 6.dp, top = 6.dp, bottom = 6.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(emoji, fontSize = 18.sp)
+        Spacer(Modifier.width(10.dp))
+        Text(
+            text,
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurface,
+            modifier = Modifier.weight(1f).padding(vertical = 6.dp),
+        )
+        action?.invoke()
+    }
+}
+
+/** Dashed outline button for "add" actions at the end of a list. */
+@Composable
+fun DashedButton(text: String, onClick: () -> Unit, modifier: Modifier = Modifier) {
+    Box(
+        modifier
+            .fillMaxWidth()
+            .heightIn(min = 48.dp)
+            .clip(MaterialTheme.shapes.large)
+            .border(BorderStroke(2.dp, MaterialTheme.colorScheme.outlineVariant), MaterialTheme.shapes.large)
+            .clickable(onClick = onClick)
+            .padding(10.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(text, style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary)
     }
 }
 
