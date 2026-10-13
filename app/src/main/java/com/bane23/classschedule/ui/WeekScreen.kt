@@ -1,28 +1,36 @@
 package com.bane23.classschedule.ui
 
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.material3.Card
-import androidx.compose.material3.FilterChip
-import androidx.compose.material3.HorizontalDivider
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.bane23.classschedule.data.Child
+import com.bane23.classschedule.data.ExtraClass
 import com.bane23.classschedule.data.SCHOOL_DAYS
 import com.bane23.classschedule.data.Shift
 import com.bane23.classschedule.data.ShiftMode
@@ -33,7 +41,7 @@ import java.time.LocalDate
 
 private data class WeekEdit(val day: DayOfWeek, val index: Int, val subject: String)
 
-/** The regular weekly timetable for one shift; tapping a period edits it permanently. */
+/** The regular weekly timetable for one shift, one day at a time; tapping a period edits it permanently. */
 @Composable
 fun WeekScreen(
     child: Child,
@@ -41,78 +49,74 @@ fun WeekScreen(
     onSubjectUsed: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val currentShift = child.shiftOn(LocalDate.now())
+    val today = LocalDate.now()
+    val currentShift = child.shiftOn(today)
     var shift by rememberSaveable(child.id) { mutableStateOf(currentShift) }
+    var dayIndex by rememberSaveable { mutableIntStateOf(SCHOOL_DAYS.indexOf(today.dayOfWeek).coerceAtLeast(0)) }
     var editing by remember { mutableStateOf<WeekEdit?>(null) }
     val timetable = child.timetable(shift)
     val showBothShifts = child.shiftMode == ShiftMode.WEEKLY || child.shiftMode == ShiftMode.MONTHLY
+    val day = SCHOOL_DAYS[dayIndex]
+    val subjects = timetable.lessonsFor(day)
 
     LazyColumn(
-        modifier.fillMaxSize().padding(horizontal = 16.dp),
+        modifier.fillMaxSize(),
+        contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 8.dp, bottom = 24.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         item {
-            Column(Modifier.padding(top = 16.dp)) {
-                if (showBothShifts) {
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Shift.entries.forEach { s ->
-                            FilterChip(selected = shift == s, onClick = { shift = s }, label = { Text(s.shortLabel()) })
-                        }
-                    }
-                    Text(
-                        "Trenutno: ${currentShift.label().lowercase()}",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                } else {
-                    Text(shift.label(), style = MaterialTheme.typography.titleSmall)
-                }
-                Text(
-                    "Dodirni čas da upišeš ili promeniš predmet u redovnom rasporedu.",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(top = 4.dp),
+            ScreenHeader(
+                title = "Nedeljni raspored",
+                subtitle = if (showBothShifts) "Ove nedelje: ${currentShift.label().lowercase()}" else shift.label(),
+            )
+        }
+        if (showBothShifts) {
+            item {
+                PillToggle(
+                    options = Shift.entries,
+                    selected = shift,
+                    label = { (if (it == Shift.MORNING) "☀️ " else "🌙 ") + it.shortLabel() },
+                    onSelect = { shift = it },
                 )
             }
         }
-        SCHOOL_DAYS.forEach { day ->
-            item(key = day.name) {
-                Card(Modifier.fillMaxWidth()) {
-                    Column(Modifier.padding(vertical = 8.dp)) {
-                        Text(
-                            day.label(),
-                            style = MaterialTheme.typography.titleMedium,
-                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
-                        )
-                        val subjects = timetable.lessonsFor(day)
-                        timetable.periods.forEachIndexed { index, period ->
-                            if (index > 0) HorizontalDivider()
-                            val subject = subjects.getOrNull(index).orEmpty()
-                            Row(
-                                Modifier
-                                    .fillMaxWidth()
-                                    .clickable { editing = WeekEdit(day, index, subject) }
-                                    .padding(horizontal = 16.dp, vertical = 10.dp),
-                            ) {
-                                Text(timetable.periodNumber(index), Modifier.width(32.dp))
-                                Text(
-                                    period.label(),
-                                    Modifier.width(112.dp),
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                )
-                                Text(
-                                    subject.ifBlank { "—" },
-                                    color = if (subject.isBlank()) MaterialTheme.colorScheme.onSurfaceVariant
-                                    else MaterialTheme.colorScheme.onSurface,
-                                )
-                            }
-                        }
-                    }
+        item {
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                SCHOOL_DAYS.forEachIndexed { i, d ->
+                    DayChip(
+                        day = d,
+                        count = timetable.lessonsFor(d).count { it.isNotBlank() },
+                        selected = i == dayIndex,
+                        isToday = d == today.dayOfWeek,
+                        onClick = { dayIndex = i },
+                        modifier = Modifier.weight(1f),
+                    )
                 }
             }
         }
-        item { Text("", Modifier.padding(bottom = 8.dp)) }
+        item {
+            Row(verticalAlignment = Alignment.Bottom, modifier = Modifier.padding(top = 8.dp)) {
+                SectionLabel(day.label(), Modifier.weight(1f))
+                Text(
+                    "Dodirni čas za upis",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }
+        item {
+            AppCard(contentPadding = PaddingValues(vertical = 8.dp)) {
+                timetable.periods.forEachIndexed { index, period ->
+                    val subject = subjects.getOrNull(index).orEmpty()
+                    PeriodRow(
+                        number = timetable.periodNumber(index),
+                        time = period.label(),
+                        subject = subject,
+                        onClick = { editing = WeekEdit(day, index, subject) },
+                    )
+                }
+            }
+        }
     }
 
     editing?.let { edit ->
@@ -131,5 +135,68 @@ fun WeekScreen(
                 editing = null
             },
         )
+    }
+}
+
+/** A weekday button: short name and the number of classes, so empty days stand out. */
+@Composable
+private fun DayChip(day: DayOfWeek, count: Int, selected: Boolean, isToday: Boolean, onClick: () -> Unit, modifier: Modifier) {
+    val colors = MaterialTheme.colorScheme
+    Surface(
+        onClick = onClick,
+        modifier = modifier.height(64.dp),
+        shape = MaterialTheme.shapes.medium,
+        color = if (selected) colors.primary else colors.surfaceContainerLowest,
+        border = if (isToday && !selected) BorderStroke(2.dp, colors.primary) else null,
+        shadowElevation = if (selected) 2.dp else 1.dp,
+    ) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
+            Text(
+                day.shortLabel(),
+                style = MaterialTheme.typography.titleSmall,
+                color = if (selected) colors.onPrimary else colors.onSurface,
+            )
+            Text(
+                if (count == 0) "—" else "$count",
+                style = MaterialTheme.typography.bodySmall,
+                color = if (selected) colors.onPrimary.copy(alpha = 0.8f) else colors.onSurfaceVariant,
+            )
+        }
+    }
+}
+
+@Composable
+private fun PeriodRow(number: String, time: String, subject: String, onClick: () -> Unit) {
+    val (kind, name) = ExtraClass.parse(subject)
+    Surface(onClick = onClick, color = Color.Transparent) {
+        Row(
+            Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            if (subject.isBlank()) {
+                Box(
+                    Modifier
+                        .size(44.dp)
+                        .border(1.5.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(15.dp)),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Text("+", fontSize = 20.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            } else {
+                SubjectBadge(subject, size = 44.dp)
+            }
+            Column(Modifier.weight(1f).padding(horizontal = 12.dp)) {
+                if (kind != null) {
+                    Text(kind.prefix.uppercase(), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.tertiary)
+                }
+                Text(
+                    if (subject.isBlank()) "Slobodan čas" else name,
+                    style = MaterialTheme.typography.titleMedium,
+                    color = if (subject.isBlank()) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurface,
+                )
+                Text(time, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+            Text(number, style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
     }
 }

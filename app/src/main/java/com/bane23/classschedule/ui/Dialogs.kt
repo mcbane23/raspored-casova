@@ -132,6 +132,7 @@ fun SubjectPickerDialog(
                         matches.forEach { subject ->
                             DropdownMenuItem(
                                 text = { Text(subject) },
+                                leadingIcon = { Text(subjectStyle(subject).emoji) },
                                 onClick = {
                                     text = subject
                                     expanded = false

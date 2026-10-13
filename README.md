@@ -31,6 +31,12 @@ Add a new `SchoolYear` there each summer once the ministry publishes the next ye
 - **Parent alarm:** an optional notification when the day's last class ends (or 5/10/15 minutes before), following
   the shift, the school calendar and one-day changes. It uses inexact alarms, so no exact-alarm permission is needed.
 
+**Design:** a fixed, friendly palette (off-white base, indigo actions, sunny-yellow highlights) in light and dark
+mode, rounded cards and a colored emoji badge per subject (`ui/Components.kt`) so younger children can recognize
+classes without reading. The Today tab opens with a status card (current class with a progress bar, break, or
+"classes are over"), the Week tab shows one weekday at a time, and the Calendar tab leads with a countdown to the
+next break.
+
 Data is stored locally on the phone (`data.json` in the app's private storage).
 
 See [docs/google-play.md](docs/google-play.md) for the Play Console checklist and listing texts, and
