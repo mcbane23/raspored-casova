@@ -314,7 +314,13 @@ private fun AlarmSettings(child: Child, viewModel: AppViewModel) {
     fun sendTest() {
         val end = child.classesEndOn(LocalDate.now())
         val text = if (end != null) "Probno obaveštenje. Danas se časovi završavaju u ${end.label()}." else "Probno obaveštenje radi."
-        testBlocked = !AlarmReceiver.showNotification(context, TEST_NOTIFICATION_ID, child.name.ifBlank { "Raspored časova" }, text)
+        testBlocked = !AlarmReceiver.showNotification(
+            context,
+            TEST_NOTIFICATION_ID,
+            child.name.ifBlank { "Raspored časova" },
+            text,
+            alarmSound = child.alarmSound,
+        )
     }
 
     val testPermissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
@@ -359,6 +365,19 @@ private fun AlarmSettings(child: Child, viewModel: AppViewModel) {
             label = { if (it == 0) "Na kraju" else "$it min" },
             onSelect = { viewModel.setAlarmMinutesBefore(child.id, it) },
         )
+        Row(
+            Modifier.fillMaxWidth().clickable { viewModel.setAlarmSound(child.id, !child.alarmSound) },
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Column(Modifier.weight(1f)) {
+                Text("Zvuk alarma")
+                Hint(
+                    if (child.alarmSound) "Glasan alarm koji zvoni dok ne otvoriš obaveštenje"
+                    else "Isključeno: obaveštenje sa zvukom školskog zvona",
+                )
+            }
+            Switch(checked = child.alarmSound, onCheckedChange = { viewModel.setAlarmSound(child.id, it) })
+        }
     }
     OutlinedButton(
         onClick = {

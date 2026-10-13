@@ -113,6 +113,8 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
 
     fun setAlarmMinutesBefore(id: String, minutes: Int) = updateChild(id) { it.copy(alarmMinutesBefore = minutes) }
 
+    fun setAlarmSound(id: String, alarmSound: Boolean) = updateChild(id) { it.copy(alarmSound = alarmSound) }
+
     /** Adds a child received by QR code, or copies its timetable and settings onto the child [replaceId]. */
     fun importChild(shared: Child, replaceId: String?) = save { data ->
         if (replaceId == null) {
@@ -127,6 +129,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
                     overrides = it.overrides,
                     alarmEnabled = it.alarmEnabled,
                     alarmMinutesBefore = it.alarmMinutesBefore,
+                    alarmSound = it.alarmSound,
                 )
             },
         )

@@ -17,7 +17,7 @@ object ShareCodec {
     private val json = Json { encodeDefaults = false; ignoreUnknownKeys = true }
 
     fun encode(child: Child): String {
-        val shared = child.copy(overrides = emptyList(), alarmEnabled = false, alarmMinutesBefore = 0)
+        val shared = child.copy(overrides = emptyList(), alarmEnabled = false, alarmMinutesBefore = 0, alarmSound = false)
         val raw = json.encodeToString(Child.serializer(), shared).toByteArray(Charsets.UTF_8)
         val deflater = Deflater(Deflater.BEST_COMPRESSION).apply {
             setInput(raw)
