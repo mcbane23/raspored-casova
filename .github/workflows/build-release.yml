@@ -46,7 +46,7 @@ jobs:
           SIGNING_KEYSTORE_BASE64: ${{ secrets.SIGNING_KEYSTORE_BASE64 }}
         run: |
           if [ -z "$SIGNING_KEYSTORE_BASE64" ]; then
-            echo "::warning::Secret SIGNING_KEYSTORE_BASE64 nije podesen, release ce imati samo debug APK. Pogledaj README."
+            echo "::warning::Secret SIGNING_KEYSTORE_BASE64 is not set, the release will contain only the debug APK. See README."
             exit 0
           fi
           echo "$SIGNING_KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/upload.jks"
@@ -87,6 +87,6 @@ jobs:
           gh release list --limit 1000 --json tagName,createdAt \
             --jq "sort_by(.createdAt) | reverse | .[$KEEP_RELEASES:] | .[].tagName" |
           while read -r tag; do
-            echo "Brisem stari release $tag"
+            echo "Deleting old release $tag"
             gh release delete "$tag" --yes --cleanup-tag
           done
