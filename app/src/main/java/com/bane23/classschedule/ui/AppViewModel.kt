@@ -13,6 +13,7 @@ import com.bane23.classschedule.data.ExtraClass
 import com.bane23.classschedule.data.Region
 import com.bane23.classschedule.data.Shift
 import com.bane23.classschedule.data.ShiftMode
+import com.bane23.classschedule.data.ThemeMode
 import com.bane23.classschedule.data.Timetable
 import com.bane23.classschedule.data.shiftOn
 import com.bane23.classschedule.data.withDayChange
@@ -49,6 +50,8 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun selectChild(id: String) = save { it.copy(selectedChildId = id) }
+
+    fun setTheme(theme: ThemeMode) = save { it.copy(theme = theme) }
 
     fun addChild(name: String) {
         val child = Child(name = name.trim().ifEmpty { "Dete" }, referenceEpochDay = LocalDate.now().toEpochDay())
@@ -110,6 +113,8 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
 
     fun setAlarmMinutesBefore(id: String, minutes: Int) = updateChild(id) { it.copy(alarmMinutesBefore = minutes) }
 
+    fun setAlarmSound(id: String, alarmSound: Boolean) = updateChild(id) { it.copy(alarmSound = alarmSound) }
+
     /** Adds a child received by QR code, or copies its timetable and settings onto the child [replaceId]. */
     fun importChild(shared: Child, replaceId: String?) = save { data ->
         if (replaceId == null) {
@@ -124,6 +129,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
                     overrides = it.overrides,
                     alarmEnabled = it.alarmEnabled,
                     alarmMinutesBefore = it.alarmMinutesBefore,
+                    alarmSound = it.alarmSound,
                 )
             },
         )

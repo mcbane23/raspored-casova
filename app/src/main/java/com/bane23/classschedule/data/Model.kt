@@ -184,6 +184,8 @@ data class Child(
     val alarmEnabled: Boolean = false,
     /** How many minutes before the end of the last class the notification comes (0 = at the end). */
     val alarmMinutesBefore: Int = 0,
+    /** Ring like an alarm clock (alarm volume, repeating) instead of the school-bell notification sound. */
+    val alarmSound: Boolean = false,
 ) {
     fun timetable(shift: Shift): Timetable = if (shift == Shift.MORNING) morning else afternoon
 
@@ -191,10 +193,15 @@ data class Child(
         if (shift == Shift.MORNING) copy(morning = timetable) else copy(afternoon = timetable)
 }
 
+/** App color theme; [SYSTEM] follows the phone's light or dark setting. */
+@Serializable
+enum class ThemeMode { SYSTEM, LIGHT, DARK }
+
 @Serializable
 data class AppData(
     val children: List<Child> = emptyList(),
     val selectedChildId: String? = null,
+    val theme: ThemeMode = ThemeMode.SYSTEM,
     /** Format version of the saved data; files written before versioning count as 1. */
     val dataVersion: Int = 1,
 )
