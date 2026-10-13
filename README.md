@@ -3,6 +3,17 @@
 Android aplikacija za praćenje rasporeda časova, školskog kalendara (praznici i raspusti) i roditeljskog
 obaveštenja kada se časovi za taj dan završe. Podržava prepodnevnu i popodnevnu smenu.
 
+## Funkcije
+
+- **Danas:** časovi za izabrani dan sa vremenom zvona i smenom. Dodirom na čas on se menja ili otkazuje samo za taj
+  dan (npr. Srpski umesto Engleskog, ili nema Fizičkog), a dodaje se i čas samo za taj dan. Izmene za prošle dane se
+  same brišu.
+- **Nedelja:** redovni raspored od ponedeljka do petka, posebno za prepodnevnu i popodnevnu smenu.
+- **Podešavanja:** više dece (jedno po defaultu), škola, smena (uvek prepodne, uvek popodne, menja se nedeljno ili
+  mesečno, uz izbor koja je smena ove nedelje/meseca) i vreme zvona za svaku smenu.
+
+Podaci se čuvaju lokalno na telefonu (`data.json` u privatnom prostoru aplikacije).
+
 ## Build
 
 ```bash
