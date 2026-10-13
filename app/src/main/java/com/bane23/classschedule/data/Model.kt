@@ -42,31 +42,6 @@ val DEFAULT_SUBJECTS: List<String> = listOf(
 @Serializable
 enum class Shift { MORNING, AFTERNOON }
 
-/** Subjects of Serbian primary school (grades 1–8), offered until the parent edits the list. */
-val DEFAULT_SUBJECTS: List<String> = listOf(
-    "Srpski jezik",
-    "Matematika",
-    "Engleski jezik",
-    "Svet oko nas",
-    "Priroda i društvo",
-    "Likovna kultura",
-    "Muzička kultura",
-    "Fizičko i zdravstveno vaspitanje",
-    "Istorija",
-    "Geografija",
-    "Biologija",
-    "Fizika",
-    "Hemija",
-    "Tehnika i tehnologija",
-    "Informatika i računarstvo",
-    "Drugi strani jezik",
-    "Verska nastava",
-    "Građansko vaspitanje",
-    "Čas odeljenskog starešine",
-    "Dopunska nastava",
-    "Dodatna nastava",
-)
-
 @Serializable
 enum class ShiftMode {
     /** Always the morning shift. */
