@@ -9,8 +9,9 @@ Checklist and texts for the Google Play Console listing.
 3. Enable **Play App Signing** and upload the AAB from the latest GitHub release.
 4. Paste the privacy policy URL in Play Console: https://mcbane23.github.io/privacy/raspored-casova/ (published
    from the public `mcbane23/privacy` repository; keep it in sync with `docs/privacy-policy.md`).
-5. Store graphics: a 512×512 icon and a 1024×500 feature graphic were generated for the first listing (kept outside
-   the repository); phone screenshots must be taken from the app (at least 2).
+5. Store graphics (kept outside the repository, in the project's shared files under `play-store/v2/`): the 512×512
+   "calendar and bell" icon (same artwork as the launcher icon), six 1080×1920 phone screenshots with Serbian
+   captions, and two 1024×500 feature graphic variants.
 
 ## App content answers
 
