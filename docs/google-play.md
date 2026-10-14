@@ -28,7 +28,7 @@ Checklist and texts for the Google Play Console listing.
 
 ## Permissions declared
 
-- `POST_NOTIFICATIONS` – the optional "classes are over" reminder.
+- `POST_NOTIFICATIONS` – the optional "classes are over" and "pack the bag" reminders.
 - `RECEIVE_BOOT_COMPLETED` – reschedules that reminder after a restart.
 - `CAMERA` (from the zxing-android-embedded scanner) – scanning a shared timetable QR code.
 
@@ -54,6 +54,7 @@ stalna.
 sledećeg raspusta. Podržani su centralna Srbija i Vojvodina, kao i raniji kraj nastave za osmi razred.
 • Događaji škole – dodajte Dan škole, školsku slavu ili druge slobodne dane.
 • Roditeljski alarm – obaveštenje kad se završi poslednji čas (ili nekoliko minuta ranije).
+• Podsetnik za torbu – uveče pred školski dan podseća dete šta da spakuje za sutra.
 • Više dece – svako dete ima svoj raspored, smenu i kalendar.
 • Spisak predmeta – izaberite predmet iz liste umesto kucanja, uz dopunsku i dodatnu nastavu iz bilo kog predmeta.
 • Pretčas – za smene koje počinju pretčasom.

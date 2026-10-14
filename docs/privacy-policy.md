@@ -17,7 +17,7 @@ third-party SDKs that collect data. The app does not request internet access.
 
 ## Permissions
 
-- **Notifications** – used only to show the "classes are over" reminder you turn on in Settings.
+- **Notifications** – used only to show the "classes are over" and "pack the bag" reminders you turn on in Settings.
 - **Run at startup** – used only to restore that reminder after the phone restarts.
 - **Camera** – used only while you scan a timetable QR code shared from another phone. Camera images are not
   saved or sent anywhere.
@@ -52,7 +52,7 @@ through the Google Play listing.
 
 Sve što uneseš u aplikaciju (imena dece, škola, raspored, predmeti, zvona, događaji, alarm) čuva se **samo na
 tvom telefonu**. Aplikacija nema nalog, server ni analitiku, ne šalje i ne deli nikakve podatke i ne koristi
-internet. Dozvola za obaveštenja služi samo za podsetnik o kraju nastave, a dozvola za pokretanje pri uključivanju
+internet. Dozvola za obaveštenja služi samo za podsetnike o kraju nastave i pakovanju torbe, a dozvola za pokretanje pri uključivanju
 telefona samo da se taj podsetnik vrati posle restarta. Kamera se koristi samo dok skeniraš QR kod rasporeda sa
 drugog telefona; slike se ne čuvaju niti šalju. Podaci se brišu deinstalacijom aplikacije ili brisanjem
 njene memorije u podešavanjima telefona.

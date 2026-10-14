@@ -43,10 +43,12 @@ import com.bane23.classschedule.data.ShiftMode
 import com.bane23.classschedule.data.ThemeMode
 import com.bane23.classschedule.data.Timetable
 import com.bane23.classschedule.data.nextAlarm
+import com.bane23.classschedule.data.nextPackReminder
 import com.bane23.classschedule.data.packNote
 import com.bane23.classschedule.data.shiftOn
 import java.time.LocalDate
 import java.time.LocalDateTime
+import java.time.LocalTime
 
 /** Settings pages for parents, opened from the round button at the top right of the main tabs. */
 sealed interface SettingsPage {
@@ -138,7 +140,7 @@ private enum class AlarmTone(val label: String, val hint: String) {
     SILENT("🔕 Bez zvuka", "Samo obaveštenje, bez zvuka."),
 }
 
-/** Everything about one child: name and school, shifts, the parent alarm, the calendar and links to bells and subjects. */
+/** Everything about one child: name and school, shifts, the parent alarm, the packing reminder, the calendar and links to bells and subjects. */
 @Composable
 fun ChildSettingsScreen(
     data: AppData,
@@ -152,6 +154,9 @@ fun ChildSettingsScreen(
     var confirmDelete by remember { mutableStateOf(false) }
     var showQr by remember { mutableStateOf(false) }
     val setAlarm = rememberAlarmSwitch(viewModel)
+    val setPackReminder = rememberPackReminderSwitch(viewModel)
+    val packTest = rememberTestNotification(child, pack = true)
+    var pickingPackTime by remember { mutableStateOf(false) }
     val batteryRestricted = rememberBatteryRestricted()
     val context = LocalContext.current
     val today = LocalDate.now()
@@ -272,6 +277,67 @@ fun ChildSettingsScreen(
             }
         }
 
+        SettingsGroup("Podsetnik za torbu") {
+            val next = if (child.packReminderEnabled) child.nextPackReminder(LocalDateTime.now()) else null
+            SettingsRow(
+                title = "Podseti da se spakuje torba",
+                subtitle = when {
+                    !child.packReminderEnabled -> "Uveče pred školski dan, sa spiskom „Sutra u torbu”"
+                    next == null -> "Uključeno"
+                    next.toLocalDate() == today -> "Sledeće: danas u ${next.toLocalTime().label()}"
+                    else -> "Sledeće: ${next.toLocalDate().label().lowercase()} u ${next.toLocalTime().label()}"
+                },
+                emoji = "🎒",
+                trailing = { Switch(checked = child.packReminderEnabled, onCheckedChange = { setPackReminder(child.id, it) }) },
+                onClick = { setPackReminder(child.id, !child.packReminderEnabled) },
+            )
+            if (child.packReminderEnabled) {
+                RowDivider()
+                SettingsRow(
+                    title = "Vreme",
+                    emoji = "🕖",
+                    value = LocalTime.of(child.packReminderMinute / 60, child.packReminderMinute % 60).label(),
+                    chevron = true,
+                    onClick = { pickingPackTime = true },
+                )
+                RowDivider()
+                Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("Zvuk", style = MaterialTheme.typography.titleSmall)
+                    val tone = when {
+                        child.packReminderSilent -> AlarmTone.SILENT
+                        child.packReminderSound -> AlarmTone.ALARM
+                        else -> AlarmTone.BELL
+                    }
+                    PillToggle(
+                        AlarmTone.entries,
+                        tone,
+                        { it.label },
+                        { viewModel.setPackReminderSound(child.id, alarmSound = it == AlarmTone.ALARM, silent = it == AlarmTone.SILENT) },
+                        onCard = true,
+                    )
+                    Hint(tone.hint)
+                }
+                RowDivider()
+                SettingsRow(
+                    title = "Pošalji probni podsetnik",
+                    subtitle = if (packTest.blocked) "Obaveštenja su isključena za ovu aplikaciju. Uključi ih u podešavanjima telefona."
+                    else "Da vidiš kako izgleda i zvuči",
+                    emoji = "🔔",
+                    onClick = packTest.send,
+                )
+                if (batteryRestricted) {
+                    RowDivider()
+                    SettingsRow(
+                        title = "Isključi uštedu baterije",
+                        subtitle = "Da podsetnik stigne i kad je aplikacija zatvorena. Izaberi „Bez ograničenja”.",
+                        emoji = "🔋",
+                        chevron = true,
+                        onClick = { openBatterySettings(context) },
+                    )
+                }
+            }
+        }
+
         SettingsGroup("Raspored") {
             SettingsRow("Zvona", subtitle = "Kad počinje i završava svaki čas", emoji = "⏰", chevron = true, onClick = onOpenBells)
             RowDivider()
@@ -302,6 +368,17 @@ fun ChildSettingsScreen(
     }
 
     if (showQr) QrCodeDialog(child, onDismiss = { showQr = false })
+    if (pickingPackTime) {
+        TimeInputDialog(
+            title = "Vreme podsetnika",
+            initialMinute = child.packReminderMinute,
+            onDismiss = { pickingPackTime = false },
+            onConfirm = {
+                viewModel.setPackReminderMinute(child.id, it)
+                pickingPackTime = false
+            },
+        )
+    }
     if (confirmDelete) {
         AlertDialog(
             onDismissRequest = { confirmDelete = false },

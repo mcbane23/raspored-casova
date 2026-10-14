@@ -188,6 +188,14 @@ data class Child(
     val alarmSound: Boolean = false,
     /** A plain notification without any sound; takes precedence over [alarmSound]. */
     val alarmSilent: Boolean = false,
+    /** Remind the child in the evening before a school day to pack the bag. */
+    val packReminderEnabled: Boolean = false,
+    /** Time of the packing reminder, in minutes since midnight. */
+    val packReminderMinute: Int = DEFAULT_PACK_REMINDER_MINUTE,
+    /** Ring like an alarm clock for the packing reminder; see [alarmSound]. */
+    val packReminderSound: Boolean = false,
+    /** A packing reminder without any sound; takes precedence over [packReminderSound]. */
+    val packReminderSilent: Boolean = false,
     /** What to bring for a subject (e.g. "patike i majica"), keyed by subject name; shown in the packing list. */
     val packNotes: Map<String, String> = emptyMap(),
     /** School day the [packed] ticks belong to; ticks for any other day are ignored. */
@@ -200,6 +208,9 @@ data class Child(
     fun withTimetable(shift: Shift, timetable: Timetable): Child =
         if (shift == Shift.MORNING) copy(morning = timetable) else copy(afternoon = timetable)
 }
+
+/** Default time of the packing reminder: 19:00. */
+const val DEFAULT_PACK_REMINDER_MINUTE = 19 * 60
 
 /** App color theme; [SYSTEM] follows the phone's light or dark setting. Light is the default. */
 @Serializable
