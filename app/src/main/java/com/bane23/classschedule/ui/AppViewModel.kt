@@ -115,7 +115,8 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
 
     fun setAlarmMinutesBefore(id: String, minutes: Int) = updateChild(id) { it.copy(alarmMinutesBefore = minutes) }
 
-    fun setAlarmSound(id: String, alarmSound: Boolean) = updateChild(id) { it.copy(alarmSound = alarmSound) }
+    fun setAlarmSound(id: String, alarmSound: Boolean, silent: Boolean) =
+        updateChild(id) { it.copy(alarmSound = alarmSound, alarmSilent = silent) }
 
     fun setPackNote(id: String, subject: String, note: String) = updateChild(id) { it.withPackNote(subject, note) }
 
@@ -139,6 +140,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
                     alarmEnabled = it.alarmEnabled,
                     alarmMinutesBefore = it.alarmMinutesBefore,
                     alarmSound = it.alarmSound,
+                    alarmSilent = it.alarmSilent,
                     packedForEpochDay = it.packedForEpochDay,
                     packed = it.packed,
                 )

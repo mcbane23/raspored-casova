@@ -38,8 +38,9 @@ Add a new `SchoolYear` there each summer once the ministry publishes the next ye
   settings are not shared. The code is deflate-compressed JSON (`data/ShareCodec.kt`).
 - **Parent alarm:** an optional notification when the day's last class ends (or 5/10/15 minutes before), following
   the shift, the school calendar and one-day changes. Alarms fire with the app closed and in Doze, and are rescheduled after a reboot, app update or clock change; no exact-alarm permission is needed. When battery optimization is on, the child's settings show a shortcut to turn it off. By default it plays a short school-bell chime
-  (`res/raw/school_bell.wav`, generated for this app); the "Zvuk alarma" switch makes it ring with the phone's alarm
-  tone at alarm volume, repeating until the notification is opened or dismissed.
+  (`res/raw/school_bell.wav`, generated for this app); the "Zvuk" choice "Alarm" makes it ring with the phone's alarm
+  tone at alarm volume, repeating until the notification is opened or dismissed, and "Bez zvuka" posts a plain
+  notification without any sound.
 
 **Design ("Stanice"):** a cool blue-white base (deep night blue in the dark theme) with one tangerine accent, the
 rounded [Baloo 2](https://github.com/EkType/Baloo2) font (SIL Open Font License 1.1, bundled in `res/font`, cut down

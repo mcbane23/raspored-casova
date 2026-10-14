@@ -66,6 +66,7 @@ fun rememberTestNotification(child: Child): TestNotification {
             child.name.ifBlank { "Raspored časova" },
             text,
             alarmSound = child.alarmSound,
+            silent = child.alarmSilent,
         )
     }
 

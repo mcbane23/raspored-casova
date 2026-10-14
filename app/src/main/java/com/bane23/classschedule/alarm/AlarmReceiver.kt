@@ -38,23 +38,42 @@ class AlarmReceiver : BroadcastReceiver() {
             } else {
                 "Časovi se završavaju u ${end.label()}."
             }
-            showNotification(context, child.id.hashCode(), child.name, text, alarmSound = child.alarmSound)
+            showNotification(
+                context,
+                child.id.hashCode(),
+                child.name,
+                text,
+                alarmSound = child.alarmSound,
+                silent = child.alarmSilent,
+            )
         }
         AlarmScheduler.schedule(context, child)
     }
 
     companion object {
-        /** Before custom sounds there was one channel; it is removed so it no longer shows in the phone's settings. */
-        private const val OLD_CHANNEL_ID = "classes_over"
-        private const val BELL_CHANNEL_ID = "classes_over_bell"
+        /**
+         * Channels from earlier versions, removed so they no longer show in the phone's settings: the single channel
+         * from before custom sounds, and the first bell channel, whose sound URI used the resource id (which can
+         * change between builds) instead of the resource name.
+         */
+        private val OLD_CHANNEL_IDS = listOf("classes_over", "classes_over_bell")
+        private const val BELL_CHANNEL_ID = "classes_over_bell_v2"
         private const val ALARM_CHANNEL_ID = "classes_over_alarm"
+        private const val SILENT_CHANNEL_ID = "classes_over_silent"
 
         /**
          * Posts a notification; returns false when notifications are not allowed. With [alarmSound] it uses the
          * phone's alarm tone at alarm volume and repeats it until the notification is opened or dismissed,
-         * otherwise it plays the app's school-bell chime once.
+         * with [silent] it makes no sound at all, otherwise it plays the app's school-bell chime once.
          */
-        fun showNotification(context: Context, id: Int, title: String, text: String, alarmSound: Boolean): Boolean {
+        fun showNotification(
+            context: Context,
+            id: Int,
+            title: String,
+            text: String,
+            alarmSound: Boolean,
+            silent: Boolean,
+        ): Boolean {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
                 ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) !=
                 PackageManager.PERMISSION_GRANTED
@@ -68,25 +87,31 @@ class AlarmReceiver : BroadcastReceiver() {
                 Intent(context, MainActivity::class.java),
                 PendingIntent.FLAG_IMMUTABLE,
             )
-            val notification = NotificationCompat.Builder(context, if (alarmSound) ALARM_CHANNEL_ID else BELL_CHANNEL_ID)
+            val ringing = alarmSound && !silent
+            val channel = when {
+                silent -> SILENT_CHANNEL_ID
+                alarmSound -> ALARM_CHANNEL_ID
+                else -> BELL_CHANNEL_ID
+            }
+            val notification = NotificationCompat.Builder(context, channel)
                 .setSmallIcon(R.drawable.ic_notification)
                 .setContentTitle(title)
                 .setContentText(text)
                 .setContentIntent(open)
                 .setAutoCancel(true)
                 .setPriority(NotificationCompat.PRIORITY_HIGH)
-                .setCategory(if (alarmSound) NotificationCompat.CATEGORY_ALARM else NotificationCompat.CATEGORY_REMINDER)
+                .setCategory(if (ringing) NotificationCompat.CATEGORY_ALARM else NotificationCompat.CATEGORY_REMINDER)
                 .build()
-            if (alarmSound) notification.flags = notification.flags or Notification.FLAG_INSISTENT
+            if (ringing) notification.flags = notification.flags or Notification.FLAG_INSISTENT
             NotificationManagerCompat.from(context).notify(id, notification)
             return true
         }
 
         fun ensureChannels(context: Context) {
             val manager = context.getSystemService(NotificationManager::class.java) ?: return
-            manager.deleteNotificationChannel(OLD_CHANNEL_ID)
+            OLD_CHANNEL_IDS.forEach { manager.deleteNotificationChannel(it) }
 
-            val bell = Uri.parse("${ContentResolver.SCHEME_ANDROID_RESOURCE}://${context.packageName}/${R.raw.school_bell}")
+            val bell = Uri.parse("${ContentResolver.SCHEME_ANDROID_RESOURCE}://${context.packageName}/raw/school_bell")
             val bellAudio = AudioAttributes.Builder()
                 .setUsage(AudioAttributes.USAGE_NOTIFICATION)
                 .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
@@ -109,6 +134,13 @@ class AlarmReceiver : BroadcastReceiver() {
                     description = "Glasan zvuk alarma kad se završe časovi"
                     setSound(alarmTone, alarmAudio)
                     enableVibration(true)
+                },
+            )
+
+            manager.createNotificationChannel(
+                NotificationChannel(SILENT_CHANNEL_ID, "Kraj nastave (bez zvuka)", NotificationManager.IMPORTANCE_HIGH).apply {
+                    description = "Obaveštenje bez zvuka kad se završe časovi"
+                    setSound(null, null)
                 },
             )
         }

@@ -132,6 +132,12 @@ private fun appVersion(context: Context): String =
 
 private val ALARM_OFFSETS = listOf(0, 5, 10, 15)
 
+private enum class AlarmTone(val label: String, val hint: String) {
+    BELL("🛎️ Zvono", "Obaveštenje sa kratkim zvukom školskog zvona."),
+    ALARM("⏰ Alarm", "Zvoni kao budilnik dok ne otvoriš obaveštenje."),
+    SILENT("🔕 Bez zvuka", "Samo obaveštenje, bez zvuka."),
+}
+
 /** Everything about one child: name and school, shifts, the parent alarm, the calendar and links to bells and subjects. */
 @Composable
 fun ChildSettingsScreen(
@@ -239,17 +245,19 @@ fun ChildSettingsScreen(
                         onCard = true,
                     )
                     Text("Zvuk", style = MaterialTheme.typography.titleSmall)
+                    val tone = when {
+                        child.alarmSilent -> AlarmTone.SILENT
+                        child.alarmSound -> AlarmTone.ALARM
+                        else -> AlarmTone.BELL
+                    }
                     PillToggle(
-                        listOf(false, true),
-                        child.alarmSound,
-                        { if (it) "⏰ Glasan alarm" else "🛎️ Školsko zvono" },
-                        { viewModel.setAlarmSound(child.id, it) },
+                        AlarmTone.entries,
+                        tone,
+                        { it.label },
+                        { viewModel.setAlarmSound(child.id, alarmSound = it == AlarmTone.ALARM, silent = it == AlarmTone.SILENT) },
                         onCard = true,
                     )
-                    Hint(
-                        if (child.alarmSound) "Zvoni kao budilnik dok ne otvoriš obaveštenje."
-                        else "Obaveštenje sa kratkim zvukom školskog zvona.",
-                    )
+                    Hint(tone.hint)
                 }
                 if (batteryRestricted) {
                     RowDivider()
