@@ -20,6 +20,10 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.List
+import androidx.compose.material.icons.filled.DateRange
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -51,19 +55,6 @@ import java.time.LocalDate
 
 private data class WeekEdit(val day: DayOfWeek, val index: Int, val subject: String)
 
-/** Short subject names for the whole-week table, where only a few letters fit. */
-private val SHORT_NAMES = listOf(
-    "srpski" to "Srp", "matemat" to "Mat", "engleski" to "Eng", "strani" to "Str", "svet oko nas" to "SON",
-    "priroda" to "PiD", "likovn" to "Lik", "muzič" to "Muz", "muzic" to "Muz", "fizičk" to "Fiz", "fizick" to "Fiz",
-    "istorij" to "Ist", "geograf" to "Geo", "biolog" to "Bio", "fizika" to "Fizika", "hemij" to "Hem", "tehni" to "Teh",
-    "informat" to "Inf", "verska" to "Ver", "građansk" to "Građ", "gradjansk" to "Građ", "odeljensk" to "ČOS",
-)
-
-private fun shortName(lesson: String): String {
-    val name = ExtraClass.parse(lesson).second.trim()
-    return SHORT_NAMES.firstOrNull { name.lowercase().contains(it.first) }?.second ?: name.take(4)
-}
-
 /**
  * The regular weekly timetable for one shift: one day at a time in big rows (for children) or the whole week as a
  * table. "Uredi" switches to editing, where tapping a period picks its subject for every week.
@@ -93,12 +84,35 @@ fun WeekScreen(
     val subjects = timetable.lessonsFor(day)
 
     LazyColumn(
-        modifier.fillMaxSize(),
+        modifier.fillMaxSize().then(
+            if (wholeWeek && !editMode) Modifier
+            else Modifier.swipeBetween(
+                onPrevious = { dayIndex = (dayIndex - 1).coerceAtLeast(0) },
+                onNext = { dayIndex = (dayIndex + 1).coerceAtMost(SCHOOL_DAYS.size - 1) },
+            ),
+        ),
         contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 24.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
         item {
             ChildTopRow(children, child.id, onSelectChild, title = "Nedelja") {
+                if (!editMode) {
+                    Surface(
+                        onClick = { wholeWeek = !wholeWeek },
+                        shape = CircleShape,
+                        color = MaterialTheme.colorScheme.surfaceContainerLowest,
+                        modifier = Modifier.size(44.dp),
+                    ) {
+                        Box(contentAlignment = Alignment.Center) {
+                            Icon(
+                                if (wholeWeek) Icons.AutoMirrored.Filled.List else Icons.Filled.DateRange,
+                                contentDescription = if (wholeWeek) "Prikaži po danu" else "Prikaži celu nedelju",
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                    }
+                    Spacer(Modifier.width(8.dp))
+                }
                 Surface(
                     onClick = { onEditModeChange(!editMode) },
                     shape = CircleShape,
@@ -124,10 +138,6 @@ fun WeekScreen(
                     style = MaterialTheme.typography.labelLarge,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
-            }
-        } else {
-            item {
-                PillToggle(listOf(false, true), wholeWeek, { if (it) "Cela nedelja" else "Po danu" }, { wholeWeek = it })
             }
         }
         if (rotates) {

@@ -9,8 +9,23 @@ import androidx.activity.SystemBarStyle
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.AnimatedContentTransitionScope
+import androidx.compose.animation.ContentTransform
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.BeachAccess
+import androidx.compose.material.icons.rounded.CalendarViewWeek
+import androidx.compose.material.icons.rounded.Groups
+import androidx.compose.material.icons.rounded.Today
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
@@ -26,8 +41,8 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.bane23.classschedule.data.ThemeMode
 import com.bane23.classschedule.ui.AppViewModel
@@ -99,11 +114,11 @@ class MainActivity : ComponentActivity() {
 private val LIGHT_SCRIM = AndroidColor.argb(0xe6, 0xFF, 0xFF, 0xFF)
 private val DARK_SCRIM = AndroidColor.argb(0x80, 0x1b, 0x1b, 0x1b)
 
-private enum class Tab(val label: String, val emoji: String) {
-    FAMILY("Porodica", "👨‍👩‍👧"),
-    TODAY("Danas", "🏠"),
-    WEEK("Nedelja", "📅"),
-    BREAKS("Raspust", "🏖️"),
+private enum class Tab(val label: String, val icon: ImageVector) {
+    FAMILY("Porodica", Icons.Rounded.Groups),
+    TODAY("Danas", Icons.Rounded.Today),
+    WEEK("Nedelja", Icons.Rounded.CalendarViewWeek),
+    BREAKS("Raspust", Icons.Rounded.BeachAccess),
 }
 
 /** Settings pages are kept as short strings ("home", "child:<id>", ...) so they survive rotation. */
@@ -195,11 +210,13 @@ fun App(viewModel: AppViewModel = viewModel(), openTodayFor: String? = null, onO
                                 tab = t
                                 if (t != Tab.WEEK) editingWeek = false
                             },
-                            icon = { Text(t.emoji, fontSize = 22.sp) },
+                            icon = { Icon(t.icon, contentDescription = null) },
                             label = { Text(t.label, style = MaterialTheme.typography.labelLarge) },
                             colors = NavigationBarItemDefaults.colors(
                                 indicatorColor = MaterialTheme.colorScheme.primaryContainer,
+                                selectedIconColor = MaterialTheme.colorScheme.onPrimaryContainer,
                                 selectedTextColor = MaterialTheme.colorScheme.primary,
+                                unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
                                 unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
                             ),
                         )
@@ -209,80 +226,108 @@ fun App(viewModel: AppViewModel = viewModel(), openTodayFor: String? = null, onO
         },
     ) { innerPadding ->
         val modifier = Modifier.padding(innerPadding)
-        val settingsChild = (page as? SettingsPage.ForChild)?.let { p -> data.children.find { it.id == p.childId } }
+        AnimatedContent(
+            targetState = settingsRoute ?: "tab:${shownTab.name}",
+            transitionSpec = { screenTransition() },
+            label = "screen",
+        ) { screen ->
+            // Draw the screen this content slot stands for, so the outgoing one keeps its look while it animates away.
+            val page = settingsPage(screen)
+            val screenTab = Tab.entries.find { "tab:${it.name}" == screen } ?: shownTab
+            val settingsChild = (page as? SettingsPage.ForChild)?.let { p -> data.children.find { it.id == p.childId } }
 
-        when {
-            page == SettingsPage.Home || (page != null && settingsChild == null) -> SettingsHomeScreen(
-                data = data,
-                selected = child,
-                viewModel = viewModel,
-                onBack = { openSettings(null) },
-                onOpenChild = { openSettings(SettingsPage.ChildPage(it)) },
-                modifier = modifier,
-            )
-            page is SettingsPage.ChildPage && settingsChild != null -> ChildSettingsScreen(
-                data = data,
-                child = settingsChild,
-                viewModel = viewModel,
-                onBack = { openSettings(SettingsPage.Home) },
-                onOpen = { openSettings(it) },
-                onEditTimetable = { editTimetable(settingsChild.id) },
-                modifier = modifier,
-            )
-            page is SettingsPage.Profile && settingsChild != null ->
-                ProfileScreen(settingsChild, viewModel, onBack = { openSettings(page.parent()) }, modifier = modifier)
-            page is SettingsPage.Notifications && settingsChild != null ->
-                NotificationsScreen(settingsChild, viewModel, onBack = { openSettings(page.parent()) }, modifier = modifier)
-            page is SettingsPage.SchoolCalendar && settingsChild != null ->
-                SchoolCalendarScreen(settingsChild, viewModel, onBack = { openSettings(page.parent()) }, modifier = modifier)
-            page is SettingsPage.Bells && settingsChild != null ->
-                BellsScreen(settingsChild, viewModel, onBack = { openSettings(page.parent()) }, modifier = modifier)
-            page is SettingsPage.Subjects && settingsChild != null ->
-                SubjectsScreen(settingsChild, viewModel, onBack = { openSettings(page.parent()) }, modifier = modifier)
-            else -> when (shownTab) {
-                Tab.FAMILY -> FamilyScreen(
-                    children = data.children,
-                    onOpenChild = {
-                        viewModel.selectChild(it)
-                        tab = Tab.TODAY
-                    },
-                    onOpenSettings = { openSettings(SettingsPage.Home) },
-                    onAlarmChange = setAlarm,
+            when {
+                page == SettingsPage.Home || (page != null && settingsChild == null) -> SettingsHomeScreen(
+                    data = data,
+                    selected = child,
+                    viewModel = viewModel,
+                    onBack = { openSettings(null) },
+                    onOpenChild = { openSettings(SettingsPage.ChildPage(it)) },
                     modifier = modifier,
                 )
-                Tab.TODAY -> TodayScreen(
-                    children = data.children,
-                    child = child,
-                    onSelectChild = { viewModel.selectChild(it) },
-                    onOpenSettings = { openSettings(SettingsPage.Home) },
-                    onEditTimetable = { editTimetable(child.id) },
-                    onChangeDay = { date, index, subject -> viewModel.changeDay(child.id, date, index, subject) },
-                    onResetDay = { date -> viewModel.resetDay(child.id, date) },
-                    onPacked = { date, subject, packed -> viewModel.setPacked(child.id, date, subject, packed) },
+                page is SettingsPage.ChildPage && settingsChild != null -> ChildSettingsScreen(
+                    data = data,
+                    child = settingsChild,
+                    viewModel = viewModel,
+                    onBack = { openSettings(SettingsPage.Home) },
+                    onOpen = { openSettings(it) },
+                    onEditTimetable = { editTimetable(settingsChild.id) },
                     modifier = modifier,
                 )
-                Tab.WEEK -> WeekScreen(
-                    children = data.children,
-                    child = child,
-                    onSelectChild = { viewModel.selectChild(it) },
-                    onOpenSettings = { openSettings(SettingsPage.Home) },
-                    onOpenBells = { openSettings(SettingsPage.Bells(child.id)) },
-                    editMode = editingWeek,
-                    onEditModeChange = { editingWeek = it },
-                    onTimetableChange = { shift, timetable -> viewModel.setTimetable(child.id, shift, timetable) },
-                    onSubjectUsed = { viewModel.addSubject(child.id, it) },
-                    modifier = modifier,
-                )
-                Tab.BREAKS -> CalendarScreen(
-                    children = data.children,
-                    child = child,
-                    onSelectChild = { viewModel.selectChild(it) },
-                    onOpenSettings = { openSettings(SettingsPage.Home) },
-                    onAddEvent = { viewModel.addEvent(child.id, it) },
-                    onDeleteEvent = { viewModel.deleteEvent(child.id, it) },
-                    modifier = modifier,
-                )
+                page is SettingsPage.Profile && settingsChild != null ->
+                    ProfileScreen(settingsChild, viewModel, onBack = { openSettings(page.parent()) }, modifier = modifier)
+                page is SettingsPage.Notifications && settingsChild != null ->
+                    NotificationsScreen(settingsChild, viewModel, onBack = { openSettings(page.parent()) }, modifier = modifier)
+                page is SettingsPage.SchoolCalendar && settingsChild != null ->
+                    SchoolCalendarScreen(settingsChild, viewModel, onBack = { openSettings(page.parent()) }, modifier = modifier)
+                page is SettingsPage.Bells && settingsChild != null ->
+                    BellsScreen(settingsChild, viewModel, onBack = { openSettings(page.parent()) }, modifier = modifier)
+                page is SettingsPage.Subjects && settingsChild != null ->
+                    SubjectsScreen(settingsChild, viewModel, onBack = { openSettings(page.parent()) }, modifier = modifier)
+                else -> when (screenTab) {
+                    Tab.FAMILY -> FamilyScreen(
+                        children = data.children,
+                        onOpenChild = {
+                            viewModel.selectChild(it)
+                            tab = Tab.TODAY
+                        },
+                        onOpenSettings = { openSettings(SettingsPage.Home) },
+                        onAlarmChange = setAlarm,
+                        modifier = modifier,
+                    )
+                    Tab.TODAY -> TodayScreen(
+                        children = data.children,
+                        child = child,
+                        onSelectChild = { viewModel.selectChild(it) },
+                        onOpenSettings = { openSettings(SettingsPage.Home) },
+                        onEditTimetable = { editTimetable(child.id) },
+                        onChangeDay = { date, index, subject -> viewModel.changeDay(child.id, date, index, subject) },
+                        onResetDay = { date -> viewModel.resetDay(child.id, date) },
+                        onPacked = { date, subject, packed -> viewModel.setPacked(child.id, date, subject, packed) },
+                        modifier = modifier,
+                    )
+                    Tab.WEEK -> WeekScreen(
+                        children = data.children,
+                        child = child,
+                        onSelectChild = { viewModel.selectChild(it) },
+                        onOpenSettings = { openSettings(SettingsPage.Home) },
+                        onOpenBells = { openSettings(SettingsPage.Bells(child.id)) },
+                        editMode = editingWeek,
+                        onEditModeChange = { editingWeek = it },
+                        onTimetableChange = { shift, timetable -> viewModel.setTimetable(child.id, shift, timetable) },
+                        onSubjectUsed = { viewModel.addSubject(child.id, it) },
+                        modifier = modifier,
+                    )
+                    Tab.BREAKS -> CalendarScreen(
+                        children = data.children,
+                        child = child,
+                        onSelectChild = { viewModel.selectChild(it) },
+                        onOpenSettings = { openSettings(SettingsPage.Home) },
+                        onAddEvent = { viewModel.addEvent(child.id, it) },
+                        onDeleteEvent = { viewModel.deleteEvent(child.id, it) },
+                        modifier = modifier,
+                    )
+                }
             }
         }
+    }
+}
+
+/** How deep a screen sits: the tabs, then Settings, a child's hub and a child's topic page. */
+private fun depth(screen: String): Int = when (settingsPage(screen)) {
+    null -> 0
+    SettingsPage.Home -> 1
+    is SettingsPage.ChildPage -> 2
+    else -> 3
+}
+
+/** Going deeper slides the new page in from the right, going back from the left; switching tabs crossfades. */
+private fun AnimatedContentTransitionScope<String>.screenTransition(): ContentTransform {
+    val from = depth(initialState)
+    val to = depth(targetState)
+    return when {
+        to > from -> (slideInHorizontally { it / 3 } + fadeIn()) togetherWith (slideOutHorizontally { -it / 6 } + fadeOut())
+        to < from -> (slideInHorizontally { -it / 6 } + fadeIn()) togetherWith (slideOutHorizontally { it / 3 } + fadeOut())
+        else -> fadeIn(tween(220)) togetherWith fadeOut(tween(150))
     }
 }

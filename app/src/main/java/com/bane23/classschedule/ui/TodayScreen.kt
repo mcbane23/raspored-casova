@@ -1,5 +1,7 @@
 package com.bane23.classschedule.ui
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -23,9 +25,12 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -40,6 +45,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -83,6 +91,7 @@ fun TodayScreen(
 ) {
     var epochDay by rememberSaveable { mutableStateOf(LocalDate.now().toEpochDay()) }
     var editing by remember { mutableStateOf<DayEdit?>(null) }
+    var details by remember { mutableStateOf<Lesson?>(null) }
     val now = rememberNow()
     val date = LocalDate.ofEpochDay(epochDay)
     val isToday = date == now.toLocalDate()
@@ -98,7 +107,7 @@ fun TodayScreen(
     val warning = rememberReminderWarning(listOf(child))
 
     LazyColumn(
-        modifier.fillMaxSize(),
+        modifier.fillMaxSize().swipeBetween(onPrevious = { epochDay-- }, onNext = { epochDay++ }),
         contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 24.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
@@ -167,21 +176,9 @@ fun TodayScreen(
                         title = (if (isToday) "Danas " else "") + lessonsCount(lessons.size),
                         clock = if (isToday) clock else null,
                         canAdd = nextFreeIndex < timetable.periods.size,
-                        onLesson = { editing = DayEdit(it.index, it.subject) },
+                        onLesson = { details = it },
                         onAdd = { editing = DayEdit(nextFreeIndex, "") },
                     )
-                }
-            }
-            val next = (dayStatus(lessons, clock) as? DayStatus.InClass)?.next
-            if (isToday && next != null) {
-                item {
-                    AppCard {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text("Sledeće", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.weight(1f))
-                            Text(next.period.start.label(), style = MaterialTheme.typography.titleSmall)
-                        }
-                        Text("${subjectStyle(next.subject).emoji} ${next.subject}", style = MaterialTheme.typography.titleLarge)
-                    }
                 }
             }
         }
@@ -189,6 +186,20 @@ fun TodayScreen(
         if (packDay != null && child.packSubjects(packDay).isNotEmpty()) {
             item { PackingCard(child, date, packDay, onPacked) }
         }
+    }
+
+    details?.let { lesson ->
+        LessonDetailsSheet(
+            lesson = lesson,
+            periodLabel = timetable.periodLabel(lesson.index),
+            note = child.packNote(lesson.subject),
+            dateLabel = if (isToday) "danas" else date.label().lowercase(),
+            onDismiss = { details = null },
+            onChange = {
+                details = null
+                editing = DayEdit(lesson.index, lesson.subject)
+            },
+        )
     }
 
     editing?.let { edit ->
@@ -255,6 +266,8 @@ private fun DayHero(child: Child, date: LocalDate, isToday: Boolean, clock: Loca
             detail = "do ${status.lesson.period.end.label()}",
             ringMinutes = status.minutesLeft,
             ringProgress = status.progress,
+            footer = status.next?.let { "Zatim ${subjectStyle(it.subject).emoji} ${it.subject} u ${it.period.start.label()}" }
+                ?: "🏁 Poslednji čas danas",
         )
         is DayStatus.Break -> HeroCard(
             color = BreakTeal,
@@ -327,7 +340,7 @@ private fun StopsCard(
         }
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(
-                "Dodirni čas za izmenu samo ovog dana",
+                "Dodirni čas za detalje",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.weight(1f).padding(start = 6.dp),
@@ -339,13 +352,18 @@ private fun StopsCard(
 
 /** With few classes the stops spread over the full width; with many they scroll at a fixed spacing. */
 private fun Modifier.matchParentSizeWidth(scroll: Boolean, count: Int): Modifier =
-    if (scroll) width((46 * count + 10 * (count - 1)).dp) else fillMaxWidth()
+    if (scroll) width((48 * count + 10 * (count - 1)).dp) else fillMaxWidth()
 
 @Composable
 private fun Stop(lesson: Lesson, done: Boolean, current: Boolean, onClick: () -> Unit) {
     val style = subjectStyle(lesson.subject)
     Column(
-        Modifier.width(46.dp).clip(MaterialTheme.shapes.small).clickable(onClick = onClick).padding(bottom = 4.dp),
+        Modifier
+            .width(48.dp)
+            .clip(MaterialTheme.shapes.small)
+            .clickable(onClick = onClick)
+            .semantics(mergeDescendants = true) { contentDescription = "${lesson.subject}, ${lesson.period.start.label()}" }
+            .padding(bottom = 4.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Box(
@@ -363,6 +381,7 @@ private fun Stop(lesson: Lesson, done: Boolean, current: Boolean, onClick: () ->
         ) {
             Text(if (done) "✓" else style.emoji, fontSize = 19.sp, color = MaterialTheme.colorScheme.onSurface)
         }
+        Text(shortName(lesson.subject), style = MaterialTheme.typography.labelMedium, maxLines = 1)
         Text(lesson.period.start.label(), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         ExtraClass.parse(lesson.subject).first?.let { kind ->
             Text(kind.prefix.take(3) + ".", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
@@ -374,17 +393,38 @@ private fun Stop(lesson: Lesson, done: Boolean, current: Boolean, onClick: () ->
 @Composable
 private fun PackingCard(child: Child, from: LocalDate, packDay: LocalDate, onPacked: (LocalDate, String, Boolean) -> Unit) {
     val heading = if (packDay == from.plusDays(1)) "Sutra u torbu" else "Za ${packDay.dayOfWeek.label().lowercase()} u torbu"
+    val subjects = child.packSubjects(packDay)
+    val packedCount = subjects.count { child.isPacked(packDay, it) }
+    val allPacked = packedCount == subjects.size
     AppCard(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-        Row(verticalAlignment = Alignment.Bottom, modifier = Modifier.padding(bottom = 4.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(bottom = 4.dp)) {
             Text("🎒 $heading", style = MaterialTheme.typography.titleMedium)
             Spacer(Modifier.width(6.dp))
             Text(
                 "(${packDay.dayOfWeek.label().lowercase()})",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.weight(1f),
+            )
+            Tag(
+                "$packedCount / ${subjects.size}",
+                if (allPacked) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.background,
+                if (allPacked) MaterialTheme.colorScheme.onTertiary else MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
-        child.packSubjects(packDay).forEach { subject ->
+        val progress by animateFloatAsState(packedCount.toFloat() / subjects.size.coerceAtLeast(1), label = "packed")
+        Box(Modifier.fillMaxWidth().padding(bottom = 6.dp).height(6.dp).clip(CircleShape).background(MaterialTheme.colorScheme.outlineVariant)) {
+            Box(Modifier.fillMaxWidth(progress).height(6.dp).clip(CircleShape).background(MaterialTheme.colorScheme.tertiary))
+        }
+        AnimatedVisibility(allPacked) {
+            Text(
+                "🎉 Torba je spremna!",
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.tertiary,
+                modifier = Modifier.padding(bottom = 4.dp),
+            )
+        }
+        subjects.forEach { subject ->
             val packed = child.isPacked(packDay, subject)
             val note = child.packNote(subject)
             Surface(onClick = { onPacked(packDay, subject, !packed) }, color = Color.Transparent, shape = MaterialTheme.shapes.small) {
@@ -413,6 +453,49 @@ private fun PackingCard(child: Child, from: LocalDate, packDay: LocalDate, onPac
                         }
                     }
                 }
+            }
+        }
+    }
+}
+
+/**
+ * What a tapped class is: subject, time and what to bring. Changing it for the day is one more deliberate tap, so a
+ * child looking at their day can't cancel a class by accident.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun LessonDetailsSheet(
+    lesson: Lesson,
+    periodLabel: String,
+    note: String,
+    dateLabel: String,
+    onDismiss: () -> Unit,
+    onChange: () -> Unit,
+) {
+    val (kind, name) = ExtraClass.parse(lesson.subject)
+    ModalBottomSheet(onDismissRequest = onDismiss, containerColor = MaterialTheme.colorScheme.surfaceContainerLowest) {
+        Column(
+            Modifier.fillMaxWidth().padding(start = 20.dp, end = 20.dp, bottom = 28.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(6.dp),
+        ) {
+            SubjectBadge(lesson.subject, size = 72.dp)
+            if (kind != null) {
+                Text(kind.prefix.uppercase(), style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
+            }
+            Text(name, style = MaterialTheme.typography.headlineSmall, textAlign = TextAlign.Center)
+            Text(
+                "$periodLabel · ${lesson.period.label()}",
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            if (note.isNotBlank()) {
+                Spacer(Modifier.height(4.dp))
+                NoteBanner("🎒", "Nosi: $note")
+            }
+            Spacer(Modifier.height(8.dp))
+            OutlinedButton(onClick = onChange, shape = CircleShape, modifier = Modifier.fillMaxWidth().height(48.dp)) {
+                Text("✏️ Izmeni ili otkaži samo $dateLabel", style = MaterialTheme.typography.titleSmall)
             }
         }
     }
