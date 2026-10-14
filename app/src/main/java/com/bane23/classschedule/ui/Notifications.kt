@@ -5,6 +5,7 @@ import android.content.ActivityNotFoundException
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.net.Uri
 import android.os.Build
 import android.os.PowerManager
 import android.provider.Settings
@@ -19,6 +20,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.core.content.ContextCompat
 import com.bane23.classschedule.alarm.AlarmReceiver
+import com.bane23.classschedule.alarm.AlarmScheduler
 import com.bane23.classschedule.data.Child
 import com.bane23.classschedule.data.classesEndOn
 import java.time.LocalDate
@@ -40,6 +42,10 @@ fun rememberAlarmSwitch(viewModel: AppViewModel): (childId: String, enabled: Boo
 fun rememberPackReminderSwitch(viewModel: AppViewModel): (childId: String, enabled: Boolean) -> Unit =
     rememberNotificationSwitch(viewModel::setPackReminder)
 
+/**
+ * Turning a reminder on first asks for the notification permission when it is needed, then opens the "Alarms &
+ * reminders" switch if exact alarms are not allowed yet, since without it the reminder comes late.
+ */
 @Composable
 private fun rememberNotificationSwitch(set: (childId: String, enabled: Boolean) -> Unit): (String, Boolean) -> Unit {
     val context = LocalContext.current
@@ -47,6 +53,7 @@ private fun rememberNotificationSwitch(set: (childId: String, enabled: Boolean) 
     val launcher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
         pending?.let { set(it, granted) }
         pending = null
+        if (granted && !AlarmScheduler.canScheduleExact(context)) openExactAlarmSettings(context)
     }
     return { id, enabled ->
         if (enabled && needsNotificationPermission(context)) {
@@ -54,7 +61,32 @@ private fun rememberNotificationSwitch(set: (childId: String, enabled: Boolean) 
             launcher.launch(Manifest.permission.POST_NOTIFICATIONS)
         } else {
             set(id, enabled)
+            if (enabled && !AlarmScheduler.canScheduleExact(context)) openExactAlarmSettings(context)
         }
+    }
+}
+
+/** Whether alarms can fire at the exact minute. Rechecked each time the screen comes back from the phone's settings. */
+@Composable
+fun rememberExactAlarmAllowed(): Boolean {
+    val context = LocalContext.current
+    var allowed by remember { mutableStateOf(true) }
+    LifecycleResumeEffect(Unit) {
+        allowed = AlarmScheduler.canScheduleExact(context)
+        onPauseOrDispose { }
+    }
+    return allowed
+}
+
+/** Opens this app's "Alarms & reminders" switch (Android 12+). */
+fun openExactAlarmSettings(context: Context) {
+    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) return
+    try {
+        context.startActivity(
+            Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM, Uri.parse("package:${context.packageName}")),
+        )
+    } catch (_: ActivityNotFoundException) {
+        context.startActivity(Intent(Settings.ACTION_SETTINGS))
     }
 }
 

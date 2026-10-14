@@ -37,7 +37,7 @@ Add a new `SchoolYear` there each summer once the ministry publishes the next ye
   QR code; another phone scans it and adds it as a new child or replaces an existing one. One-day changes and alarm
   settings are not shared. The code is deflate-compressed JSON (`data/ShareCodec.kt`).
 - **Parent alarm:** an optional notification when the day's last class ends (or 5/10/15 minutes before), following
-  the shift, the school calendar and one-day changes. Alarms fire with the app closed and in Doze, and are rescheduled after a reboot, app update or clock change; no exact-alarm permission is needed. When battery optimization is on, the child's settings show a shortcut to turn it off. By default it plays a short school-bell chime
+  the shift, the school calendar and one-day changes. Alarms fire with the app closed and in Doze, and are rescheduled after a reboot, app update or clock change. With "Alarms & reminders" allowed (Android 12+) they fire at the exact minute; while it is missing, the child's settings warn and link to it. When battery optimization is on, the child's settings show a shortcut to turn it off. By default it plays a short school-bell chime
   (`res/raw/school_bell.wav`, generated for this app); the "Zvuk" choice "Alarm" makes it ring with the phone's alarm
   tone at alarm volume, repeating until the notification is opened or dismissed, and "Bez zvuka" posts a plain
   notification without any sound.

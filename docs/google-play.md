@@ -30,9 +30,10 @@ Checklist and texts for the Google Play Console listing.
 
 - `POST_NOTIFICATIONS` – the optional "classes are over" and "pack the bag" reminders.
 - `RECEIVE_BOOT_COMPLETED` – reschedules that reminder after a restart.
+- `SCHEDULE_EXACT_ALARM` – lets both reminders fire at the exact minute set. On Android 12+ the user grants it under "Alarms & reminders"; the app links there and warns while it is missing.
 - `CAMERA` (from the zxing-android-embedded scanner) – scanning a shared timetable QR code.
 
-The app uses `setAndAllowWhileIdle` (or `setExactAndAllowWhileIdle` where exact alarms are already allowed), so it needs no exact-alarm permission or declaration. It does not request `REQUEST_IGNORE_BATTERY_OPTIMIZATIONS`; Settings only links to the system battery optimization list.
+With exact alarms allowed the app uses `AlarmManager.setAlarmClock`, which fires on time even in Doze; without the permission it falls back to `setAndAllowWhileIdle`, which Android may delay by 10-15 minutes. It uses the user-granted `SCHEDULE_EXACT_ALARM`, not `USE_EXACT_ALARM` (reserved by Play policy for alarm-clock and calendar apps), so no exact-alarm declaration form is needed. It does not request `REQUEST_IGNORE_BATTERY_OPTIMIZATIONS`; Settings only links to the system battery optimization list.
 
 ## Store listing (Serbian)
 
