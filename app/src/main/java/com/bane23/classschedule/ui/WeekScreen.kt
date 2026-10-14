@@ -39,6 +39,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -113,17 +115,27 @@ fun WeekScreen(
                     }
                     Spacer(Modifier.width(8.dp))
                 }
+                // With several children the name pills need the room, so "Uredi" shrinks to its pencil.
+                val compact = children.size > 1 && !editMode
                 Surface(
                     onClick = { onEditModeChange(!editMode) },
                     shape = CircleShape,
                     color = if (editMode) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceContainerLowest,
+                    modifier = if (compact) Modifier.size(44.dp) else Modifier,
                 ) {
-                    Text(
-                        if (editMode) "Gotovo" else "✏️ Uredi",
-                        style = MaterialTheme.typography.titleSmall,
-                        color = if (editMode) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface,
-                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp),
-                    )
+                    Box(contentAlignment = Alignment.Center) {
+                        Text(
+                            when {
+                                editMode -> "Gotovo"
+                                compact -> "✏️"
+                                else -> "✏️ Uredi"
+                            },
+                            style = MaterialTheme.typography.titleSmall,
+                            color = if (editMode) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface,
+                            modifier = if (compact) Modifier.semantics { contentDescription = "Uredi raspored" }
+                            else Modifier.padding(horizontal = 16.dp, vertical = 10.dp),
+                        )
+                    }
                 }
                 if (!editMode) {
                     Spacer(Modifier.width(8.dp))

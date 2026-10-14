@@ -75,7 +75,7 @@ class ScreenshotTest {
         compose.onNodeWithContentDescription("Prikaži celu nedelju").performClick()
         shot("13-week-table")
         compose.onNodeWithContentDescription("Prikaži po danu").performClick()
-        click("✏️ Uredi")
+        compose.onNodeWithContentDescription("Uredi raspored").performClick()
         shot("14-week-edit")
         click("Gotovo")
         tab("Raspust")
