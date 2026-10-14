@@ -21,3 +21,19 @@ fun Child.nextAlarm(now: LocalDateTime, daysAhead: Int = 120): LocalDateTime? {
     }
     return null
 }
+
+/**
+ * The next packing reminder strictly after [now]: at [Child.packReminderMinute] on each day whose following day has
+ * classes, looking up to [daysAhead] days ahead. Null when the reminder is off or no classes are found.
+ */
+fun Child.nextPackReminder(now: LocalDateTime, daysAhead: Int = 120): LocalDateTime? {
+    if (!packReminderEnabled) return null
+    val time = LocalTime.of(packReminderMinute / 60, packReminderMinute % 60)
+    for (offset in 0..daysAhead) {
+        val date = now.toLocalDate().plusDays(offset.toLong())
+        if (lessonsOn(date.plusDays(1)).isEmpty()) continue
+        val reminder = date.atTime(time)
+        if (reminder.isAfter(now)) return reminder
+    }
+    return null
+}

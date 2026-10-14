@@ -23,6 +23,10 @@ object ShareCodec {
             alarmMinutesBefore = 0,
             alarmSound = false,
             alarmSilent = false,
+            packReminderEnabled = false,
+            packReminderMinute = DEFAULT_PACK_REMINDER_MINUTE,
+            packReminderSound = false,
+            packReminderSilent = false,
             packedForEpochDay = 0,
             packed = emptyList(),
         )
