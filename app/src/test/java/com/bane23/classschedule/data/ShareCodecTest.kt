@@ -24,6 +24,7 @@ class ShareCodecTest {
         region = Region.VOJVODINA,
         customEvents = listOf(CalendarEvent(1, 1, "Dan škole", id = "e1")),
         alarmEnabled = true,
+        alarmSilent = true,
     )
 
     @Test
@@ -42,6 +43,7 @@ class ShareCodecTest {
         assertEquals(child.subjects, decoded.subjects)
         assertEquals(emptyList<DayOverride>(), decoded.overrides)
         assertEquals(false, decoded.alarmEnabled)
+        assertEquals(false, decoded.alarmSilent)
         assertNotEquals(child.id, decoded.id)
     }
 

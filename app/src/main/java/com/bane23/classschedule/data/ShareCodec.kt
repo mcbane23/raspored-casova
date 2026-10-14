@@ -22,6 +22,7 @@ object ShareCodec {
             alarmEnabled = false,
             alarmMinutesBefore = 0,
             alarmSound = false,
+            alarmSilent = false,
             packedForEpochDay = 0,
             packed = emptyList(),
         )

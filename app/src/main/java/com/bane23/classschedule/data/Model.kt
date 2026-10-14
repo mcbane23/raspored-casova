@@ -186,6 +186,8 @@ data class Child(
     val alarmMinutesBefore: Int = 0,
     /** Ring like an alarm clock (alarm volume, repeating) instead of the school-bell notification sound. */
     val alarmSound: Boolean = false,
+    /** A plain notification without any sound; takes precedence over [alarmSound]. */
+    val alarmSilent: Boolean = false,
     /** What to bring for a subject (e.g. "patike i majica"), keyed by subject name; shown in the packing list. */
     val packNotes: Map<String, String> = emptyMap(),
     /** School day the [packed] ticks belong to; ticks for any other day are ignored. */
