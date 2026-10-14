@@ -13,6 +13,32 @@ Checklist and texts for the Google Play Console listing.
    "calendar and bell" icon (same artwork as the launcher icon), six 1080×1920 phone screenshots with Serbian
    captions, and two 1024×500 feature graphic variants.
 
+## Release notes (first release)
+
+Paste into Play Console → the release → **Release notes** (max 500 characters per language; these are 396 and
+403). Later releases can reuse the `SR:`/`EN:` lines from the GitHub release, see [releases.md](releases.md).
+
+```
+<sr>
+Prva verzija aplikacije Raspored časova!
+• Današnji časovi i nedeljni raspored, posebno za prepodnevnu i popodnevnu smenu
+• Školski kalendar Srbije 2026/27 sa raspustima i odbrojavanjem
+• Roditeljski alarm kad se završi poslednji čas
+• Večernji podsetnik za pakovanje torbe
+• Više dece, deljenje rasporeda QR kodom i widget za početni ekran
+Bez naloga, bez reklama, svi podaci ostaju na telefonu.
+</sr>
+<en-US>
+First release of Raspored časova (School Timetable)!
+• Today's classes and the weekly timetable, separate for morning and afternoon shifts
+• Serbian school calendar 2026/27 with breaks and a countdown
+• Parent alarm when the last class ends
+• Evening reminder to pack the school bag
+• Several children, QR code timetable sharing and a home-screen widget
+No account, no ads, all data stays on your phone.
+</en-US>
+```
+
 ## App content answers
 
 | Section | Answer |
