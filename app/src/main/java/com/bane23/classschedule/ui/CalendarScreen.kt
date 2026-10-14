@@ -89,7 +89,11 @@ fun CalendarScreen(
         }
         item { SectionLabel("Slobodni dani i događaji") }
         if (upcoming.isEmpty()) {
-            item { AppCard { EmptyState("📅", "Nema predstojećih događaja", "Dodaj Dan škole, školsku slavu ili izlet.") } }
+            item {
+                AppCard {
+                    EmptyState("📅", "Nema predstojećih događaja", "Dodaj Dan škole, školsku slavu ili izlet.", action = "+ Dodaj događaj", onAction = { adding = true })
+                }
+            }
         }
         items(upcoming, key = { "${it.id}-${it.startEpochDay}" }) { event ->
             EventTicket(event, today) {

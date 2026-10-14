@@ -15,8 +15,11 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
@@ -36,6 +39,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.bane23.classschedule.data.AppData
 import com.bane23.classschedule.data.Child
+import com.bane23.classschedule.data.DEFAULT_CHILD_NAME
 import com.bane23.classschedule.data.Period
 import com.bane23.classschedule.data.Region
 import com.bane23.classschedule.data.Shift
@@ -50,15 +54,25 @@ import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.LocalTime
 
-/** Settings pages for parents, opened from the round button at the top right of the main tabs. */
+/**
+ * Settings pages for parents, opened from the round button at the top right of the main tabs. Each child has a short
+ * hub ([ChildPage]) leading to one page per topic, so every option has one obvious place.
+ */
 sealed interface SettingsPage {
     data object Home : SettingsPage
-    data class ChildPage(val childId: String) : SettingsPage
-    data class Bells(val childId: String) : SettingsPage
-    data class Subjects(val childId: String) : SettingsPage
+
+    /** A page about one child; every page except [Home] is one. */
+    sealed interface ForChild : SettingsPage { val childId: String }
+
+    data class ChildPage(override val childId: String) : ForChild
+    data class Profile(override val childId: String) : ForChild
+    data class Notifications(override val childId: String) : ForChild
+    data class SchoolCalendar(override val childId: String) : ForChild
+    data class Bells(override val childId: String) : ForChild
+    data class Subjects(override val childId: String) : ForChild
 }
 
-/** General settings: theme, the list of children, QR import and a test notification. */
+/** General settings: the list of children, QR import, theme and the app version. */
 @Composable
 fun SettingsHomeScreen(
     data: AppData,
@@ -70,16 +84,9 @@ fun SettingsHomeScreen(
 ) {
     var addingChild by remember { mutableStateOf(false) }
     val scanQr = rememberQrImport(viewModel, replaceable = selected)
-    val test = rememberTestNotification(selected)
     val today = LocalDate.now()
 
     SettingsPageLayout("Raspored časova", "Podešavanja", onBack, modifier) {
-        SettingsGroup("Izgled") {
-            Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text("Tema", style = MaterialTheme.typography.titleSmall)
-                PillToggle(ThemeMode.entries, data.theme, { it.label() }, { viewModel.setTheme(it) }, onCard = true)
-            }
-        }
         SettingsGroup("Deca") {
             data.children.forEach { c ->
                 val shift = c.shiftOn(today)
@@ -101,14 +108,12 @@ fun SettingsHomeScreen(
                 onClick = scanQr,
             )
         }
-        SettingsGroup("Obaveštenja") {
-            SettingsRow(
-                title = "Pošalji probno obaveštenje",
-                subtitle = if (test.blocked) "Obaveštenja su isključena za ovu aplikaciju. Uključi ih u podešavanjima telefona."
-                else "Da čuješ kako zvuči alarm za ${selected.name.ifBlank { "dete" }}",
-                emoji = "🔔",
-                onClick = test.send,
-            )
+        Hint("Dodirni dete da podesiš smene, zvona, predmete, alarm i kalendar.", Modifier.padding(horizontal = 6.dp))
+        SettingsGroup("Izgled") {
+            Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text("Tema", style = MaterialTheme.typography.titleSmall)
+                PillToggle(ThemeMode.entries, data.theme, { it.label() }, { viewModel.setTheme(it) }, onCard = true)
+            }
         }
         SettingsGroup("O aplikaciji") {
             SettingsRow(title = "Verzija", emoji = "ℹ️", value = appVersion(LocalContext.current))
@@ -140,100 +145,258 @@ private enum class AlarmTone(val label: String, val hint: String) {
     SILENT("🔕 Bez zvuka", "Samo obaveštenje, bez zvuka."),
 }
 
-/** Everything about one child: name and school, shifts, the parent alarm, the packing reminder, the calendar and links to bells and subjects. */
+/** "danas u 12:35" or "utorak, 14. oktobar u 12:35" for the next alarm or reminder. */
+private fun nextTimeLabel(next: LocalDateTime, today: LocalDate): String =
+    if (next.toLocalDate() == today) "danas u ${next.toLocalTime().label()}"
+    else "${next.toLocalDate().label().lowercase()} u ${next.toLocalTime().label()}"
+
+/** "ove nedelje pre podne", "uvek popodne", ... */
+private fun shiftSummary(child: Child, today: LocalDate): String {
+    val shift = child.shiftOn(today).shortLabel().lowercase()
+    return when (child.shiftMode) {
+        ShiftMode.WEEKLY -> "ove nedelje $shift"
+        ShiftMode.MONTHLY -> "ovog meseca $shift"
+        else -> "uvek $shift"
+    }
+}
+
+/**
+ * One child's settings hub: a short list of topics, each with a live summary, so a parent sees at a glance how the
+ * child is set up and where to change it. [onEditTimetable] leaves settings for the Week tab in edit mode.
+ */
 @Composable
 fun ChildSettingsScreen(
     data: AppData,
     child: Child,
     viewModel: AppViewModel,
     onBack: () -> Unit,
-    onOpenBells: () -> Unit,
-    onOpenSubjects: () -> Unit,
+    onOpen: (SettingsPage) -> Unit,
+    onEditTimetable: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     var confirmDelete by remember { mutableStateOf(false) }
     var showQr by remember { mutableStateOf(false) }
-    val setAlarm = rememberAlarmSwitch(viewModel)
-    val setPackReminder = rememberPackReminderSwitch(viewModel)
-    val packTest = rememberTestNotification(child, pack = true)
-    var pickingPackTime by remember { mutableStateOf(false) }
-    val batteryRestricted = rememberBatteryRestricted()
-    val exactAllowed = rememberExactAlarmAllowed()
-    val context = LocalContext.current
+    val problem = rememberReminderProblem()
     val today = LocalDate.now()
-    val current = child.shiftOn(today)
-    val fixed = child.shiftMode == ShiftMode.FIXED_MORNING || child.shiftMode == ShiftMode.FIXED_AFTERNOON
+    val now = LocalDateTime.now()
+    val shift = child.shiftOn(today)
+    val firstBell = child.timetable(shift).periods.firstOrNull()?.start
 
     SettingsPageLayout("Podešavanja", child.name.ifBlank { "Dete" }, onBack, modifier) {
         SettingsGroup(null) {
-            Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedTextField(
-                    value = child.name,
-                    onValueChange = { viewModel.renameChild(child.id, it) },
-                    label = { Text("Ime") },
-                    singleLine = true,
-                    shape = MaterialTheme.shapes.small,
-                    modifier = Modifier.fillMaxWidth(),
-                )
-                OutlinedTextField(
-                    value = child.school,
-                    onValueChange = { viewModel.setSchool(child.id, it) },
-                    label = { Text("Škola i odeljenje") },
-                    singleLine = true,
-                    shape = MaterialTheme.shapes.small,
-                    modifier = Modifier.fillMaxWidth(),
-                )
-            }
+            SettingsRow(
+                title = "Ime, škola i smena",
+                subtitle = listOfNotNull(child.school.ifBlank { null }, "${shift.icon()} ${shiftSummary(child, today)}").joinToString(" · "),
+                leading = { ChildAvatar(child.name, size = 36.dp) },
+                chevron = true,
+                onClick = { onOpen(SettingsPage.Profile(child.id)) },
+            )
         }
 
+        SettingsGroup("Raspored") {
+            SettingsRow(
+                title = "Časovi po danima",
+                subtitle = "Upiši ili promeni predmete za svaki dan",
+                emoji = "📅",
+                chevron = true,
+                onClick = onEditTimetable,
+            )
+            RowDivider()
+            SettingsRow(
+                title = "Zvona",
+                subtitle = firstBell?.let { "${shift.icon()} Prvi čas u ${it.label()} · posebno za svaku smenu" } ?: "Kad počinje i završava svaki čas",
+                emoji = "⏰",
+                chevron = true,
+                onClick = { onOpen(SettingsPage.Bells(child.id)) },
+            )
+            RowDivider()
+            SettingsRow(
+                title = "Predmeti i torba",
+                subtitle = "${child.subjects.size} predmeta · šta se nosi za koji",
+                emoji = "📚",
+                chevron = true,
+                onClick = { onOpen(SettingsPage.Subjects(child.id)) },
+            )
+        }
+
+        SettingsGroup("Obaveštenja") {
+            val alarm = child.nextAlarm(now)
+            val pack = child.nextPackReminder(now)
+            val anyOn = child.alarmEnabled || child.packReminderEnabled
+            SettingsRow(
+                title = "Alarm i podsetnik za torbu",
+                subtitle = when {
+                    anyOn && problem != null -> "⚠️ ${problem.title}"
+                    !anyOn -> "Isključeno · dodirni da uključiš"
+                    else -> listOfNotNull(
+                        if (!child.alarmEnabled) null else alarm?.let { "Alarm ${nextTimeLabel(it, today)}" } ?: "Alarm uključen",
+                        if (!child.packReminderEnabled) null else pack?.let { "torba ${nextTimeLabel(it, today)}" } ?: "podsetnik uključen",
+                    ).joinToString(" · ")
+                },
+                emoji = "🔔",
+                chevron = true,
+                onClick = { onOpen(SettingsPage.Notifications(child.id)) },
+            )
+        }
+
+        SettingsGroup("Škola") {
+            SettingsRow(
+                title = "Školski kalendar",
+                subtitle = child.region.label() + if (child.finalGrade) " · 8. razred" else "",
+                emoji = "🗓️",
+                chevron = true,
+                onClick = { onOpen(SettingsPage.SchoolCalendar(child.id)) },
+            )
+            RowDivider()
+            SettingsRow("Podeli raspored", subtitle = "QR kod za drugi telefon", emoji = "📤", chevron = true, onClick = { showQr = true })
+        }
+
+        if (data.children.size > 1) {
+            TextButton(onClick = { confirmDelete = true }, modifier = Modifier.fillMaxWidth()) {
+                Text("Obriši dete ${child.name}", color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.titleSmall)
+            }
+        }
+    }
+
+    if (showQr) QrCodeDialog(child, onDismiss = { showQr = false })
+    if (confirmDelete) {
+        AlertDialog(
+            onDismissRequest = { confirmDelete = false },
+            title = { Text("Obrisati ${child.name}?") },
+            text = { Text("Biće obrisani raspored i sva podešavanja za ovo dete.") },
+            confirmButton = {
+                TextButton(onClick = {
+                    confirmDelete = false
+                    onBack()
+                    viewModel.deleteChild(child.id)
+                }) { Text("Obriši") }
+            },
+            dismissButton = { TextButton(onClick = { confirmDelete = false }) { Text("Odustani") } },
+        )
+    }
+}
+
+/** Name, school and shift rotation. */
+@Composable
+fun ProfileScreen(child: Child, viewModel: AppViewModel, onBack: () -> Unit, modifier: Modifier = Modifier) {
+    SettingsPageLayout(child.name.ifBlank { "Dete" }, "Ime, škola i smena", onBack, modifier) {
+        SettingsGroup(null) {
+            Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                NameAndSchoolFields(child, viewModel)
+            }
+        }
         SettingsGroup("Smene") {
             Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text("Kako se smenjuje", style = MaterialTheme.typography.titleSmall)
-                PillToggle(
-                    options = listOf(ShiftMode.WEEKLY, ShiftMode.MONTHLY, null),
-                    selected = if (fixed) null else child.shiftMode,
-                    label = {
-                        when (it) {
-                            ShiftMode.WEEKLY -> "Svake nedelje"
-                            ShiftMode.MONTHLY -> "Svakog meseca"
-                            else -> "Uvek ista"
-                        }
-                    },
-                    onSelect = { mode ->
-                        viewModel.setShiftMode(child.id, mode ?: if (current == Shift.MORNING) ShiftMode.FIXED_MORNING else ShiftMode.FIXED_AFTERNOON)
-                    },
-                    onCard = true,
-                )
-                Text(
-                    when (child.shiftMode) {
-                        ShiftMode.WEEKLY -> "Ove nedelje ide:"
-                        ShiftMode.MONTHLY -> "Ovog meseca ide:"
-                        else -> "Uvek ide:"
-                    },
-                    style = MaterialTheme.typography.bodyMedium,
-                )
-                PillToggle(
-                    options = Shift.entries,
-                    selected = current,
-                    label = { "${it.icon()} ${it.shortLabel()}" },
-                    onSelect = {
-                        if (fixed) viewModel.setShiftMode(child.id, if (it == Shift.MORNING) ShiftMode.FIXED_MORNING else ShiftMode.FIXED_AFTERNOON)
-                        else viewModel.setCurrentShift(child.id, it)
-                    },
-                    onCard = true,
-                )
+                ShiftPicker(child, viewModel)
+            }
+        }
+    }
+}
+
+/** Text fields for the child's name and school; the default name "Dete" shows as an empty field to type into. */
+@Composable
+fun NameAndSchoolFields(child: Child, viewModel: AppViewModel) {
+    OutlinedTextField(
+        value = if (child.name == DEFAULT_CHILD_NAME) "" else child.name,
+        onValueChange = { viewModel.renameChild(child.id, it) },
+        label = { Text("Ime") },
+        singleLine = true,
+        shape = MaterialTheme.shapes.small,
+        modifier = Modifier.fillMaxWidth(),
+    )
+    OutlinedTextField(
+        value = child.school,
+        onValueChange = { viewModel.setSchool(child.id, it) },
+        label = { Text("Škola i odeljenje (npr. OŠ Vuk Karadžić, 3-2)") },
+        singleLine = true,
+        shape = MaterialTheme.shapes.small,
+        modifier = Modifier.fillMaxWidth(),
+    )
+}
+
+/** How the shift rotates and which shift the child is in now. */
+@Composable
+fun ShiftPicker(child: Child, viewModel: AppViewModel) {
+    val current = child.shiftOn(LocalDate.now())
+    val fixed = child.shiftMode == ShiftMode.FIXED_MORNING || child.shiftMode == ShiftMode.FIXED_AFTERNOON
+    Text("Kako se smenjuje", style = MaterialTheme.typography.titleSmall)
+    PillToggle(
+        options = listOf(ShiftMode.WEEKLY, ShiftMode.MONTHLY, null),
+        selected = if (fixed) null else child.shiftMode,
+        label = {
+            when (it) {
+                ShiftMode.WEEKLY -> "Svake nedelje"
+                ShiftMode.MONTHLY -> "Svakog meseca"
+                else -> "Uvek ista"
+            }
+        },
+        onSelect = { mode ->
+            viewModel.setShiftMode(child.id, mode ?: if (current == Shift.MORNING) ShiftMode.FIXED_MORNING else ShiftMode.FIXED_AFTERNOON)
+        },
+        onCard = true,
+    )
+    Text(
+        when (child.shiftMode) {
+            ShiftMode.WEEKLY -> "Ove nedelje ide:"
+            ShiftMode.MONTHLY -> "Ovog meseca ide:"
+            else -> "Uvek ide:"
+        },
+        style = MaterialTheme.typography.titleSmall,
+    )
+    PillToggle(
+        options = Shift.entries,
+        selected = current,
+        label = { "${it.icon()} ${it.shortLabel()}" },
+        onSelect = {
+            if (fixed) viewModel.setShiftMode(child.id, if (it == Shift.MORNING) ShiftMode.FIXED_MORNING else ShiftMode.FIXED_AFTERNOON)
+            else viewModel.setCurrentShift(child.id, it)
+        },
+        onCard = true,
+    )
+}
+
+/** The parent alarm and the packing reminder, each with its test button, and anything that keeps them from arriving. */
+@Composable
+fun NotificationsScreen(child: Child, viewModel: AppViewModel, onBack: () -> Unit, modifier: Modifier = Modifier) {
+    val setAlarm = rememberAlarmSwitch(viewModel)
+    val setPackReminder = rememberPackReminderSwitch(viewModel)
+    val alarmTest = rememberTestNotification(child)
+    val packTest = rememberTestNotification(child, pack = true)
+    var pickingPackTime by remember { mutableStateOf(false) }
+    val batteryRestricted = rememberBatteryRestricted()
+    val problem = rememberReminderProblem()
+    val context = LocalContext.current
+    val today = LocalDate.now()
+    val blockedHint = "Obaveštenja su isključena za ovu aplikaciju. Uključi ih u podešavanjima telefona."
+
+    SettingsPageLayout(child.name.ifBlank { "Dete" }, "Obaveštenja", onBack, modifier) {
+        val anyOn = child.alarmEnabled || child.packReminderEnabled
+        if (anyOn && (problem != null || batteryRestricted)) {
+            SettingsGroup("Da stigne na vreme") {
+                if (problem != null) {
+                    SettingsRow(title = problem.title, subtitle = problem.detail, emoji = "⚠️", chevron = true, onClick = { openFix(context, problem) })
+                }
+                if (problem != null && batteryRestricted) RowDivider()
+                if (batteryRestricted) {
+                    SettingsRow(
+                        title = "Isključi uštedu baterije",
+                        subtitle = "Da obaveštenje stigne i kad je aplikacija zatvorena. Izaberi „Bez ograničenja”.",
+                        emoji = "🔋",
+                        chevron = true,
+                        onClick = { openBatterySettings(context) },
+                    )
+                }
             }
         }
 
-        SettingsGroup("Alarm za kraj nastave") {
-            val next = if (child.alarmEnabled) child.nextAlarm(LocalDateTime.now()) else null
+        SettingsGroup("Alarm za kraj nastave · za roditelja") {
+            val next = child.nextAlarm(LocalDateTime.now())
             SettingsRow(
                 title = "Obavesti me kad se završe časovi",
                 subtitle = when {
                     !child.alarmEnabled -> "Stiže obaveštenje na ovaj telefon"
                     next == null -> "Uključeno"
-                    next.toLocalDate() == today -> "Sledeće: danas u ${next.toLocalTime().label()}"
-                    else -> "Sledeće: ${next.toLocalDate().label().lowercase()} u ${next.toLocalTime().label()}"
+                    else -> "Sledeće: ${nextTimeLabel(next, today)}"
                 },
                 emoji = "🔔",
                 trailing = { Switch(checked = child.alarmEnabled, onCheckedChange = { setAlarm(child.id, it) }) },
@@ -265,38 +428,24 @@ fun ChildSettingsScreen(
                     )
                     Hint(tone.hint)
                 }
-                if (!exactAllowed) {
-                    RowDivider()
-                    SettingsRow(
-                        title = "Alarm može da kasni",
-                        subtitle = "Dozvoli „Alarmi i podsetnici” da obaveštenje stigne tačno na vreme.",
-                        emoji = "⚠️",
-                        chevron = true,
-                        onClick = { openExactAlarmSettings(context) },
-                    )
-                }
-                if (batteryRestricted) {
-                    RowDivider()
-                    SettingsRow(
-                        title = "Isključi uštedu baterije",
-                        subtitle = "Da alarm stigne i kad je aplikacija zatvorena. Izaberi „Bez ograničenja”.",
-                        emoji = "🔋",
-                        chevron = true,
-                        onClick = { openBatterySettings(context) },
-                    )
-                }
+                RowDivider()
+                SettingsRow(
+                    title = "Pošalji probno obaveštenje",
+                    subtitle = if (alarmTest.blocked) blockedHint else "Da čuješ kako zvuči",
+                    emoji = "🧪",
+                    onClick = alarmTest.send,
+                )
             }
         }
 
-        SettingsGroup("Podsetnik za torbu") {
-            val next = if (child.packReminderEnabled) child.nextPackReminder(LocalDateTime.now()) else null
+        SettingsGroup("Podsetnik za torbu · za dete") {
+            val next = child.nextPackReminder(LocalDateTime.now())
             SettingsRow(
                 title = "Podseti da se spakuje torba",
                 subtitle = when {
                     !child.packReminderEnabled -> "Uveče pred školski dan, sa spiskom „Sutra u torbu”"
                     next == null -> "Uključeno"
-                    next.toLocalDate() == today -> "Sledeće: danas u ${next.toLocalTime().label()}"
-                    else -> "Sledeće: ${next.toLocalDate().label().lowercase()} u ${next.toLocalTime().label()}"
+                    else -> "Sledeće: ${nextTimeLabel(next, today)}"
                 },
                 emoji = "🎒",
                 trailing = { Switch(checked = child.packReminderEnabled, onCheckedChange = { setPackReminder(child.id, it) }) },
@@ -331,54 +480,14 @@ fun ChildSettingsScreen(
                 RowDivider()
                 SettingsRow(
                     title = "Pošalji probni podsetnik",
-                    subtitle = if (packTest.blocked) "Obaveštenja su isključena za ovu aplikaciju. Uključi ih u podešavanjima telefona."
-                    else "Da vidiš kako izgleda i zvuči",
-                    emoji = "🔔",
+                    subtitle = if (packTest.blocked) blockedHint else "Da vidiš kako izgleda i zvuči",
+                    emoji = "🧪",
                     onClick = packTest.send,
                 )
-                if (batteryRestricted) {
-                    RowDivider()
-                    SettingsRow(
-                        title = "Isključi uštedu baterije",
-                        subtitle = "Da podsetnik stigne i kad je aplikacija zatvorena. Izaberi „Bez ograničenja”.",
-                        emoji = "🔋",
-                        chevron = true,
-                        onClick = { openBatterySettings(context) },
-                    )
-                }
-            }
-        }
-
-        SettingsGroup("Raspored") {
-            SettingsRow("Zvona", subtitle = "Kad počinje i završava svaki čas", emoji = "⏰", chevron = true, onClick = onOpenBells)
-            RowDivider()
-            SettingsRow("Predmeti i torba", subtitle = "Spisak predmeta i šta se nosi", emoji = "📚", chevron = true, onClick = onOpenSubjects)
-            RowDivider()
-            SettingsRow("Podeli raspored", subtitle = "QR kod za drugi telefon", emoji = "📤", chevron = true, onClick = { showQr = true })
-        }
-
-        SettingsGroup("Školski kalendar") {
-            Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                PillToggle(Region.entries, child.region, { it.label() }, { viewModel.setRegion(child.id, it) }, onCard = true)
-            }
-            RowDivider()
-            SettingsRow(
-                title = "Osmi razred",
-                subtitle = "Ranije završava nastavu",
-                emoji = "🎓",
-                trailing = { Switch(checked = child.finalGrade, onCheckedChange = { viewModel.setFinalGrade(child.id, it) }) },
-                onClick = { viewModel.setFinalGrade(child.id, !child.finalGrade) },
-            )
-        }
-
-        if (data.children.size > 1) {
-            TextButton(onClick = { confirmDelete = true }, modifier = Modifier.fillMaxWidth()) {
-                Text("Obriši dete ${child.name}", color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.titleSmall)
             }
         }
     }
 
-    if (showQr) QrCodeDialog(child, onDismiss = { showQr = false })
     if (pickingPackTime) {
         TimeInputDialog(
             title = "Vreme podsetnika",
@@ -390,20 +499,28 @@ fun ChildSettingsScreen(
             },
         )
     }
-    if (confirmDelete) {
-        AlertDialog(
-            onDismissRequest = { confirmDelete = false },
-            title = { Text("Obrisati ${child.name}?") },
-            text = { Text("Biće obrisani raspored i sva podešavanja za ovo dete.") },
-            confirmButton = {
-                TextButton(onClick = {
-                    confirmDelete = false
-                    onBack()
-                    viewModel.deleteChild(child.id)
-                }) { Text("Obriši") }
-            },
-            dismissButton = { TextButton(onClick = { confirmDelete = false }) { Text("Odustani") } },
-        )
+}
+
+/** Which official calendar applies (region, 8th grade); the school's own events are added on the Raspust tab. */
+@Composable
+fun SchoolCalendarScreen(child: Child, viewModel: AppViewModel, onBack: () -> Unit, modifier: Modifier = Modifier) {
+    SettingsPageLayout(child.name.ifBlank { "Dete" }, "Školski kalendar", onBack, modifier) {
+        SettingsGroup("Region") {
+            Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                PillToggle(Region.entries, child.region, { it.label() }, { viewModel.setRegion(child.id, it) }, onCard = true)
+                Hint("Vojvodina ima drugačije datume nekih raspusta.")
+            }
+        }
+        SettingsGroup(null) {
+            SettingsRow(
+                title = "Osmi razred",
+                subtitle = "Ranije završava nastavu",
+                emoji = "🎓",
+                trailing = { Switch(checked = child.finalGrade, onCheckedChange = { viewModel.setFinalGrade(child.id, it) }) },
+                onClick = { viewModel.setFinalGrade(child.id, !child.finalGrade) },
+            )
+        }
+        NoteBanner("🏫", "Dan škole, školsku slavu i izlete dodaješ na kartici Raspust.")
     }
 }
 
@@ -413,63 +530,83 @@ private data class BellEdit(val index: Int, val isStart: Boolean)
 /** Bell times for each shift, with the optional pre-class. */
 @Composable
 fun BellsScreen(child: Child, viewModel: AppViewModel, onBack: () -> Unit, modifier: Modifier = Modifier) {
+    SettingsPageLayout(child.name.ifBlank { "Dete" }, "Zvona", onBack, modifier) {
+        BellsEditor(child, viewModel)
+    }
+}
+
+/** The bells of one shift at a time (switched at the top), placed in the caller's column: pre-class, each period's times and add/remove/reset. */
+@Composable
+fun BellsEditor(child: Child, viewModel: AppViewModel) {
     var shift by rememberSaveable(child.id) { mutableStateOf(child.shiftOn(LocalDate.now())) }
     var editing by remember { mutableStateOf<BellEdit?>(null) }
+    var confirmReset by remember { mutableStateOf(false) }
     val timetable = child.timetable(shift)
     val periods = timetable.periods
     fun change(updated: Timetable) = viewModel.setTimetable(child.id, shift, updated)
 
-    SettingsPageLayout(child.name.ifBlank { "Dete" }, "Zvona", onBack, modifier) {
-        PillToggle(Shift.entries, shift, { "${it.icon()} ${it.shortLabel()}" }, { shift = it })
-        SettingsGroup(null) {
-            SettingsRow(
-                title = "Pretčas",
-                subtitle = "Čas pre 1. časa",
-                emoji = "🌅",
-                trailing = { Switch(checked = timetable.hasPreClass, onCheckedChange = { change(timetable.withPreClass(it)) }) },
-                onClick = { change(timetable.withPreClass(!timetable.hasPreClass)) },
-            )
-        }
-        SettingsGroup(null) {
-            periods.forEachIndexed { index, period ->
-                if (index > 0) {
-                    val gap = period.startMinute - periods[index - 1].endMinute
-                    if (gap >= 15) {
-                        Text(
-                            "☕ Veliki odmor · $gap min",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
-                            textAlign = androidx.compose.ui.text.style.TextAlign.Center,
-                        )
-                    } else {
-                        RowDivider()
-                    }
-                }
-                Row(Modifier.padding(horizontal = 14.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Text(timetable.periodLabel(index), style = MaterialTheme.typography.titleSmall, modifier = Modifier.weight(1f))
-                    TimeChip(period.start.label()) { editing = BellEdit(index, isStart = true) }
-                    Text("–", Modifier.padding(horizontal = 6.dp), color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    TimeChip(period.end.label()) { editing = BellEdit(index, isStart = false) }
+    PillToggle(Shift.entries, shift, { "${it.icon()} ${it.shortLabel()}" }, { shift = it })
+    SettingsGroup(null) {
+        SettingsRow(
+            title = "Pretčas",
+            subtitle = "Čas pre 1. časa",
+            emoji = "🌅",
+            trailing = { Switch(checked = timetable.hasPreClass, onCheckedChange = { change(timetable.withPreClass(it)) }) },
+            onClick = { change(timetable.withPreClass(!timetable.hasPreClass)) },
+        )
+    }
+    SettingsGroup(null) {
+        periods.forEachIndexed { index, period ->
+            if (index > 0) {
+                val gap = period.startMinute - periods[index - 1].endMinute
+                if (gap >= 15) {
+                    Text(
+                        "☕ Veliki odmor · $gap min",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                        textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                    )
+                } else {
+                    RowDivider()
                 }
             }
-        }
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            if (periods.size < 10) {
-                PillButton("+ Dodaj čas", Modifier.weight(1f)) {
-                    val start = (periods.lastOrNull()?.endMinute?.plus(5)) ?: (8 * 60)
-                    if (start + 45 < 24 * 60) change(timetable.copy(periods = periods + Period(start, start + 45)))
-                }
-            }
-            if (periods.size > 1) {
-                PillButton("Ukloni poslednji", Modifier.weight(1f)) { change(timetable.copy(periods = periods.dropLast(1))) }
+            Row(Modifier.padding(horizontal = 14.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+                Text(timetable.periodLabel(index), style = MaterialTheme.typography.titleSmall, modifier = Modifier.weight(1f))
+                TimeChip(period.start.label()) { editing = BellEdit(index, isStart = true) }
+                Text("–", Modifier.padding(horizontal = 6.dp), color = MaterialTheme.colorScheme.onSurfaceVariant)
+                TimeChip(period.end.label()) { editing = BellEdit(index, isStart = false) }
             }
         }
-        PillButton("Vrati uobičajena zvona", Modifier.fillMaxWidth()) {
-            val reset = timetable.withPreClass(false).copy(periods = Timetable.defaultFor(shift).periods)
-            change(reset.withPreClass(timetable.hasPreClass))
+    }
+    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        if (periods.size < 10) {
+            PillButton("+ Dodaj čas", Modifier.weight(1f)) {
+                val start = (periods.lastOrNull()?.endMinute?.plus(5)) ?: (8 * 60)
+                if (start + 45 < 24 * 60) change(timetable.copy(periods = periods + Period(start, start + 45)))
+            }
         }
-        NoteBanner("💡", "Dodirni vreme da ga promeniš. Zvona su posebna za svako dete i svaku smenu.")
+        if (periods.size > 1) {
+            PillButton("Ukloni poslednji", Modifier.weight(1f)) { change(timetable.copy(periods = periods.dropLast(1))) }
+        }
+    }
+    PillButton("Vrati uobičajena zvona", Modifier.fillMaxWidth()) { confirmReset = true }
+    NoteBanner("💡", "Dodirni vreme da ga promeniš. Zvona su posebna za svako dete i svaku smenu.")
+
+    if (confirmReset) {
+        AlertDialog(
+            onDismissRequest = { confirmReset = false },
+            title = { Text("Vratiti uobičajena zvona?") },
+            text = { Text("Vremena za ${shift.shortLabel().lowercase()} biće vraćena na 45 minuta po času, sa velikim odmorom posle 2. časa.") },
+            confirmButton = {
+                TextButton(onClick = {
+                    val reset = timetable.withPreClass(false).copy(periods = Timetable.defaultFor(shift).periods)
+                    change(reset.withPreClass(timetable.hasPreClass))
+                    confirmReset = false
+                }) { Text("Vrati") }
+            },
+            dismissButton = { TextButton(onClick = { confirmReset = false }) { Text("Odustani") } },
+        )
     }
 
     editing?.let { edit ->
@@ -500,6 +637,7 @@ fun BellsScreen(child: Child, viewModel: AppViewModel, onBack: () -> Unit, modif
 fun SubjectsScreen(child: Child, viewModel: AppViewModel, onBack: () -> Unit, modifier: Modifier = Modifier) {
     var adding by remember { mutableStateOf(false) }
     var editing by remember { mutableStateOf<String?>(null) }
+    var confirmReset by remember { mutableStateOf(false) }
 
     SettingsPageLayout(child.name.ifBlank { "Dete" }, "Predmeti i torba", onBack, modifier) {
         NoteBanner("🎒", "Ono što upišeš ovde pojavljuje se u listi „Sutra u torbu“.")
@@ -518,9 +656,24 @@ fun SubjectsScreen(child: Child, viewModel: AppViewModel, onBack: () -> Unit, mo
             RowDivider()
             SettingsRow(title = "Dodaj predmet", emoji = "➕", accent = true, onClick = { adding = true })
         }
-        TextButton(onClick = { viewModel.resetSubjects(child.id) }, modifier = Modifier.fillMaxWidth()) {
+        TextButton(onClick = { confirmReset = true }, modifier = Modifier.fillMaxWidth()) {
             Text("Vrati podrazumevani spisak predmeta")
         }
+    }
+
+    if (confirmReset) {
+        AlertDialog(
+            onDismissRequest = { confirmReset = false },
+            title = { Text("Vratiti podrazumevani spisak?") },
+            text = { Text("Predmeti koje si dodao biće uklonjeni sa spiska. Raspored i beleške šta se nosi ostaju.") },
+            confirmButton = {
+                TextButton(onClick = {
+                    viewModel.resetSubjects(child.id)
+                    confirmReset = false
+                }) { Text("Vrati") }
+            },
+            dismissButton = { TextButton(onClick = { confirmReset = false }) { Text("Odustani") } },
+        )
     }
 
     if (adding) {
@@ -579,7 +732,7 @@ private fun SettingsPageLayout(
 
 /** A labelled white card holding settings rows. */
 @Composable
-private fun SettingsGroup(label: String?, content: @Composable ColumnScope.() -> Unit) {
+fun SettingsGroup(label: String?, content: @Composable ColumnScope.() -> Unit) {
     if (label != null) SectionLabel(label)
     Surface(shape = MaterialTheme.shapes.large, color = MaterialTheme.colorScheme.surfaceContainerLowest, modifier = Modifier.fillMaxWidth()) {
         Column(content = content)
@@ -587,13 +740,13 @@ private fun SettingsGroup(label: String?, content: @Composable ColumnScope.() ->
 }
 
 @Composable
-private fun RowDivider() {
+fun RowDivider() {
     HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
 }
 
 /** One settings row: an emoji tile (or [leading]), a title with an optional subtitle, and a value, switch or chevron. */
 @Composable
-private fun SettingsRow(
+fun SettingsRow(
     title: String,
     subtitle: String? = null,
     emoji: String? = null,
@@ -630,7 +783,7 @@ private fun SettingsRow(
         }
         if (value != null) Text(value, style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
         trailing?.invoke()
-        if (chevron) Text("›", fontSize = 22.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        if (chevron) Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }
 

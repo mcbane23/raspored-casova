@@ -19,10 +19,16 @@ Serbian.
 - **Raspust (Breaks):** the official Serbian primary-school calendar (breaks, days off, swapped days) with a big
   countdown to the next break, plus the school's own events (e.g. Dan škole, school slava) added per child. Days
   without classes show no lessons on the Today tab.
-- **Settings** (the round button at the top right, meant for parents): theme, children, QR import and a test
-  notification; per child: name and school, shift rotation (alternating weekly or monthly, or always the same, with
-  a choice of which shift is current), parent alarm, packing reminder, calendar region (Central Serbia or Vojvodina) and 8th grade
-  (earlier end of classes), bell times for each shift, and the subject list with what to bring for each subject.
+- **First-run setup:** on a fresh install the app asks, one question per screen, for the child's name and school,
+  the shift, the bells and the notifications (or takes everything from another parent's QR code), then opens the Week
+  tab in edit mode to enter the timetable. Empty screens have a button that leads to what is missing.
+- **Settings** (the round button at the top right of every tab, meant for parents): children, QR import, theme. Each
+  child has a short page of topics, each with a live summary and its own page: name, school and shift; timetable
+  (opens the Week tab in edit mode); bell times for each shift; subjects and what to bring; notifications (parent
+  alarm and packing reminder, each with a test button, plus anything that would hold them back); school calendar
+  (Central Serbia or Vojvodina, 8th grade with its earlier end of classes); and sharing by QR code.
+- When a child has the alarm or packing reminder on but the phone blocks notifications or exact alarms, the Family
+  and Today tabs show a warning with a button to the setting that fixes it.
 
 The official calendar lives in `app/src/main/java/com/bane23/classschedule/data/SchoolCalendar.kt` (`SCHOOL_YEARS`).
 Add a new `SchoolYear` there each summer once the ministry publishes the next year's calendar.

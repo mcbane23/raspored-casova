@@ -27,7 +27,7 @@ class ChildRepository private constructor(context: Context) {
             return current.copy(children = current.children.map { it.withoutPastChanges(today) })
         }
         // First launch: start with one child so the app is usable right away.
-        val first = Child(name = "Dete", referenceEpochDay = LocalDate.now().toEpochDay())
+        val first = Child(name = DEFAULT_CHILD_NAME, referenceEpochDay = LocalDate.now().toEpochDay())
         return AppData(children = listOf(first), selectedChildId = first.id, dataVersion = CURRENT_DATA_VERSION)
     }
 

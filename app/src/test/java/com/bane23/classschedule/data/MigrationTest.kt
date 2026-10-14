@@ -33,6 +33,12 @@ class MigrationTest {
     }
 
     @Test
+    fun existingUsersSkipTheFirstRunSetup() {
+        assertEquals(true, AppData(dataVersion = 3).migrated().onboarded)
+        assertEquals(false, AppData(dataVersion = CURRENT_DATA_VERSION).migrated().onboarded)
+    }
+
+    @Test
     fun defaultListHasNoExtraClassSubjects() {
         assertEquals(emptyList<String>(), DEFAULT_SUBJECTS.filter { it.startsWith("Dopunska") || it.startsWith("Dodatna") })
     }

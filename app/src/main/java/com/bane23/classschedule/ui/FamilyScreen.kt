@@ -67,6 +67,8 @@ fun FamilyScreen(
         .sortedBy { it.startEpochDay }
         .take(3)
 
+    val warning = rememberReminderWarning(children)
+
     LazyColumn(
         modifier.fillMaxSize(),
         contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 24.dp),
@@ -77,6 +79,9 @@ fun FamilyScreen(
                 ScreenHeader("Porodica", overline = today.label(), modifier = Modifier.weight(1f))
                 SettingsButton(onOpenSettings)
             }
+        }
+        if (warning != null) {
+            item { ReminderProblemBanner(warning) }
         }
         items(children, key = { it.id }) { child ->
             KidCard(child, now, onClick = { onOpenChild(child.id) }, onAlarmChange = { onAlarmChange(child.id, it) })

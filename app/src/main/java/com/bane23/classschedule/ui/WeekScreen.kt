@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -22,6 +23,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -71,6 +73,10 @@ fun WeekScreen(
     children: List<Child>,
     child: Child,
     onSelectChild: (String) -> Unit,
+    onOpenSettings: () -> Unit,
+    onOpenBells: () -> Unit,
+    editMode: Boolean,
+    onEditModeChange: (Boolean) -> Unit,
     onTimetableChange: (Shift, Timetable) -> Unit,
     onSubjectUsed: (String) -> Unit,
     modifier: Modifier = Modifier,
@@ -80,7 +86,6 @@ fun WeekScreen(
     var shift by rememberSaveable(child.id) { mutableStateOf(currentShift) }
     var dayIndex by rememberSaveable { mutableIntStateOf(SCHOOL_DAYS.indexOf(today.dayOfWeek).coerceAtLeast(0)) }
     var wholeWeek by rememberSaveable { mutableStateOf(false) }
-    var editMode by rememberSaveable { mutableStateOf(false) }
     var editing by remember { mutableStateOf<WeekEdit?>(null) }
     val timetable = child.timetable(shift)
     val rotates = child.shiftMode == ShiftMode.WEEKLY || child.shiftMode == ShiftMode.MONTHLY
@@ -95,7 +100,7 @@ fun WeekScreen(
         item {
             ChildTopRow(children, child.id, onSelectChild, title = "Nedelja") {
                 Surface(
-                    onClick = { editMode = !editMode },
+                    onClick = { onEditModeChange(!editMode) },
                     shape = CircleShape,
                     color = if (editMode) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceContainerLowest,
                 ) {
@@ -105,6 +110,10 @@ fun WeekScreen(
                         color = if (editMode) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface,
                         modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp),
                     )
+                }
+                if (!editMode) {
+                    Spacer(Modifier.width(8.dp))
+                    SettingsButton(onOpenSettings)
                 }
             }
         }
@@ -139,7 +148,12 @@ fun WeekScreen(
         }
 
         if (wholeWeek && !editMode) {
-            item { WeekTable(timetable, today.dayOfWeek) { dayIndex = SCHOOL_DAYS.indexOf(it); wholeWeek = false } }
+            item {
+                WeekTable(timetable, today.dayOfWeek, onEdit = { onEditModeChange(true) }) {
+                    dayIndex = SCHOOL_DAYS.indexOf(it)
+                    wholeWeek = false
+                }
+            }
             item { BellTimes(timetable) }
             return@LazyColumn
         }
@@ -179,7 +193,11 @@ fun WeekScreen(
 
         val shown = if (editMode) subjects.size else subjects.indexOfLast { it.isNotBlank() } + 1
         if (shown == 0 && !editMode) {
-            item { AppCard { EmptyState("🗓️", "Nema časova", "Dodirni Uredi da upišeš časove za ovaj dan.") } }
+            item {
+                AppCard {
+                    EmptyState("🗓️", "Nema časova", "Upiši časove za ovaj dan.", action = "✏️ Upiši časove", onAction = { onEditModeChange(true) })
+                }
+            }
         }
         for (index in 0 until shown) {
             val subject = subjects.getOrNull(index).orEmpty()
@@ -211,6 +229,11 @@ fun WeekScreen(
                     "Dodirni čas da promeniš predmet. Važi za svaki ${day.label().lowercase()} (${shift.shortLabel().lowercase()}). " +
                         "Za promenu samo jednog dana idi na Danas.",
                 )
+            }
+            item {
+                NoteBanner("⏰", "Vreme časova se menja u zvonima.") {
+                    TextButton(onClick = onOpenBells) { Text("Zvona") }
+                }
             }
         }
     }
@@ -313,10 +336,10 @@ private fun LessonRow(
 
 /** The whole week like the timetable children paste into their notebook; tapping a day opens it. */
 @Composable
-private fun WeekTable(timetable: Timetable, today: DayOfWeek, onDay: (DayOfWeek) -> Unit) {
+private fun WeekTable(timetable: Timetable, today: DayOfWeek, onEdit: () -> Unit, onDay: (DayOfWeek) -> Unit) {
     val rows = SCHOOL_DAYS.maxOf { d -> timetable.lessonsFor(d).indexOfLast { it.isNotBlank() } + 1 }
     if (rows == 0) {
-        AppCard { EmptyState("🗓️", "Raspored još nije unet", "Dodirni Uredi da upišeš časove.") }
+        AppCard { EmptyState("🗓️", "Raspored još nije unet", "Upiši časove za svaki dan u nedelji.", action = "✏️ Upiši raspored", onAction = onEdit) }
         return
     }
     Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {

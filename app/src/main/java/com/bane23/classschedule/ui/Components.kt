@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -23,7 +24,9 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -274,9 +277,16 @@ fun Tag(text: String, container: Color, content: Color, modifier: Modifier = Mod
     )
 }
 
-/** Friendly empty state: a big emoji, a short title and a hint about what to do next. */
+/** Friendly empty state: a big emoji, a short title, a hint about what to do next and optionally a button that does it. */
 @Composable
-fun EmptyState(emoji: String, title: String, hint: String? = null, modifier: Modifier = Modifier) {
+fun EmptyState(
+    emoji: String,
+    title: String,
+    hint: String? = null,
+    modifier: Modifier = Modifier,
+    action: String? = null,
+    onAction: () -> Unit = {},
+) {
     Column(
         modifier.fillMaxWidth().padding(vertical = 24.dp, horizontal = 16.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -287,6 +297,24 @@ fun EmptyState(emoji: String, title: String, hint: String? = null, modifier: Mod
         if (hint != null) {
             Text(hint, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = TextAlign.Center)
         }
+        if (action != null) {
+            Spacer(Modifier.height(6.dp))
+            BigButton(action, onClick = onAction)
+        }
+    }
+}
+
+/** Filled accent button for the one main action on a screen, e.g. "Upiši raspored". */
+@Composable
+fun BigButton(text: String, modifier: Modifier = Modifier, enabled: Boolean = true, onClick: () -> Unit) {
+    Button(
+        onClick = onClick,
+        enabled = enabled,
+        shape = CircleShape,
+        contentPadding = PaddingValues(horizontal = 24.dp, vertical = 12.dp),
+        modifier = modifier.heightIn(min = 52.dp),
+    ) {
+        Text(text, style = MaterialTheme.typography.titleMedium)
     }
 }
 
@@ -305,7 +333,7 @@ fun SettingsButton(onClick: () -> Unit) {
 fun BackButton(onClick: () -> Unit) {
     Surface(onClick = onClick, shape = CircleShape, color = MaterialTheme.colorScheme.surfaceContainerLowest, modifier = Modifier.size(44.dp)) {
         Box(contentAlignment = Alignment.Center) {
-            Text("‹", fontSize = 28.sp, color = MaterialTheme.colorScheme.onSurface, modifier = Modifier.padding(bottom = 4.dp))
+            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Nazad", tint = MaterialTheme.colorScheme.onSurface)
         }
     }
 }

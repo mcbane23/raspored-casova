@@ -75,6 +75,7 @@ fun TodayScreen(
     child: Child,
     onSelectChild: (String) -> Unit,
     onOpenSettings: () -> Unit,
+    onEditTimetable: () -> Unit,
     onChangeDay: (LocalDate, Int, String) -> Unit,
     onResetDay: (LocalDate) -> Unit,
     onPacked: (LocalDate, String, Boolean) -> Unit,
@@ -94,6 +95,8 @@ fun TodayScreen(
     val noClassesReason = (info as? DayInfo.NoClasses)?.reason?.takeIf { child.overrideOn(date) == null }
     val packDay = child.nextSchoolDayAfter(date)
 
+    val warning = rememberReminderWarning(listOf(child))
+
     LazyColumn(
         modifier.fillMaxSize(),
         contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 24.dp),
@@ -103,6 +106,9 @@ fun TodayScreen(
             ChildTopRow(children, child.id, onSelectChild, title = child.name.ifBlank { "Raspored časova" }) {
                 SettingsButton(onOpenSettings)
             }
+        }
+        if (warning != null) {
+            item { ReminderProblemBanner(warning) }
         }
         item {
             DaySwitcher(
@@ -131,7 +137,13 @@ fun TodayScreen(
                         if (child.regularSubjectsOn(date).any { it.isNotBlank() }) {
                             EmptyState("🎈", "Svi časovi su otkazani", "Za ovaj dan nema časova.")
                         } else {
-                            EmptyState("🗓️", "Raspored još nije unet", "Upiši časove na kartici Nedelja.")
+                            EmptyState(
+                                "🗓️",
+                                "Raspored još nije unet",
+                                "Upiši koje časove ${child.name.ifBlank { "dete" }} ima svakog dana.",
+                                action = "✏️ Upiši raspored",
+                                onAction = onEditTimetable,
+                            )
                         }
                     }
                 } else {
