@@ -7,8 +7,8 @@ Checklist and texts for the Google Play Console listing.
 1. Add the four signing secrets (see README → Signing keys) so releases include a signed AAB.
 2. Create the app in Play Console: default language **Serbian (Latin) – sr**, app (not game), free.
 3. Enable **Play App Signing** and upload the AAB from the latest GitHub release.
-4. Host `docs/privacy-policy.md` at a public URL (the repository is private, so e.g. a public GitHub Gist,
-   Google Sites page, or GitHub Pages from a separate public repository) and paste that URL in Play Console.
+4. Paste the privacy policy URL in Play Console: https://mcbane23.github.io/privacy/raspored-casova/ (published
+   from the public `mcbane23/privacy` repository; keep it in sync with `docs/privacy-policy.md`).
 5. Store graphics: a 512×512 icon and a 1024×500 feature graphic were generated for the first listing (kept outside
    the repository); phone screenshots must be taken from the app (at least 2).
 
@@ -16,7 +16,7 @@ Checklist and texts for the Google Play Console listing.
 
 | Section | Answer |
 | --- | --- |
-| Privacy policy | URL of the hosted `docs/privacy-policy.md` |
+| Privacy policy | https://mcbane23.github.io/privacy/raspored-casova/ |
 | Ads | No ads |
 | App access | All functionality available without login |
 | Content rating | Reference/utility app, no objectionable content |
