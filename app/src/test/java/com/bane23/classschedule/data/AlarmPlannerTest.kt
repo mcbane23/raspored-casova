@@ -53,4 +53,19 @@ class AlarmPlannerTest {
         assertEquals(LocalDate.of(2026, 11, 18).atTime(10, 40), child.nextAlarm(inBreak.plusDays(1)))
         assertNull(child.copy(alarmEnabled = false).nextAlarm(wednesday.atTime(7, 0)))
     }
+
+    @Test
+    fun packReminderComesTheEveningBeforeASchoolDay() {
+        val reminder = child.copy(alarmEnabled = false, packReminderEnabled = true)
+        // Thursday has classes, so Wednesday evening; after that the next classes are on Wednesday 21 Oct.
+        assertEquals(wednesday.atTime(19, 0), reminder.nextPackReminder(wednesday.atTime(7, 0)))
+        assertEquals(LocalDate.of(2026, 10, 20).atTime(19, 0), reminder.nextPackReminder(wednesday.atTime(19, 0)))
+    }
+
+    @Test
+    fun packReminderUsesItsOwnTimeAndCanBeOff() {
+        val reminder = child.copy(packReminderEnabled = true, packReminderMinute = 20 * 60 + 30)
+        assertEquals(wednesday.atTime(20, 30), reminder.nextPackReminder(wednesday.atTime(19, 0)))
+        assertNull(child.nextPackReminder(wednesday.atTime(7, 0)))
+    }
 }

@@ -1,5 +1,7 @@
 package com.bane23.classschedule
 
+import android.content.Context
+import android.content.Intent
 import android.graphics.Color as AndroidColor
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -17,6 +19,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -41,8 +44,13 @@ import com.bane23.classschedule.ui.rememberAlarmSwitch
 import com.bane23.classschedule.ui.theme.RasporedCasovaTheme
 
 class MainActivity : ComponentActivity() {
+    /** Child whose Today tab a tapped notification asked for, until [App] has opened it. */
+    private var openTodayFor by mutableStateOf<String?>(null)
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        // Only a fresh launch; after rotation the same intent must not jump back to Today.
+        if (savedInstanceState == null) openTodayFor = intent?.getStringExtra(EXTRA_OPEN_TODAY_FOR)
         enableEdgeToEdge()
         setContent {
             val viewModel: AppViewModel = viewModel()
@@ -61,9 +69,25 @@ class MainActivity : ComponentActivity() {
                 onDispose {}
             }
             RasporedCasovaTheme(darkTheme = dark) {
-                App(viewModel)
+                App(viewModel, openTodayFor = openTodayFor, onOpenedToday = { openTodayFor = null })
             }
         }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        intent.getStringExtra(EXTRA_OPEN_TODAY_FOR)?.let { openTodayFor = it }
+    }
+
+    companion object {
+        private const val EXTRA_OPEN_TODAY_FOR = "openTodayFor"
+
+        /** Opens the app (or brings it to the front) on the Today tab of the child [childId]. */
+        fun openTodayIntent(context: Context, childId: String): Intent =
+            Intent(context, MainActivity::class.java)
+                .putExtra(EXTRA_OPEN_TODAY_FOR, childId)
+                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)
     }
 }
 
@@ -106,8 +130,9 @@ private fun SettingsPage.parent(): SettingsPage? = when (this) {
     is SettingsPage.Subjects -> SettingsPage.ChildPage(childId)
 }
 
+/** The whole app; [openTodayFor] is a child id from a tapped notification, cleared through [onOpenedToday]. */
 @Composable
-fun App(viewModel: AppViewModel = viewModel()) {
+fun App(viewModel: AppViewModel = viewModel(), openTodayFor: String? = null, onOpenedToday: () -> Unit = {}) {
     val data by viewModel.data.collectAsState()
     val family = data.children.size > 1
     var tab by rememberSaveable { mutableStateOf(if (family) Tab.FAMILY else Tab.TODAY) }
@@ -119,6 +144,14 @@ fun App(viewModel: AppViewModel = viewModel()) {
     fun openSettings(next: SettingsPage?) { settingsRoute = next?.route() }
 
     BackHandler(enabled = page != null) { openSettings(page?.parent()) }
+
+    LaunchedEffect(openTodayFor) {
+        val id = openTodayFor ?: return@LaunchedEffect
+        if (data.children.any { it.id == id }) viewModel.selectChild(id)
+        tab = Tab.TODAY
+        settingsRoute = null
+        onOpenedToday()
+    }
 
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,

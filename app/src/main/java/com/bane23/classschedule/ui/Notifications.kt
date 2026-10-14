@@ -32,16 +32,26 @@ private fun needsNotificationPermission(context: Context): Boolean =
     Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
         ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
 
+/** Turns a child's parent alarm on or off, first asking for the notification permission when it is needed. */
+@Composable
+fun rememberAlarmSwitch(viewModel: AppViewModel): (childId: String, enabled: Boolean) -> Unit =
+    rememberNotificationSwitch(viewModel::setAlarm)
+
+/** Turns a child's packing reminder on or off, first asking for the notification permission when it is needed. */
+@Composable
+fun rememberPackReminderSwitch(viewModel: AppViewModel): (childId: String, enabled: Boolean) -> Unit =
+    rememberNotificationSwitch(viewModel::setPackReminder)
+
 /**
- * Turns a child's parent alarm on or off. Turning it on first asks for the notification permission when it is needed,
- * then opens the "Alarms & reminders" switch if exact alarms are not allowed yet, since without it the alarm is late.
+ * Turning a reminder on first asks for the notification permission when it is needed, then opens the "Alarms &
+ * reminders" switch if exact alarms are not allowed yet, since without it the reminder comes late.
  */
 @Composable
-fun rememberAlarmSwitch(viewModel: AppViewModel): (childId: String, enabled: Boolean) -> Unit {
+private fun rememberNotificationSwitch(set: (childId: String, enabled: Boolean) -> Unit): (String, Boolean) -> Unit {
     val context = LocalContext.current
     var pending by remember { mutableStateOf<String?>(null) }
     val launcher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
-        pending?.let { viewModel.setAlarm(it, granted) }
+        pending?.let { set(it, granted) }
         pending = null
         if (granted && !AlarmScheduler.canScheduleExact(context)) openExactAlarmSettings(context)
     }
@@ -50,7 +60,7 @@ fun rememberAlarmSwitch(viewModel: AppViewModel): (childId: String, enabled: Boo
             pending = id
             launcher.launch(Manifest.permission.POST_NOTIFICATIONS)
         } else {
-            viewModel.setAlarm(id, enabled)
+            set(id, enabled)
             if (enabled && !AlarmScheduler.canScheduleExact(context)) openExactAlarmSettings(context)
         }
     }
@@ -80,25 +90,43 @@ fun openExactAlarmSettings(context: Context) {
     }
 }
 
-/** Sends a test parent notification for [child]; [blocked] is true when the phone refused to show it. */
+/** Sends a test notification for [child]; [blocked] is true when the phone refused to show it. */
 class TestNotification(val send: () -> Unit, val blocked: Boolean)
 
+/** A test of the parent's "classes are over" notification, or with [pack] of the child's packing reminder. */
 @Composable
-fun rememberTestNotification(child: Child): TestNotification {
+fun rememberTestNotification(child: Child, pack: Boolean = false): TestNotification {
     val context = LocalContext.current
     var blocked by remember { mutableStateOf(false) }
 
     fun show() {
-        val end = child.classesEndOn(LocalDate.now())
-        val text = if (end != null) "Probno obaveštenje. Danas se časovi završavaju u ${end.label()}." else "Probno obaveštenje radi."
-        blocked = !AlarmReceiver.showNotification(
-            context,
-            TEST_NOTIFICATION_ID,
-            child.name.ifBlank { "Raspored časova" },
-            text,
-            alarmSound = child.alarmSound,
-            silent = child.alarmSilent,
-        )
+        blocked = if (pack) {
+            val content = packReminderContent(child, LocalDate.now())
+            !AlarmReceiver.showNotification(
+                context,
+                AlarmReceiver.Reminder.PACK_BAG,
+                child.id,
+                TEST_NOTIFICATION_ID,
+                content?.title ?: "🎒 Spakuj torbu",
+                content?.text ?: "Probni podsetnik radi.",
+                alarmSound = child.packReminderSound,
+                silent = child.packReminderSilent,
+                bigText = content?.bigText,
+            )
+        } else {
+            val end = child.classesEndOn(LocalDate.now())
+            val text = if (end != null) "Probno obaveštenje. Danas se časovi završavaju u ${end.label()}." else "Probno obaveštenje radi."
+            !AlarmReceiver.showNotification(
+                context,
+                AlarmReceiver.Reminder.CLASSES_OVER,
+                child.id,
+                TEST_NOTIFICATION_ID,
+                child.name.ifBlank { "Raspored časova" },
+                text,
+                alarmSound = child.alarmSound,
+                silent = child.alarmSilent,
+            )
+        }
     }
 
     val launcher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
@@ -111,7 +139,7 @@ fun rememberTestNotification(child: Child): TestNotification {
 }
 
 /**
- * Whether battery optimization may hold back the parent alarm. Rechecked each time the screen comes back, so the
+ * Whether battery optimization may hold back the reminders. Rechecked each time the screen comes back, so the
  * warning disappears after the user changes the setting.
  */
 @Composable

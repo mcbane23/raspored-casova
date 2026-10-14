@@ -21,7 +21,7 @@ Serbian.
   without classes show no lessons on the Today tab.
 - **Settings** (the round button at the top right, meant for parents): theme, children, QR import and a test
   notification; per child: name and school, shift rotation (alternating weekly or monthly, or always the same, with
-  a choice of which shift is current), parent alarm, calendar region (Central Serbia or Vojvodina) and 8th grade
+  a choice of which shift is current), parent alarm, packing reminder, calendar region (Central Serbia or Vojvodina) and 8th grade
   (earlier end of classes), bell times for each shift, and the subject list with what to bring for each subject.
 
 The official calendar lives in `app/src/main/java/com/bane23/classschedule/data/SchoolCalendar.kt` (`SCHOOL_YEARS`).
@@ -37,10 +37,15 @@ Add a new `SchoolYear` there each summer once the ministry publishes the next ye
   QR code; another phone scans it and adds it as a new child or replaces an existing one. One-day changes and alarm
   settings are not shared. The code is deflate-compressed JSON (`data/ShareCodec.kt`).
 - **Parent alarm:** an optional notification when the day's last class ends (or 5/10/15 minutes before), following
-  the shift, the school calendar and one-day changes. Alarms fire with the app closed and in Doze, and are rescheduled after a reboot, app update or clock change; no exact-alarm permission is needed. When battery optimization is on, the child's settings show a shortcut to turn it off. By default it plays a short school-bell chime
+  the shift, the school calendar and one-day changes. Alarms fire with the app closed and in Doze, and are rescheduled after a reboot, app update or clock change. With "Alarms & reminders" allowed (Android 12+) they fire at the exact minute; while it is missing, the child's settings warn and link to it. When battery optimization is on, the child's settings show a shortcut to turn it off. By default it plays a short school-bell chime
   (`res/raw/school_bell.wav`, generated for this app); the "Zvuk" choice "Alarm" makes it ring with the phone's alarm
   tone at alarm volume, repeating until the notification is opened or dismissed, and "Bez zvuka" posts a plain
   notification without any sound.
+- **Packing reminder:** an optional per-child notification for the student, at a chosen time (19:00 by default) on
+  each evening before a school day, listing the next day's subjects not yet ticked off in "Sutra u torbu" with what
+  to bring for each; it is skipped when everything is packed. It is scheduled and rescheduled like the parent alarm
+  and has the same sound choices, on its own notification channels.
+- Tapping either notification opens the app on the Today tab of that child.
 
 **Design ("Stanice"):** a cool blue-white base (deep night blue in the dark theme) with one tangerine accent, the
 rounded [Baloo 2](https://github.com/EkType/Baloo2) font (SIL Open Font License 1.1, bundled in `res/font`, cut down
