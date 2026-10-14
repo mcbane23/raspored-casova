@@ -69,7 +69,7 @@ crossfade. The light theme is the default; Settings also offers dark and "follow
 Data is stored locally on the phone (`data.json` in the app's private storage).
 
 See [docs/google-play.md](docs/google-play.md) for the Play Console checklist and listing texts, and
-[docs/privacy-policy.md](docs/privacy-policy.md) for the privacy policy.
+[docs/privacy-policy.md](docs/privacy-policy.md) for the privacy policy (published at https://mcbane23.github.io/privacy/raspored-casova/).
 
 ## Build
 
