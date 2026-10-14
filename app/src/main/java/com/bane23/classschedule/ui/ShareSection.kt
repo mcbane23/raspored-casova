@@ -51,16 +51,24 @@ fun QrCodeDialog(child: Child, onDismiss: () -> Unit) {
 
 /**
  * Scans a timetable QR code from another phone; the result is added as a new child or replaces [replaceable].
+ * With [onImported] (the first-run setup) it replaces [replaceable] without asking and then calls it.
  * Returns the function that opens the scanner.
  */
 @Composable
-fun rememberQrImport(viewModel: AppViewModel, replaceable: Child?): () -> Unit {
+fun rememberQrImport(viewModel: AppViewModel, replaceable: Child?, onImported: (() -> Unit)? = null): () -> Unit {
     var scanned by remember { mutableStateOf<Child?>(null) }
     var scanFailed by remember { mutableStateOf(false) }
     val scanner = rememberLauncherForActivityResult(ScanContract()) { result ->
         val text = result.contents ?: return@rememberLauncherForActivityResult
         val decoded = ShareCodec.decode(text)
-        if (decoded == null) scanFailed = true else scanned = decoded
+        when {
+            decoded == null -> scanFailed = true
+            onImported != null && replaceable != null -> {
+                viewModel.importChild(decoded, replaceId = replaceable.id)
+                onImported()
+            }
+            else -> scanned = decoded
+        }
     }
 
     scanned?.let { shared ->

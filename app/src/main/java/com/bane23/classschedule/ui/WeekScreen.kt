@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -19,9 +20,14 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.List
+import androidx.compose.material.icons.filled.DateRange
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -33,6 +39,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -49,19 +57,6 @@ import java.time.LocalDate
 
 private data class WeekEdit(val day: DayOfWeek, val index: Int, val subject: String)
 
-/** Short subject names for the whole-week table, where only a few letters fit. */
-private val SHORT_NAMES = listOf(
-    "srpski" to "Srp", "matemat" to "Mat", "engleski" to "Eng", "strani" to "Str", "svet oko nas" to "SON",
-    "priroda" to "PiD", "likovn" to "Lik", "muzič" to "Muz", "muzic" to "Muz", "fizičk" to "Fiz", "fizick" to "Fiz",
-    "istorij" to "Ist", "geograf" to "Geo", "biolog" to "Bio", "fizika" to "Fizika", "hemij" to "Hem", "tehni" to "Teh",
-    "informat" to "Inf", "verska" to "Ver", "građansk" to "Građ", "gradjansk" to "Građ", "odeljensk" to "ČOS",
-)
-
-private fun shortName(lesson: String): String {
-    val name = ExtraClass.parse(lesson).second.trim()
-    return SHORT_NAMES.firstOrNull { name.lowercase().contains(it.first) }?.second ?: name.take(4)
-}
-
 /**
  * The regular weekly timetable for one shift: one day at a time in big rows (for children) or the whole week as a
  * table. "Uredi" switches to editing, where tapping a period picks its subject for every week.
@@ -71,6 +66,10 @@ fun WeekScreen(
     children: List<Child>,
     child: Child,
     onSelectChild: (String) -> Unit,
+    onOpenSettings: () -> Unit,
+    onOpenBells: () -> Unit,
+    editMode: Boolean,
+    onEditModeChange: (Boolean) -> Unit,
     onTimetableChange: (Shift, Timetable) -> Unit,
     onSubjectUsed: (String) -> Unit,
     modifier: Modifier = Modifier,
@@ -80,7 +79,6 @@ fun WeekScreen(
     var shift by rememberSaveable(child.id) { mutableStateOf(currentShift) }
     var dayIndex by rememberSaveable { mutableIntStateOf(SCHOOL_DAYS.indexOf(today.dayOfWeek).coerceAtLeast(0)) }
     var wholeWeek by rememberSaveable { mutableStateOf(false) }
-    var editMode by rememberSaveable { mutableStateOf(false) }
     var editing by remember { mutableStateOf<WeekEdit?>(null) }
     val timetable = child.timetable(shift)
     val rotates = child.shiftMode == ShiftMode.WEEKLY || child.shiftMode == ShiftMode.MONTHLY
@@ -88,23 +86,60 @@ fun WeekScreen(
     val subjects = timetable.lessonsFor(day)
 
     LazyColumn(
-        modifier.fillMaxSize(),
+        modifier.fillMaxSize().then(
+            if (wholeWeek && !editMode) Modifier
+            else Modifier.swipeBetween(
+                onPrevious = { dayIndex = (dayIndex - 1).coerceAtLeast(0) },
+                onNext = { dayIndex = (dayIndex + 1).coerceAtMost(SCHOOL_DAYS.size - 1) },
+            ),
+        ),
         contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 24.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
         item {
             ChildTopRow(children, child.id, onSelectChild, title = "Nedelja") {
+                if (!editMode) {
+                    Surface(
+                        onClick = { wholeWeek = !wholeWeek },
+                        shape = CircleShape,
+                        color = MaterialTheme.colorScheme.surfaceContainerLowest,
+                        modifier = Modifier.size(44.dp),
+                    ) {
+                        Box(contentAlignment = Alignment.Center) {
+                            Icon(
+                                if (wholeWeek) Icons.AutoMirrored.Filled.List else Icons.Filled.DateRange,
+                                contentDescription = if (wholeWeek) "Prikaži po danu" else "Prikaži celu nedelju",
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                    }
+                    Spacer(Modifier.width(8.dp))
+                }
+                // With several children the name pills need the room, so "Uredi" shrinks to its pencil.
+                val compact = children.size > 1 && !editMode
                 Surface(
-                    onClick = { editMode = !editMode },
+                    onClick = { onEditModeChange(!editMode) },
                     shape = CircleShape,
                     color = if (editMode) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceContainerLowest,
+                    modifier = if (compact) Modifier.size(44.dp) else Modifier,
                 ) {
-                    Text(
-                        if (editMode) "Gotovo" else "✏️ Uredi",
-                        style = MaterialTheme.typography.titleSmall,
-                        color = if (editMode) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface,
-                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp),
-                    )
+                    Box(contentAlignment = Alignment.Center) {
+                        Text(
+                            when {
+                                editMode -> "Gotovo"
+                                compact -> "✏️"
+                                else -> "✏️ Uredi"
+                            },
+                            style = MaterialTheme.typography.titleSmall,
+                            color = if (editMode) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface,
+                            modifier = if (compact) Modifier.semantics { contentDescription = "Uredi raspored" }
+                            else Modifier.padding(horizontal = 16.dp, vertical = 10.dp),
+                        )
+                    }
+                }
+                if (!editMode) {
+                    Spacer(Modifier.width(8.dp))
+                    SettingsButton(onOpenSettings)
                 }
             }
         }
@@ -115,10 +150,6 @@ fun WeekScreen(
                     style = MaterialTheme.typography.labelLarge,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
-            }
-        } else {
-            item {
-                PillToggle(listOf(false, true), wholeWeek, { if (it) "Cela nedelja" else "Po danu" }, { wholeWeek = it })
             }
         }
         if (rotates) {
@@ -139,7 +170,12 @@ fun WeekScreen(
         }
 
         if (wholeWeek && !editMode) {
-            item { WeekTable(timetable, today.dayOfWeek) { dayIndex = SCHOOL_DAYS.indexOf(it); wholeWeek = false } }
+            item {
+                WeekTable(timetable, today.dayOfWeek, onEdit = { onEditModeChange(true) }) {
+                    dayIndex = SCHOOL_DAYS.indexOf(it)
+                    wholeWeek = false
+                }
+            }
             item { BellTimes(timetable) }
             return@LazyColumn
         }
@@ -179,7 +215,11 @@ fun WeekScreen(
 
         val shown = if (editMode) subjects.size else subjects.indexOfLast { it.isNotBlank() } + 1
         if (shown == 0 && !editMode) {
-            item { AppCard { EmptyState("🗓️", "Nema časova", "Dodirni Uredi da upišeš časove za ovaj dan.") } }
+            item {
+                AppCard {
+                    EmptyState("🗓️", "Nema časova", "Upiši časove za ovaj dan.", action = "✏️ Upiši časove", onAction = { onEditModeChange(true) })
+                }
+            }
         }
         for (index in 0 until shown) {
             val subject = subjects.getOrNull(index).orEmpty()
@@ -211,6 +251,11 @@ fun WeekScreen(
                     "Dodirni čas da promeniš predmet. Važi za svaki ${day.label().lowercase()} (${shift.shortLabel().lowercase()}). " +
                         "Za promenu samo jednog dana idi na Danas.",
                 )
+            }
+            item {
+                NoteBanner("⏰", "Vreme časova se menja u zvonima.") {
+                    TextButton(onClick = onOpenBells) { Text("Zvona") }
+                }
             }
         }
     }
@@ -313,10 +358,10 @@ private fun LessonRow(
 
 /** The whole week like the timetable children paste into their notebook; tapping a day opens it. */
 @Composable
-private fun WeekTable(timetable: Timetable, today: DayOfWeek, onDay: (DayOfWeek) -> Unit) {
+private fun WeekTable(timetable: Timetable, today: DayOfWeek, onEdit: () -> Unit, onDay: (DayOfWeek) -> Unit) {
     val rows = SCHOOL_DAYS.maxOf { d -> timetable.lessonsFor(d).indexOfLast { it.isNotBlank() } + 1 }
     if (rows == 0) {
-        AppCard { EmptyState("🗓️", "Raspored još nije unet", "Dodirni Uredi da upišeš časove.") }
+        AppCard { EmptyState("🗓️", "Raspored još nije unet", "Upiši časove za svaki dan u nedelji.", action = "✏️ Upiši raspored", onAction = onEdit) }
         return
     }
     Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {

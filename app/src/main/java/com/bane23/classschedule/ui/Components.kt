@@ -1,10 +1,13 @@
 package com.bane23.classschedule.ui
 
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -15,6 +18,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -23,7 +27,9 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -42,6 +48,7 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.luminance
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
@@ -91,6 +98,39 @@ val AccentOrange = Color(0xFFE8620C)
 val BreakTeal = Color(0xFF14A38B)
 val DoneGreen = Color(0xFF2FA86A)
 val HolidayAmber = Color(0xFFE98B2A)
+
+/** Short subject names for places where only a few letters fit (the week table, the stops on Today). */
+private val SHORT_NAMES = listOf(
+    "srpski" to "Srp", "matemat" to "Mat", "engleski" to "Eng", "strani" to "Str", "svet oko nas" to "SON",
+    "priroda" to "PiD", "likovn" to "Lik", "muzič" to "Muz", "muzic" to "Muz", "fizičk" to "Fiz", "fizick" to "Fiz",
+    "istorij" to "Ist", "geograf" to "Geo", "biolog" to "Bio", "fizika" to "Fizika", "hemij" to "Hem", "tehni" to "Teh",
+    "informat" to "Inf", "verska" to "Ver", "građansk" to "Građ", "gradjansk" to "Građ", "odeljensk" to "ČOS",
+)
+
+/** "Mat" for "Matematika" or "Dopunska: Matematika"; unknown subjects keep their first four letters. */
+fun shortName(lesson: String): String {
+    val name = ExtraClass.parse(lesson).second.trim()
+    return SHORT_NAMES.firstOrNull { name.lowercase().contains(it.first) }?.second ?: name.take(4)
+}
+
+/**
+ * A horizontal swipe on this element calls [onPrevious] (swipe right) or [onNext] (swipe left), e.g. to change the
+ * day. Drags consumed by a scrolling child (the stops row) don't count.
+ */
+fun Modifier.swipeBetween(onPrevious: () -> Unit, onNext: () -> Unit): Modifier = pointerInput(onPrevious, onNext) {
+    val threshold = 72.dp.toPx()
+    var total = 0f
+    detectHorizontalDragGestures(
+        onDragStart = { total = 0f },
+        onDragEnd = {
+            when {
+                total > threshold -> onPrevious()
+                total < -threshold -> onNext()
+            }
+        },
+        onHorizontalDrag = { _, amount -> total += amount },
+    )
+}
 
 /** Style for a lesson text; optional classes ("Dopunska: Matematika") take their subject's style. */
 fun subjectStyle(lesson: String): SubjectStyle {
@@ -274,9 +314,16 @@ fun Tag(text: String, container: Color, content: Color, modifier: Modifier = Mod
     )
 }
 
-/** Friendly empty state: a big emoji, a short title and a hint about what to do next. */
+/** Friendly empty state: a big emoji, a short title, a hint about what to do next and optionally a button that does it. */
 @Composable
-fun EmptyState(emoji: String, title: String, hint: String? = null, modifier: Modifier = Modifier) {
+fun EmptyState(
+    emoji: String,
+    title: String,
+    hint: String? = null,
+    modifier: Modifier = Modifier,
+    action: String? = null,
+    onAction: () -> Unit = {},
+) {
     Column(
         modifier.fillMaxWidth().padding(vertical = 24.dp, horizontal = 16.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -287,6 +334,24 @@ fun EmptyState(emoji: String, title: String, hint: String? = null, modifier: Mod
         if (hint != null) {
             Text(hint, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = TextAlign.Center)
         }
+        if (action != null) {
+            Spacer(Modifier.height(6.dp))
+            BigButton(action, onClick = onAction)
+        }
+    }
+}
+
+/** Filled accent button for the one main action on a screen, e.g. "Upiši raspored". */
+@Composable
+fun BigButton(text: String, modifier: Modifier = Modifier, enabled: Boolean = true, onClick: () -> Unit) {
+    Button(
+        onClick = onClick,
+        enabled = enabled,
+        shape = CircleShape,
+        contentPadding = PaddingValues(horizontal = 24.dp, vertical = 12.dp),
+        modifier = modifier.heightIn(min = 52.dp),
+    ) {
+        Text(text, style = MaterialTheme.typography.titleMedium)
     }
 }
 
@@ -305,7 +370,7 @@ fun SettingsButton(onClick: () -> Unit) {
 fun BackButton(onClick: () -> Unit) {
     Surface(onClick = onClick, shape = CircleShape, color = MaterialTheme.colorScheme.surfaceContainerLowest, modifier = Modifier.size(44.dp)) {
         Box(contentAlignment = Alignment.Center) {
-            Text("‹", fontSize = 28.sp, color = MaterialTheme.colorScheme.onSurface, modifier = Modifier.padding(bottom = 4.dp))
+            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Nazad", tint = MaterialTheme.colorScheme.onSurface)
         }
     }
 }
@@ -368,6 +433,7 @@ fun HeroCard(
     detail: String?,
     ringMinutes: Long? = null,
     ringProgress: Float = 0f,
+    footer: String? = null,
     onClick: (() -> Unit)? = null,
 ) {
     Surface(
@@ -395,6 +461,18 @@ fun HeroCard(
                     CountdownRing(ringMinutes, ringProgress)
                 }
             }
+            if (footer != null) {
+                Text(
+                    footer,
+                    style = MaterialTheme.typography.titleSmall,
+                    color = Color.White,
+                    modifier = Modifier
+                        .padding(top = 8.dp)
+                        .clip(CircleShape)
+                        .background(Color.White.copy(alpha = 0.18f))
+                        .padding(horizontal = 12.dp, vertical = 4.dp),
+                )
+            }
         }
     }
 }
@@ -402,11 +480,12 @@ fun HeroCard(
 /** Ring that empties as time passes, with the minutes left in the middle. */
 @Composable
 private fun CountdownRing(minutes: Long, progress: Float) {
+    val left by animateFloatAsState(1f - progress.coerceIn(0f, 1f), tween(600), label = "ring")
     Box(Modifier.size(64.dp), contentAlignment = Alignment.Center) {
         Canvas(Modifier.size(58.dp)) {
             val stroke = Stroke(width = 7.dp.toPx(), cap = StrokeCap.Round)
             drawArc(Color.White.copy(alpha = 0.25f), 0f, 360f, useCenter = false, style = stroke)
-            drawArc(Color.White, -90f, 360f * (1f - progress.coerceIn(0f, 1f)), useCenter = false, style = stroke)
+            drawArc(Color.White, -90f, 360f * left, useCenter = false, style = stroke)
         }
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Text(if (minutes > 99) "${minutes / 60}h" else "$minutes", style = MaterialTheme.typography.titleLarge, color = Color.White, lineHeight = 20.sp)

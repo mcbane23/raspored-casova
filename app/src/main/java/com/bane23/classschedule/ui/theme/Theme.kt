@@ -19,9 +19,9 @@ import com.bane23.classschedule.R
 
 // "Stanice" palettes: a cool blue-white base (light) or a deep night blue (dark) with one warm tangerine accent.
 // Subjects bring their own colors (ui/Components.kt), so the base stays calm and the accent marks only what is
-// current or tappable.
+// current or tappable. The home-screen widget uses the same two palettes.
 
-private val LightColors = lightColorScheme(
+internal val LightColors = lightColorScheme(
     primary = Color(0xFFE8620C),
     onPrimary = Color.White,
     primaryContainer = Color(0xFFFFE8D6),
@@ -53,7 +53,7 @@ private val LightColors = lightColorScheme(
     errorContainer = Color(0xFFFBDADC),
 )
 
-private val DarkColors = darkColorScheme(
+internal val DarkColors = darkColorScheme(
     primary = Color(0xFFFF9A4D),
     onPrimary = Color(0xFF1A1208),
     primaryContainer = Color(0xFF3A2C35),

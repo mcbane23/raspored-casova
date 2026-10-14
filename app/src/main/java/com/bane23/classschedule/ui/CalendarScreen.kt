@@ -3,6 +3,8 @@ package com.bane23.classschedule.ui
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -19,10 +21,10 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Checkbox
-import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDialog
+import androidx.compose.material3.DateRangePicker
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -30,7 +32,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.rememberDatePickerState
+import androidx.compose.material3.rememberDateRangePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -68,6 +70,7 @@ fun CalendarScreen(
 ) {
     val today = LocalDate.now()
     var adding by remember { mutableStateOf(false) }
+    var deleting by remember { mutableStateOf<CalendarEvent?>(null) }
     val customIds = child.customEvents.map { it.id }.toSet()
     val upcoming = child.calendarEvents().filter { it.endEpochDay >= today.toEpochDay() }
     val year = schoolYearOf(today)
@@ -89,18 +92,36 @@ fun CalendarScreen(
         }
         item { SectionLabel("Slobodni dani i događaji") }
         if (upcoming.isEmpty()) {
-            item { AppCard { EmptyState("📅", "Nema predstojećih događaja", "Dodaj Dan škole, školsku slavu ili izlet.") } }
+            item {
+                AppCard {
+                    EmptyState("📅", "Nema predstojećih događaja", "Dodaj Dan škole, školsku slavu ili izlet.", action = "+ Dodaj događaj", onAction = { adding = true })
+                }
+            }
         }
         items(upcoming, key = { "${it.id}-${it.startEpochDay}" }) { event ->
             EventTicket(event, today) {
                 if (event.id in customIds) {
-                    IconButton(onClick = { onDeleteEvent(event.id) }) {
+                    IconButton(onClick = { deleting = event }) {
                         Icon(Icons.Filled.Delete, contentDescription = "Obriši događaj", tint = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }
             }
         }
         item { DashedButton("+ Dodaj događaj škole", onClick = { adding = true }) }
+    }
+
+    deleting?.let { event ->
+        AlertDialog(
+            onDismissRequest = { deleting = null },
+            title = { Text("Obrisati „${event.title}”?") },
+            confirmButton = {
+                TextButton(onClick = {
+                    onDeleteEvent(event.id)
+                    deleting = null
+                }) { Text("Obriši") }
+            },
+            dismissButton = { TextButton(onClick = { deleting = null }) { Text("Odustani") } },
+        )
     }
 
     if (adding) {
@@ -139,7 +160,10 @@ private fun CountdownCard(next: CalendarEvent, today: LocalDate) {
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
+/** Common school events offered as one-tap chips: title and whether there are classes that day. */
+private val QUICK_EVENTS = listOf("🏫 Dan škole" to true, "🕯️ Školska slava" to true, "🚌 Izlet" to false, "🎭 Priredba" to false)
+
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 private fun AddEventDialog(onDismiss: () -> Unit, onConfirm: (CalendarEvent) -> Unit) {
     val today = LocalDate.now()
@@ -147,30 +171,51 @@ private fun AddEventDialog(onDismiss: () -> Unit, onConfirm: (CalendarEvent) -> 
     var start by remember { mutableStateOf(today) }
     var end by remember { mutableStateOf(today) }
     var noClasses by remember { mutableStateOf(true) }
-    var picking by remember { mutableStateOf<Boolean?>(null) } // true = start date, false = end date
+    var picking by remember { mutableStateOf(false) }
 
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("Novi događaj") },
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    QUICK_EVENTS.forEach { (label, off) ->
+                        val name = label.substringAfter(' ')
+                        FilterChip(
+                            selected = title == name,
+                            onClick = {
+                                title = name
+                                noClasses = off
+                            },
+                            label = { Text(label) },
+                        )
+                    }
+                }
                 OutlinedTextField(
                     value = title,
                     onValueChange = { title = it },
-                    label = { Text("Naziv (npr. Dan škole)") },
+                    label = { Text("Naziv") },
                     singleLine = true,
                 )
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text("Od:", Modifier.width(40.dp))
-                    TextButton(onClick = { picking = true }) { Text(start.label()) }
-                }
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text("Do:", Modifier.width(40.dp))
-                    TextButton(onClick = { picking = false }) { Text(end.label()) }
+                Surface(
+                    onClick = { picking = true },
+                    shape = MaterialTheme.shapes.small,
+                    color = MaterialTheme.colorScheme.background,
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Row(Modifier.padding(horizontal = 14.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Text("📅", fontSize = 20.sp)
+                        Spacer(Modifier.width(10.dp))
+                        Column(Modifier.weight(1f)) {
+                            Text("Datum", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text(dateRangeLabel(start, end), style = MaterialTheme.typography.titleSmall)
+                        }
+                        Text("Promeni", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
+                    }
                 }
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Checkbox(checked = noClasses, onCheckedChange = { noClasses = it })
-                    Text("Nema nastave")
+                    Text("Nema nastave tog dana")
                 }
             }
         },
@@ -185,29 +230,34 @@ private fun AddEventDialog(onDismiss: () -> Unit, onConfirm: (CalendarEvent) -> 
         dismissButton = { TextButton(onClick = onDismiss) { Text("Odustani") } },
     )
 
-    picking?.let { isStart ->
-        val initial = if (isStart) start else end
-        val state = rememberDatePickerState(initialSelectedDateMillis = initial.toEpochDay() * MILLIS_PER_DAY)
+    if (picking) {
+        val state = rememberDateRangePickerState(
+            initialSelectedStartDateMillis = start.toEpochDay() * MILLIS_PER_DAY,
+            initialSelectedEndDateMillis = end.toEpochDay() * MILLIS_PER_DAY,
+        )
         DatePickerDialog(
-            onDismissRequest = { picking = null },
+            onDismissRequest = { picking = false },
             confirmButton = {
-                TextButton(onClick = {
-                    // The picker reports UTC midnight of the chosen day.
-                    state.selectedDateMillis?.let { millis ->
-                        val date = LocalDate.ofEpochDay(millis / MILLIS_PER_DAY)
-                        if (isStart) {
-                            start = date
-                            if (end < date) end = date
-                        } else {
-                            end = date
+                TextButton(
+                    enabled = state.selectedStartDateMillis != null,
+                    onClick = {
+                        // The picker reports UTC midnight of the chosen days; one tapped day is a one-day event.
+                        state.selectedStartDateMillis?.let { millis ->
+                            start = LocalDate.ofEpochDay(millis / MILLIS_PER_DAY)
+                            end = state.selectedEndDateMillis?.let { LocalDate.ofEpochDay(it / MILLIS_PER_DAY) } ?: start
                         }
-                    }
-                    picking = null
-                }) { Text("U redu") }
+                        picking = false
+                    },
+                ) { Text("U redu") }
             },
-            dismissButton = { TextButton(onClick = { picking = null }) { Text("Odustani") } },
+            dismissButton = { TextButton(onClick = { picking = false }) { Text("Odustani") } },
         ) {
-            DatePicker(state = state)
+            DateRangePicker(
+                state = state,
+                title = { Text("Izaberi dan ili više dana", Modifier.padding(start = 24.dp, top = 16.dp)) },
+                showModeToggle = false,
+                modifier = Modifier.height(480.dp),
+            )
         }
     }
 }

@@ -9,20 +9,28 @@ Serbian.
 - **Porodica (Family):** shown only with two or more children, and then the first tab. Every child's day on one
   screen: shift, current class or break, the day's classes as small dots, when classes end and a switch for the
   parent alarm. Tapping a child opens their Today tab.
-- **Danas (Today):** a big status card (current class with a countdown ring, break, when school starts, or "done for
-  today"), the day's classes as stops on a line, and the "Sutra u torbu" packing list for the next school day.
-  Tapping a stop changes or cancels that class for that day only (e.g. Serbian instead of English, or no PE), and a
-  class can be added for that day only. Changes for past days are removed automatically.
+- **Danas (Today):** a big status card (current class with a countdown ring and the class after it, break, when
+  school starts, or "done for today"), the day's classes as stops on a line (emoji, short name and time), and the
+  "Sutra u torbu" packing list for the next school day with a progress bar and a "Torba je spremna!" when everything
+  is ticked. Swiping left or right changes the day. Tapping a stop shows the class (time, what to bring); from there
+  one more tap changes or cancels it for that day only (e.g. Serbian instead of English, or no PE), so a child can't
+  do it by accident. A class can also be added for that day only. Changes for past days are removed automatically.
 - **Nedelja (Week):** the regular Monday–Friday timetable, kept separately for the morning and afternoon shift, shown
-  one day at a time or as a whole-week table. "Uredi" switches to editing, where each period opens a sheet of subject
-  tiles.
+  one day at a time (swipe to change the day) or, with the round button at the top, as a whole-week table. "Uredi"
+  switches to editing, where each period opens a sheet of subject tiles.
 - **Raspust (Breaks):** the official Serbian primary-school calendar (breaks, days off, swapped days) with a big
-  countdown to the next break, plus the school's own events (e.g. Dan škole, school slava) added per child. Days
-  without classes show no lessons on the Today tab.
-- **Settings** (the round button at the top right, meant for parents): theme, children, QR import and a test
-  notification; per child: name and school, shift rotation (alternating weekly or monthly, or always the same, with
-  a choice of which shift is current), parent alarm, packing reminder, calendar region (Central Serbia or Vojvodina) and 8th grade
-  (earlier end of classes), bell times for each shift, and the subject list with what to bring for each subject.
+  countdown to the next break, plus the school's own events (e.g. Dan škole, school slava) added per child, with
+  one-tap chips for common events and a date-range picker. Days without classes show no lessons on the Today tab.
+- **First-run setup:** on a fresh install the app asks, one question per screen, for the child's name and school,
+  the shift, the bells and the notifications (or takes everything from another parent's QR code), then opens the Week
+  tab in edit mode to enter the timetable. Empty screens have a button that leads to what is missing.
+- **Settings** (the round button at the top right of every tab, meant for parents): children, QR import, theme. Each
+  child has a short page of topics, each with a live summary and its own page: name, school and shift; timetable
+  (opens the Week tab in edit mode); bell times for each shift; subjects and what to bring; notifications (parent
+  alarm and packing reminder, each with a test button, plus anything that would hold them back); school calendar
+  (Central Serbia or Vojvodina, 8th grade with its earlier end of classes); and sharing by QR code.
+- When a child has the alarm or packing reminder on but the phone blocks notifications or exact alarms, the Family
+  and Today tabs show a warning with a button to the setting that fixes it.
 
 The official calendar lives in `app/src/main/java/com/bane23/classschedule/data/SchoolCalendar.kt` (`SCHOOL_YEARS`).
 Add a new `SchoolYear` there each summer once the ministry publishes the next year's calendar.
@@ -46,11 +54,17 @@ Add a new `SchoolYear` there each summer once the ministry publishes the next ye
   to bring for each; it is skipped when everything is packed. It is scheduled and rescheduled like the parent alarm
   and has the same sound choices, on its own notification channels.
 - Tapping either notification opens the app on the Today tab of that child.
+- **Widget ("Raspored"):** a resizable home-screen widget for the selected child, built with Jetpack Glance
+  (`widget/`). It lists the day's classes with emoji and start times (today until the last class ends, then the next
+  school day, `data/WidgetDay.kt`) and the packing status ("🎒 Torba za sutra: 2/4", then "✅ Torba je spremna!").
+  It redraws whenever the app's data changes and refreshes itself when classes end and at midnight; tapping it opens
+  the child's Today tab.
 
 **Design ("Stanice"):** a cool blue-white base (deep night blue in the dark theme) with one tangerine accent, the
 rounded [Baloo 2](https://github.com/EkType/Baloo2) font (SIL Open Font License 1.1, bundled in `res/font`, cut down
 to Latin characters) and a color and emoji per subject (`ui/Components.kt`), so younger children can recognize
-classes without reading. The light theme is the default; Settings also offers dark and "follow the phone".
+classes without reading. The bottom bar uses rounded Material icons; settings pages slide in and out and tabs
+crossfade. The light theme is the default; Settings also offers dark and "follow the phone".
 
 Data is stored locally on the phone (`data.json` in the app's private storage).
 

@@ -8,6 +8,7 @@ import com.bane23.classschedule.data.AppData
 import com.bane23.classschedule.data.CalendarEvent
 import com.bane23.classschedule.data.Child
 import com.bane23.classschedule.data.ChildRepository
+import com.bane23.classschedule.data.DEFAULT_CHILD_NAME
 import com.bane23.classschedule.data.DEFAULT_SUBJECTS
 import com.bane23.classschedule.data.ExtraClass
 import com.bane23.classschedule.data.Region
@@ -20,6 +21,7 @@ import com.bane23.classschedule.data.withDayChange
 import com.bane23.classschedule.data.withPackNote
 import com.bane23.classschedule.data.withPacked
 import com.bane23.classschedule.data.withoutDayChange
+import com.bane23.classschedule.widget.WidgetUpdater
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import java.time.LocalDate
@@ -38,12 +40,14 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
 
     init {
         AlarmScheduler.scheduleAll(application, data.value)
+        WidgetUpdater.refresh(application)
     }
 
     private fun save(transform: (AppData) -> AppData) {
         viewModelScope.launch {
             repository.update(transform)
             AlarmScheduler.scheduleAll(getApplication<Application>(), data.value)
+            WidgetUpdater.update(getApplication<Application>())
         }
     }
 
@@ -55,8 +59,11 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
 
     fun setTheme(theme: ThemeMode) = save { it.copy(theme = theme) }
 
+    /** Ends the first-run setup, whether it was completed or skipped. */
+    fun finishOnboarding() = save { it.copy(onboarded = true) }
+
     fun addChild(name: String) {
-        val child = Child(name = name.trim().ifEmpty { "Dete" }, referenceEpochDay = LocalDate.now().toEpochDay())
+        val child = Child(name = name.trim().ifEmpty { DEFAULT_CHILD_NAME }, referenceEpochDay = LocalDate.now().toEpochDay())
         save { it.copy(children = it.children + child, selectedChildId = child.id) }
     }
 

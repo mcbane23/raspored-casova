@@ -11,6 +11,8 @@ import android.os.PowerManager
 import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -18,6 +20,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.compose.LifecycleResumeEffect
+import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
 import com.bane23.classschedule.alarm.AlarmReceiver
 import com.bane23.classschedule.alarm.AlarmScheduler
@@ -160,5 +163,63 @@ fun openBatterySettings(context: Context) {
         context.startActivity(Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS))
     } catch (_: ActivityNotFoundException) {
         context.startActivity(Intent(Settings.ACTION_SETTINGS))
+    }
+}
+
+/** Something that keeps the alarms and reminders from arriving on time. */
+enum class ReminderProblem(val title: String, val detail: String) {
+    NOTIFICATIONS_OFF("Obaveštenja su isključena", "Alarm i podsetnik neće stići dok ih ne uključiš."),
+    NOT_EXACT("Alarm može da kasni", "Dozvoli „Alarmi i podsetnici” da obaveštenje stigne tačno na vreme."),
+}
+
+/**
+ * The first [ReminderProblem] on this phone, or null when the reminders will arrive. Rechecked each time the screen
+ * comes back, so the warning disappears after the user fixes the setting.
+ */
+@Composable
+fun rememberReminderProblem(): ReminderProblem? {
+    val context = LocalContext.current
+    var problem by remember { mutableStateOf<ReminderProblem?>(null) }
+    LifecycleResumeEffect(Unit) {
+        problem = when {
+            !NotificationManagerCompat.from(context).areNotificationsEnabled() -> ReminderProblem.NOTIFICATIONS_OFF
+            !AlarmScheduler.canScheduleExact(context) -> ReminderProblem.NOT_EXACT
+            else -> null
+        }
+        onPauseOrDispose { }
+    }
+    return problem
+}
+
+/** Opens the phone setting that fixes [problem]. */
+fun openFix(context: Context, problem: ReminderProblem) {
+    when (problem) {
+        ReminderProblem.NOTIFICATIONS_OFF -> try {
+            context.startActivity(
+                Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName),
+            )
+        } catch (_: ActivityNotFoundException) {
+            context.startActivity(Intent(Settings.ACTION_SETTINGS))
+        }
+        ReminderProblem.NOT_EXACT -> openExactAlarmSettings(context)
+    }
+}
+
+/** The [ReminderProblem] to warn about on the main tabs, only when one of [children] has a reminder turned on. */
+@Composable
+fun rememberReminderWarning(children: List<Child>): ReminderProblem? {
+    val problem = rememberReminderProblem()
+    return problem.takeIf { children.any { it.alarmEnabled || it.packReminderEnabled } }
+}
+
+/**
+ * Warning on the main tabs that the phone will hold back the reminders, so a parent who switched the alarm on from
+ * the Family card still finds out, with a button to the setting that fixes it.
+ */
+@Composable
+fun ReminderProblemBanner(problem: ReminderProblem) {
+    val context = LocalContext.current
+    NoteBanner("⚠️", "${problem.title}. ${problem.detail}") {
+        TextButton(onClick = { openFix(context, problem) }) { Text("Popravi") }
     }
 }

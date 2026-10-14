@@ -209,6 +209,9 @@ data class Child(
         if (shift == Shift.MORNING) copy(morning = timetable) else copy(afternoon = timetable)
 }
 
+/** Name of a child added without one; the setup shows it as an empty field to type into. */
+const val DEFAULT_CHILD_NAME = "Dete"
+
 /** Default time of the packing reminder: 19:00. */
 const val DEFAULT_PACK_REMINDER_MINUTE = 19 * 60
 
@@ -223,9 +226,11 @@ data class AppData(
     val theme: ThemeMode = ThemeMode.LIGHT,
     /** Format version of the saved data; files written before versioning count as 1. */
     val dataVersion: Int = 1,
+    /** The first-run setup was finished or skipped; until then the app opens on the setup steps. */
+    val onboarded: Boolean = false,
 )
 
-const val CURRENT_DATA_VERSION = 3
+const val CURRENT_DATA_VERSION = 4
 
 /** Subjects that older versions put in every list before remedial and advanced classes became lesson types. */
 private val LEGACY_EXTRA_SUBJECTS = setOf("Dopunska nastava", "Dodatna nastava")
@@ -239,6 +244,10 @@ fun AppData.migrated(): AppData {
     if (data.dataVersion < 3) {
         // The light theme became the default; data saved earlier always has the old System default written out.
         if (data.theme == ThemeMode.SYSTEM) data = data.copy(theme = ThemeMode.LIGHT)
+    }
+    if (data.dataVersion < 4) {
+        // The first-run setup came later; anyone with saved data has already set the app up by hand.
+        data = data.copy(onboarded = true)
     }
     return data.copy(dataVersion = CURRENT_DATA_VERSION)
 }

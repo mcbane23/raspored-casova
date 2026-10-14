@@ -32,6 +32,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -67,6 +68,8 @@ fun FamilyScreen(
         .sortedBy { it.startEpochDay }
         .take(3)
 
+    val warning = rememberReminderWarning(children)
+
     LazyColumn(
         modifier.fillMaxSize(),
         contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 24.dp),
@@ -77,6 +80,9 @@ fun FamilyScreen(
                 ScreenHeader("Porodica", overline = today.label(), modifier = Modifier.weight(1f))
                 SettingsButton(onOpenSettings)
             }
+        }
+        if (warning != null) {
+            item { ReminderProblemBanner(warning) }
         }
         items(children, key = { it.id }) { child ->
             KidCard(child, now, onClick = { onOpenChild(child.id) }, onAlarmChange = { onAlarmChange(child.id, it) })
@@ -138,6 +144,7 @@ private fun KidCard(child: Child, now: LocalDateTime, onClick: () -> Unit, onAla
                         style = MaterialTheme.typography.bodySmall,
                         color = colors.onSurfaceVariant,
                         maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
                     )
                 }
                 Tag(
