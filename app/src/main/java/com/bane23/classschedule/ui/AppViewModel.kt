@@ -21,6 +21,7 @@ import com.bane23.classschedule.data.withDayChange
 import com.bane23.classschedule.data.withPackNote
 import com.bane23.classschedule.data.withPacked
 import com.bane23.classschedule.data.withoutDayChange
+import com.bane23.classschedule.widget.WidgetUpdater
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import java.time.LocalDate
@@ -39,12 +40,14 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
 
     init {
         AlarmScheduler.scheduleAll(application, data.value)
+        WidgetUpdater.refresh(application)
     }
 
     private fun save(transform: (AppData) -> AppData) {
         viewModelScope.launch {
             repository.update(transform)
             AlarmScheduler.scheduleAll(getApplication<Application>(), data.value)
+            WidgetUpdater.update(getApplication<Application>())
         }
     }
 

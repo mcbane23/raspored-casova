@@ -64,15 +64,6 @@ android {
     buildFeatures {
         compose = true
     }
-
-    // The Robolectric screenshot test (ScreenshotTest) loads the app's fonts and resources. It downloads a large
-    // Android runtime, so it runs only when asked for with -Pscreenshots.
-    testOptions {
-        unitTests.isIncludeAndroidResources = true
-        unitTests.all { test ->
-            if (!project.hasProperty("screenshots")) test.exclude("**/ScreenshotTest*")
-        }
-    }
 }
 
 kotlin {
@@ -95,11 +86,9 @@ dependencies {
     implementation(libs.androidx.compose.material3)
     implementation(libs.androidx.compose.material.icons.core)
     implementation(libs.androidx.compose.material.icons.extended)
+    implementation(libs.androidx.glance.appwidget)
+    implementation(libs.androidx.glance.material3)
     debugImplementation(libs.androidx.compose.ui.tooling)
-    debugImplementation(libs.androidx.compose.ui.test.manifest)
 
     testImplementation(libs.junit)
-    testImplementation(libs.robolectric)
-    testImplementation(platform(libs.androidx.compose.bom))
-    testImplementation(libs.androidx.compose.ui.test.junit4)
 }

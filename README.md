@@ -54,17 +54,17 @@ Add a new `SchoolYear` there each summer once the ministry publishes the next ye
   to bring for each; it is skipped when everything is packed. It is scheduled and rescheduled like the parent alarm
   and has the same sound choices, on its own notification channels.
 - Tapping either notification opens the app on the Today tab of that child.
+- **Widget ("Raspored"):** a resizable home-screen widget for the selected child, built with Jetpack Glance
+  (`widget/`). It lists the day's classes with emoji and start times (today until the last class ends, then the next
+  school day, `data/WidgetDay.kt`) and the packing status ("🎒 Torba za sutra: 2/4", then "✅ Torba je spremna!").
+  It redraws whenever the app's data changes and refreshes itself when classes end and at midnight; tapping it opens
+  the child's Today tab.
 
 **Design ("Stanice"):** a cool blue-white base (deep night blue in the dark theme) with one tangerine accent, the
 rounded [Baloo 2](https://github.com/EkType/Baloo2) font (SIL Open Font License 1.1, bundled in `res/font`, cut down
 to Latin characters) and a color and emoji per subject (`ui/Components.kt`), so younger children can recognize
 classes without reading. The bottom bar uses rounded Material icons; settings pages slide in and out and tabs
 crossfade. The light theme is the default; Settings also offers dark and "follow the phone".
-
-**Screenshots:** `docs/screenshots` holds the main screens rendered with sample data by
-`app/src/test/java/com/bane23/classschedule/ScreenshotTest.kt` (Robolectric). Run it with
-`./gradlew testDebugUnitTest --tests '*ScreenshotTest' -Pscreenshots`; `.github/workflows/screenshots.yml` does the
-same on `ccr-*` branches and commits the result.
 
 Data is stored locally on the phone (`data.json` in the app's private storage).
 

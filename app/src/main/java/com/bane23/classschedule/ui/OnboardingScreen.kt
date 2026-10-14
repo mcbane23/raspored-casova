@@ -34,13 +34,12 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.bane23.classschedule.data.Child
+import com.bane23.classschedule.data.hasTimetable
 
 /** Steps of the first-run setup; the ones between [WELCOME] and [DONE] show as progress dots. */
 private enum class SetupStep { WELCOME, CHILD, SHIFT, BELLS, NOTIFY, DONE }
 
 private val DOTTED_STEPS = listOf(SetupStep.CHILD, SetupStep.SHIFT, SetupStep.BELLS, SetupStep.NOTIFY)
-
-private fun Child.hasTimetable(): Boolean = (morning.lessons + afternoon.lessons).any { day -> day.any { it.isNotBlank() } }
 
 /**
  * First-run setup for parents: the child's name and school, the shift, the bells and the notifications, one question

@@ -33,6 +33,19 @@
             android:name=".alarm.AlarmReceiver"
             android:exported="false" />
 
+        <!-- Home-screen widget: the day's classes and the packing status (widget/ScheduleWidget.kt). -->
+        <receiver
+            android:name=".widget.ScheduleWidgetReceiver"
+            android:exported="true"
+            android:label="@string/widget_name">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/schedule_widget_info" />
+        </receiver>
+
         <receiver
             android:name=".alarm.RescheduleReceiver"
             android:exported="false">
