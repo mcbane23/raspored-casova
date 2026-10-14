@@ -5,6 +5,7 @@ import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import android.os.Build
+import com.bane23.classschedule.MainActivity
 import com.bane23.classschedule.data.AppData
 import com.bane23.classschedule.data.Child
 import com.bane23.classschedule.data.nextAlarm
@@ -12,10 +13,12 @@ import java.time.LocalDateTime
 import java.time.ZoneId
 
 /**
- * Schedules one "classes are over" alarm per child. Alarms survive the app being closed and are allowed to fire in
- * Doze. They are exact where the phone allows it without asking (Android 11 and older, or when the user granted
- * "Alarms & reminders"); otherwise Android may delay them by a few minutes, which is fine for telling a parent
- * school is out.
+ * Schedules one "classes are over" alarm per child. Alarms survive the app being closed.
+ *
+ * When exact alarms are allowed (always on Android 11 and older; on Android 12+ once the user grants "Alarms &
+ * reminders") the alarm is set with [AlarmManager.setAlarmClock]: it fires at the set minute, wakes the phone from
+ * Doze and is not batched or deferred by battery savers. Without that permission Android only offers inexact alarms,
+ * which phones (Samsung in particular) delay by 10-15 minutes, so the settings screen warns and links to the switch.
  */
 object AlarmScheduler {
     const val EXTRA_CHILD_ID = "childId"
@@ -33,12 +36,27 @@ object AlarmScheduler {
             return
         }
         val triggerAt = next.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
-        val exactAllowed = Build.VERSION.SDK_INT < Build.VERSION_CODES.S || alarmManager.canScheduleExactAlarms()
-        if (exactAllowed) {
-            alarmManager.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, triggerAt, intent)
-        } else {
-            alarmManager.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, triggerAt, intent)
+        if (canScheduleExact(context)) {
+            val show = PendingIntent.getActivity(
+                context,
+                0,
+                Intent(context, MainActivity::class.java),
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+            )
+            try {
+                alarmManager.setAlarmClock(AlarmManager.AlarmClockInfo(triggerAt, show), intent)
+                return
+            } catch (_: SecurityException) {
+                // The permission was revoked between the check and the call; fall through to the inexact alarm.
+            }
         }
+        alarmManager.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, triggerAt, intent)
+    }
+
+    /** Whether alarms can fire at the exact minute; false on Android 12+ until the user allows "Alarms & reminders". */
+    fun canScheduleExact(context: Context): Boolean {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) return true
+        return context.getSystemService(AlarmManager::class.java)?.canScheduleExactAlarms() == true
     }
 
     private fun pendingIntent(context: Context, childId: String): PendingIntent {

@@ -153,6 +153,7 @@ fun ChildSettingsScreen(
     var showQr by remember { mutableStateOf(false) }
     val setAlarm = rememberAlarmSwitch(viewModel)
     val batteryRestricted = rememberBatteryRestricted()
+    val exactAllowed = rememberExactAlarmAllowed()
     val context = LocalContext.current
     val today = LocalDate.now()
     val current = child.shiftOn(today)
@@ -258,6 +259,16 @@ fun ChildSettingsScreen(
                         onCard = true,
                     )
                     Hint(tone.hint)
+                }
+                if (!exactAllowed) {
+                    RowDivider()
+                    SettingsRow(
+                        title = "Alarm može da kasni",
+                        subtitle = "Dozvoli „Alarmi i podsetnici” da obaveštenje stigne tačno na vreme.",
+                        emoji = "⚠️",
+                        chevron = true,
+                        onClick = { openExactAlarmSettings(context) },
+                    )
                 }
                 if (batteryRestricted) {
                     RowDivider()
