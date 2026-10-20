@@ -6,6 +6,8 @@
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <!-- Lets the parent alarm fire at the exact minute; on Android 12+ the user grants it under "Alarms & reminders". -->
     <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
+    <!-- Buzzes the phone for reminders when its ringer is set to silent. -->
+    <uses-permission android:name="android.permission.VIBRATE" />
 
     <application
         android:allowBackup="true"

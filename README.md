@@ -48,7 +48,8 @@ Add a new `SchoolYear` there each summer once the ministry publishes the next ye
   the shift, the school calendar and one-day changes. Alarms fire with the app closed and in Doze, and are rescheduled after a reboot, app update or clock change. With "Alarms & reminders" allowed (Android 12+) they fire at the exact minute; while it is missing, the child's settings warn and link to it. When battery optimization is on, the child's settings show a shortcut to turn it off. By default it plays a short school-bell chime
   (`res/raw/school_bell.wav`, generated for this app); the "Zvuk" choice "Alarm" makes it ring with the phone's alarm
   tone at alarm volume, repeating until the notification is opened or dismissed, and "Bez zvuka" posts a plain
-  notification without any sound.
+  notification without any sound. Every choice also vibrates; when the phone's ringer is set to silent the app
+  buzzes the phone itself (as an alarm vibration) so the reminder is still noticed, except under Do Not Disturb.
 - **Packing reminder:** an optional per-child notification for the student, at a chosen time (19:00 by default) on
   each evening before a school day, listing the next day's subjects not yet ticked off in "Sutra u torbu" with what
   to bring for each; it is skipped when everything is packed. It is scheduled and rescheduled like the parent alarm
