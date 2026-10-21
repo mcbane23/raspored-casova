@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.DateRangePicker
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -29,6 +30,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.material3.rememberDateRangePickerState
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
@@ -43,15 +45,20 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.bane23.classschedule.data.ActivityKind
+import com.bane23.classschedule.data.ActivitySession
 import com.bane23.classschedule.data.Child
 import com.bane23.classschedule.data.DEFAULT_ACTIVITY_REMINDER_MINUTES
 import com.bane23.classschedule.data.Extracurricular
+import com.bane23.classschedule.data.SessionChange
 import com.bane23.classschedule.data.activitiesOn
+import com.bane23.classschedule.data.sessionsOn
+import com.bane23.classschedule.data.upcomingRegularDays
 import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.LocalTime
@@ -79,9 +86,21 @@ fun ActivityTile(activity: Extracurricular, size: Dp = 40.dp, done: Boolean = fa
     }
 }
 
-/** One activity in a list: tile, title, [time] and place, and the reminder time when it is on. */
+/**
+ * One activity in a list: tile, title, [time], [detail] and place, and the reminder bell when it is on. [tag] marks a
+ * session changed this once ("Otkazano", "Pomereno"); [crossed] strikes out one that does not take place here.
+ */
 @Composable
-fun ActivityRow(activity: Extracurricular, time: String, done: Boolean = false, now: Boolean = false, onClick: () -> Unit) {
+fun ActivityRow(
+    activity: Extracurricular,
+    time: String,
+    done: Boolean = false,
+    now: Boolean = false,
+    tag: String? = null,
+    detail: String? = null,
+    crossed: Boolean = false,
+    onClick: () -> Unit,
+) {
     Surface(onClick = onClick, color = Color.Transparent, shape = MaterialTheme.shapes.small) {
         Row(
             Modifier
@@ -90,11 +109,17 @@ fun ActivityRow(activity: Extracurricular, time: String, done: Boolean = false, 
                 .semantics(mergeDescendants = true) { contentDescription = "${activity.title}, $time" },
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            ActivityTile(activity, done = done)
-            Column(Modifier.weight(1f).padding(horizontal = 12.dp).alpha(if (done) 0.55f else 1f)) {
-                Text(activity.title, style = MaterialTheme.typography.titleSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Box(Modifier.alpha(if (crossed) 0.5f else 1f)) { ActivityTile(activity, done = done) }
+            Column(Modifier.weight(1f).padding(horizontal = 12.dp).alpha(if (done || crossed) 0.55f else 1f)) {
                 Text(
-                    listOfNotNull(time, activity.place.ifBlank { null }).joinToString(" · "),
+                    activity.title,
+                    style = MaterialTheme.typography.titleSmall,
+                    textDecoration = if (crossed) TextDecoration.LineThrough else null,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                Text(
+                    listOfNotNull(time, detail, activity.place.ifBlank { null }).joinToString(" · "),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1,
@@ -102,6 +127,7 @@ fun ActivityRow(activity: Extracurricular, time: String, done: Boolean = false, 
                 )
             }
             when {
+                tag != null -> Tag(tag, tintOf(HolidayAmber, 0.22f, 0.4f), MaterialTheme.colorScheme.onSurface)
                 now -> Tag("Sada", tintOf(ActivityViolet, 0.25f, 0.45f), MaterialTheme.colorScheme.onSurface)
                 activity.reminderEnabled && !done -> Text("🔔", fontSize = 14.sp)
             }
@@ -110,24 +136,34 @@ fun ActivityRow(activity: Extracurricular, time: String, done: Boolean = false, 
 }
 
 /**
- * The child's activities on [date] for the Today tab; with [clock] (today only) finished ones are faded and the one
- * in progress is marked. Tapping one opens it for editing.
+ * The child's activity sessions on [date] for the Today tab; with [clock] (today only) finished ones are faded and
+ * the one in progress is marked. Sessions cancelled or moved this once stay in the list, marked, so they can be
+ * restored. Tapping one opens it.
  */
 @Composable
-fun ActivitiesCard(child: Child, date: LocalDate, clock: LocalTime?, onOpen: (Extracurricular) -> Unit, onAdd: () -> Unit) {
-    val activities = child.activitiesOn(date)
-    if (activities.isEmpty()) return
+fun ActivitiesCard(child: Child, date: LocalDate, clock: LocalTime?, onOpen: (ActivitySession) -> Unit, onAdd: () -> Unit) {
+    val sessions = child.sessionsOn(date)
+    if (sessions.isEmpty()) return
     AppCard(verticalArrangement = Arrangement.spacedBy(2.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(bottom = 4.dp)) {
             Text("🏅 Aktivnosti", style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
             Tag("Vanškolske", tintOf(ActivityViolet, 0.18f, 0.35f), MaterialTheme.colorScheme.onSurface)
         }
-        activities.forEach { activity ->
+        sessions.forEach { session ->
+            val activity = session.activity
             val lastDay = activity.weekly || date == activity.lastDay
             val firstDay = activity.weekly || date == activity.firstDay
-            val done = clock != null && lastDay && clock >= activity.end
-            val now = clock != null && !done && (!firstDay || clock >= activity.start)
-            ActivityRow(activity, activity.timeLabelOn(date), done = done, now = now) { onOpen(activity) }
+            val done = clock != null && session.takesPlace && lastDay && clock >= activity.end
+            val now = clock != null && session.takesPlace && !done && (!firstDay || clock >= activity.start)
+            ActivityRow(
+                activity,
+                activity.timeLabelOn(date),
+                done = done,
+                now = now,
+                tag = session.tag(),
+                detail = session.detail(),
+                crossed = !session.takesPlace,
+            ) { onOpen(session) }
         }
         TextButton(onClick = onAdd, modifier = Modifier.align(Alignment.End)) { Text("+ Dodaj aktivnost") }
     }
@@ -138,13 +174,15 @@ fun Child.nextActivityOn(date: LocalDate, clock: LocalTime): Extracurricular? =
     activitiesOn(date).firstOrNull { (it.weekly || date == it.firstDay) && it.start > clock }
 
 /**
- * Adds or edits an extracurricular activity: kind, title, every week on chosen days or once on a date (or several
- * days, e.g. a school camp), times, place, a note and the reminder. [initial] null adds a new activity whose day is
+ * Adds or edits an extracurricular activity of [child]: kind, title, every week on chosen days or once on a date (or
+ * several days, e.g. a school camp), times, place, a note and the reminder. A weekly activity being edited also lists
+ * its next sessions, each of which can be cancelled or moved once. [initial] null adds a new activity whose day is
  * [defaultDate]; [onDelete] is offered only when editing.
  */
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun ActivityEditorSheet(
+    child: Child,
     initial: Extracurricular?,
     defaultDate: LocalDate,
     onDismiss: () -> Unit,
@@ -175,8 +213,11 @@ fun ActivityEditorSheet(
     var noClasses by remember { mutableStateOf(start.noClasses) }
     var reminder by remember { mutableStateOf(start.reminderEnabled) }
     var reminderMinutes by remember { mutableStateOf(start.reminderMinutesBefore.takeIf { it in REMINDER_OFFSETS } ?: DEFAULT_ACTIVITY_REMINDER_MINUTES) }
+    var changes by remember { mutableStateOf(start.changes) }
     var pickingTime by remember { mutableStateOf<Boolean?>(null) }
     var pickingDate by remember { mutableStateOf(false) }
+    // Regular day of the session open in the one-session sheet.
+    var sessionDay by remember { mutableStateOf<LocalDate?>(null) }
 
     val multiDay = !weekly && lastDay > firstDay
     val timesOk = multiDay || endMinute > startMinute
@@ -304,6 +345,38 @@ fun ActivityEditorSheet(
                 }
             }
 
+            if (initial != null && initial.weekly && weekly) {
+                // Sessions are listed by the saved days and times; a session changed earlier stays listed until it is past.
+                val today = LocalDate.now()
+                val draft = initial.copy(days = days.sorted(), pausedOnBreaks = paused, changes = changes)
+                val sessionDays = (child.upcomingRegularDays(draft, today, 4) + changes.map { it.regularDay }.filter { it >= today })
+                    .distinct().sorted()
+                if (sessionDays.isNotEmpty()) {
+                    Text("Otkaži ili pomeri jedan termin", style = MaterialTheme.typography.titleSmall, modifier = Modifier.padding(top = 4.dp))
+                    Surface(shape = MaterialTheme.shapes.large, color = MaterialTheme.colorScheme.surfaceContainerLowest) {
+                        Column {
+                            sessionDays.forEachIndexed { i, day ->
+                                if (i > 0) RowDivider()
+                                val change = changes.find { it.regularDay == day }
+                                SettingsRow(
+                                    title = day.label(),
+                                    subtitle = change?.label()?.replaceFirstChar { it.uppercase() }
+                                        ?: "${minuteLabel(startMinute)}–${minuteLabel(endMinute)}",
+                                    emoji = when {
+                                        change == null -> "📅"
+                                        change.cancelled -> "❌"
+                                        else -> "➡️"
+                                    },
+                                    chevron = true,
+                                    onClick = { sessionDay = day },
+                                )
+                            }
+                        }
+                    }
+                    Hint("Promena važi samo za taj termin; redovan raspored ostaje isti za naredne nedelje.")
+                }
+            }
+
             BigButton("Sačuvaj", Modifier.fillMaxWidth(), enabled = canSave) {
                 onSave(
                     start.copy(
@@ -320,6 +393,7 @@ fun ActivityEditorSheet(
                         noClasses = !weekly && noClasses,
                         reminderEnabled = reminder,
                         reminderMinutesBefore = reminderMinutes,
+                        changes = if (weekly) changes else emptyList(),
                     ),
                 )
             }
@@ -346,6 +420,18 @@ fun ActivityEditorSheet(
                     endMinute = minute
                 }
                 pickingTime = null
+            },
+        )
+    }
+
+    sessionDay?.let { day ->
+        ActivitySessionSheet(
+            activity = start.copy(title = title.ifBlank { start.title }, kind = kind, startMinute = startMinute, endMinute = endMinute, changes = changes),
+            regularDay = day,
+            onDismiss = { sessionDay = null },
+            onChange = {
+                changes = it.changes
+                sessionDay = null
             },
         )
     }
@@ -382,7 +468,149 @@ fun ActivityEditorSheet(
     }
 }
 
-private fun minuteLabel(minute: Int): String = LocalTime.of(minute / 60, minute % 60).label()
+/**
+ * One session of a weekly [activity], the one regularly on [regularDay]: cancel it, move it to another day or time, or
+ * restore it, all for this session only, so the following weeks keep the regular schedule. [onChange] gets the
+ * activity with its changes updated; [onEditAll] (when given) opens the whole activity instead.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun ActivitySessionSheet(
+    activity: Extracurricular,
+    regularDay: LocalDate,
+    onDismiss: () -> Unit,
+    onChange: (Extracurricular) -> Unit,
+    onEditAll: (() -> Unit)? = null,
+) {
+    val change = activity.changeOn(regularDay)
+    var moving by remember { mutableStateOf(change?.movedTo != null) }
+    var moveDay by remember { mutableStateOf(change?.movedTo ?: regularDay) }
+    var startMinute by remember { mutableStateOf(change?.takeIf { !it.cancelled }?.startMinute ?: activity.startMinute) }
+    var endMinute by remember { mutableStateOf(change?.takeIf { !it.cancelled }?.endMinute ?: activity.endMinute) }
+    var pickingTime by remember { mutableStateOf<Boolean?>(null) }
+    var pickingDate by remember { mutableStateOf(false) }
+    val regularTime = "${minuteLabel(activity.startMinute)}–${minuteLabel(activity.endMinute)}"
+
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
+        containerColor = MaterialTheme.colorScheme.background,
+    ) {
+        Column(
+            Modifier.verticalScroll(rememberScrollState()).padding(start = 16.dp, end = 16.dp, bottom = 24.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                ActivityTile(activity, size = 44.dp)
+                Column(Modifier.padding(start = 12.dp)) {
+                    Text("Jedan termin", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(activity.title, style = MaterialTheme.typography.titleLarge)
+                    Text("${regularDay.label()} · $regularTime", style = MaterialTheme.typography.bodyMedium)
+                }
+            }
+            when {
+                change == null -> Unit
+                change.cancelled -> NoteBanner("❌", "Ovaj termin je otkazan.")
+                else -> NoteBanner("➡️", change.label().replaceFirstChar { it.uppercase() } + ".")
+            }
+
+            if (!moving) {
+                Surface(shape = MaterialTheme.shapes.large, color = MaterialTheme.colorScheme.surfaceContainerLowest) {
+                    Column {
+                        if (change?.cancelled != true) {
+                            SettingsRow(
+                                title = "Otkaži ovaj termin",
+                                subtitle = "Bez podsetnika; naredne nedelje ostaju iste",
+                                emoji = "❌",
+                                onClick = { onChange(activity.withChange(regularDay, SessionChange(regularDay.toEpochDay()))) },
+                            )
+                            RowDivider()
+                        }
+                        SettingsRow(
+                            title = "Pomeri ovaj termin",
+                            subtitle = "Drugi dan ili drugo vreme, samo ovog puta",
+                            emoji = "📆",
+                            chevron = true,
+                            onClick = { moving = true },
+                        )
+                        if (change != null) {
+                            RowDivider()
+                            SettingsRow(
+                                title = "Vrati redovan termin",
+                                subtitle = "${regularDay.label()} · $regularTime",
+                                emoji = "↩️",
+                                onClick = { onChange(activity.withChange(regularDay, null)) },
+                            )
+                        }
+                        if (onEditAll != null) {
+                            RowDivider()
+                            SettingsRow(
+                                title = "Izmeni aktivnost",
+                                subtitle = "Dani, vreme i podsetnik za sve nedelje",
+                                emoji = "✏️",
+                                chevron = true,
+                                onClick = onEditAll,
+                            )
+                        }
+                    }
+                }
+                Hint("Redovan raspored aktivnosti ostaje isti za naredne nedelje.")
+            } else {
+                FieldButton("📅", "Novi dan", moveDay.label()) { pickingDate = true }
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    FieldButton("🕔", "Počinje", minuteLabel(startMinute), Modifier.weight(1f)) { pickingTime = true }
+                    FieldButton("🏁", "Završava", minuteLabel(endMinute), Modifier.weight(1f)) { pickingTime = false }
+                }
+                val timesOk = endMinute > startMinute
+                if (!timesOk) Hint("Kraj mora biti posle početka.")
+                Hint("Podsetnik stiže ${reminderOffsetLabel(activity.reminderMinutesBefore).lowercase()} novog početka, ako je uključen.")
+                BigButton("Sačuvaj pomeranje", Modifier.fillMaxWidth(), enabled = timesOk) {
+                    val unchanged = moveDay == regularDay && startMinute == activity.startMinute && endMinute == activity.endMinute
+                    val moved = SessionChange(regularDay.toEpochDay(), moveDay.toEpochDay(), startMinute, endMinute)
+                    onChange(activity.withChange(regularDay, if (unchanged) null else moved))
+                }
+                TextButton(onClick = { moving = false }, modifier = Modifier.fillMaxWidth()) { Text("Nazad") }
+            }
+        }
+    }
+
+    pickingTime?.let { isStart ->
+        TimeInputDialog(
+            title = if (isStart) "Početak" else "Kraj",
+            initialMinute = if (isStart) startMinute else endMinute,
+            onDismiss = { pickingTime = null },
+            onConfirm = { minute ->
+                if (isStart) {
+                    val length = (endMinute - startMinute).coerceAtLeast(15)
+                    startMinute = minute
+                    endMinute = (minute + length).coerceAtMost(24 * 60 - 1)
+                } else {
+                    endMinute = minute
+                }
+                pickingTime = null
+            },
+        )
+    }
+
+    if (pickingDate) {
+        val state = rememberDatePickerState(initialSelectedDateMillis = moveDay.toEpochDay() * MILLIS_PER_DAY)
+        DatePickerDialog(
+            onDismissRequest = { pickingDate = false },
+            confirmButton = {
+                TextButton(
+                    enabled = state.selectedDateMillis != null,
+                    onClick = {
+                        state.selectedDateMillis?.let { moveDay = LocalDate.ofEpochDay(it / MILLIS_PER_DAY) }
+                        pickingDate = false
+                    },
+                ) { Text("U redu") }
+            },
+            dismissButton = { TextButton(onClick = { pickingDate = false }) { Text("Odustani") } },
+        ) {
+            DatePicker(state = state, showModeToggle = false)
+        }
+    }
+}
 
 /** A tappable field showing a value, e.g. the date or a time, with a small label above it. */
 @Composable

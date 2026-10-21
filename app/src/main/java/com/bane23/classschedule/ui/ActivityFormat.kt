@@ -2,8 +2,11 @@ package com.bane23.classschedule.ui
 
 import com.bane23.classschedule.data.ActivityKind
 import com.bane23.classschedule.data.ActivityReminder
+import com.bane23.classschedule.data.ActivitySession
 import com.bane23.classschedule.data.Child
 import com.bane23.classschedule.data.Extracurricular
+import com.bane23.classschedule.data.SessionChange
+import com.bane23.classschedule.data.SessionState
 import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.LocalDateTime
@@ -15,6 +18,7 @@ fun ActivityKind.emoji(): String = when (this) {
     ActivityKind.SWIMMING -> "🏊"
     ActivityKind.DANCE -> "💃"
     ActivityKind.MUSIC -> "🎵"
+    ActivityKind.DRAMA -> "🎭"
     ActivityKind.ART -> "🎨"
     ActivityKind.LANGUAGE -> "🗣️"
     ActivityKind.TRIP -> "🚌"
@@ -27,6 +31,7 @@ fun ActivityKind.label(): String = when (this) {
     ActivityKind.SWIMMING -> "Plivanje"
     ActivityKind.DANCE -> "Folklor i ples"
     ActivityKind.MUSIC -> "Hor i muzika"
+    ActivityKind.DRAMA -> "Gluma"
     ActivityKind.ART -> "Likovna radionica"
     ActivityKind.LANGUAGE -> "Strani jezik"
     ActivityKind.TRIP -> "Izlet"
@@ -54,6 +59,30 @@ fun Extracurricular.scheduleLabel(): String =
     } else {
         "${dateRangeLabel(firstDay, lastDay)} · od ${start.label()} do ${end.label()}"
     }
+
+/** "pomereno na sreda, 22. oktobar u 18:00" or "otkazano" for a changed session; null for a regular one. */
+fun SessionChange.label(): String {
+    val to = movedTo ?: return "otkazano"
+    val time = minuteLabel(startMinute)
+    return if (to == regularDay) "pomereno na $time" else "pomereno na ${to.label().lowercase()} u $time"
+}
+
+/** Short tag for a session that is not as planned: "Otkazano" or "Pomereno"; null for a regular one. */
+fun ActivitySession.tag(): String? = when (state) {
+    SessionState.REGULAR -> null
+    SessionState.CANCELLED -> "Otkazano"
+    SessionState.MOVED_AWAY, SessionState.MOVED_HERE -> "Pomereno"
+}
+
+/** The extra line for a changed session: where it moved to, or where it came from; null when there is nothing to add. */
+fun ActivitySession.detail(): String? = when (state) {
+    SessionState.REGULAR, SessionState.CANCELLED -> null
+    SessionState.MOVED_AWAY -> activity.changeOn(date)?.label()
+    SessionState.MOVED_HERE -> if (regularDay == date) "drugo vreme samo ovog puta" else "redovno: ${regularDay.label().lowercase()}"
+}
+
+/** "17:30" for minutes since midnight. */
+fun minuteLabel(minute: Int): String = "%02d:%02d".format(minute / 60, minute % 60)
 
 /** "30 min pre", "1 h pre" or "Na početku" for the reminder setting. */
 fun reminderOffsetLabel(minutes: Int): String = if (minutes == 0) "Na početku" else "${durationLabel(minutes.toLong())} pre"

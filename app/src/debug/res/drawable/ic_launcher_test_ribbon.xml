@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- A red ribbon across the lower part of the icon with "TEST" in white block letters. The ribbon runs past the
+     mask edges; the letters stay inside the 66dp safe zone. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <path
+        android:fillColor="#7A0010"
+        android:fillAlpha="0.25"
+        android:pathData="M0,61.5h108v20h-108z" />
+    <path
+        android:fillColor="#E5484D"
+        android:pathData="M0,60h108v20h-108z" />
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M30.25,63h10v2.8h-10z M33.85,65.8h2.8v11.2h-2.8z M42.75,63h2.8v14h-2.8z M45.55,63h7.2v2.8h-7.2z M45.55,68.6h6.2v2.8h-6.2z M45.55,74.2h7.2v2.8h-7.2z M55.25,63h10v2.8h-10z M55.25,65.8h2.8v2.8h-2.8z M55.25,68.6h10v2.8h-10z M62.45,71.4h2.8v2.8h-2.8z M55.25,74.2h10v2.8h-10z M67.75,63h10v2.8h-10z M71.35,65.8h2.8v11.2h-2.8z" />
+</vector>

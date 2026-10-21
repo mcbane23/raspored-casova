@@ -126,4 +126,81 @@ class ActivitiesTest {
         assertEquals(listOf("camp"), away.activitiesOn(tuesday).filter { !it.weekly }.map { it.id })
         assertEquals(1, away.lessonsOn(LocalDate.of(2026, 10, 27)).size)
     }
+
+    @Test
+    fun cancelledSessionIsSkippedOnlyThatWeek() {
+        val cancelled = football.withChange(wednesday, SessionChange(wednesday.toEpochDay()))
+        val ana = child.copy(activities = listOf(cancelled, choir))
+        assertEquals(listOf(choir), ana.activitiesOn(wednesday))
+        assertEquals(SessionState.CANCELLED, ana.sessionsOn(wednesday).single { it.activity.id == "football" }.state)
+        // The next Monday and Wednesday football is back.
+        assertEquals(listOf(cancelled), ana.activitiesOn(wednesday.plusDays(5)))
+        assertEquals(listOf(choir, cancelled), ana.activitiesOn(wednesday.plusDays(7)))
+        // No reminder for the cancelled session: the next one is Monday 19 Oct at 17:00.
+        assertEquals(LocalDate.of(2026, 10, 19).atTime(17, 0), ana.nextActivityReminder(wednesday.atTime(12, 0)))
+    }
+
+    @Test
+    fun movedSessionShowsOnTheNewDayWithItsTimeAndReminder() {
+        // Wednesday's football moved to Thursday 18:00–19:30.
+        val thursday = wednesday.plusDays(1)
+        val moved = football.withChange(wednesday, SessionChange(wednesday.toEpochDay(), thursday.toEpochDay(), 18 * 60, 19 * 60 + 30))
+        val ana = child.copy(activities = listOf(moved))
+        assertEquals(emptyList<Extracurricular>(), ana.activitiesOn(wednesday))
+        assertEquals(SessionState.MOVED_AWAY, ana.sessionsOn(wednesday).single().state)
+        val session = ana.sessionsOn(thursday).single()
+        assertEquals(SessionState.MOVED_HERE, session.state)
+        assertEquals(wednesday, session.regularDay)
+        assertEquals(18 * 60, ana.activitiesOn(thursday).single().startMinute)
+        assertEquals(thursday.atTime(17, 30), ana.nextActivityReminder(wednesday.atTime(12, 0)))
+        // The regular schedule is unchanged, and the week after it is Wednesday again.
+        assertEquals(17 * 60 + 30, ana.activities.single().startMinute)
+        assertEquals(17 * 60 + 30, ana.activitiesOn(wednesday.plusDays(7)).single().startMinute)
+        assertEquals(emptyList<Extracurricular>(), ana.activitiesOn(thursday.plusDays(7)))
+    }
+
+    @Test
+    fun sessionMovedToAnotherTimeOnTheSameDayShowsOnce() {
+        val later = football.withChange(wednesday, SessionChange(wednesday.toEpochDay(), wednesday.toEpochDay(), 19 * 60, 20 * 60))
+        val ana = child.copy(activities = listOf(later))
+        val sessions = ana.sessionsOn(wednesday)
+        assertEquals(listOf(SessionState.MOVED_HERE), sessions.map { it.state })
+        assertEquals(wednesday.atTime(18, 30), ana.nextActivityReminder(wednesday.atTime(12, 0)))
+    }
+
+    @Test
+    fun sessionMovedOntoARegularDayGivesTwoSessions() {
+        // Monday 19 Oct moved to Wednesday 21 Oct at 10:00, which already has its own football at 17:30.
+        val monday = LocalDate.of(2026, 10, 19)
+        val nextWednesday = monday.plusDays(2)
+        val moved = football.withChange(monday, SessionChange(monday.toEpochDay(), nextWednesday.toEpochDay(), 10 * 60, 11 * 60))
+        val ana = child.copy(activities = listOf(moved))
+        assertEquals(listOf(10 * 60, 17 * 60 + 30), ana.activitiesOn(nextWednesday).map { it.startMinute })
+        val due = ana.activityRemindersDue(nextWednesday.atTime(0, 0), nextWednesday.atTime(23, 59))
+        assertEquals(listOf(nextWednesday.atTime(10, 0), nextWednesday.atTime(17, 30)), due.map { it.start })
+    }
+
+    @Test
+    fun restoringASessionAndDroppingPastChanges() {
+        val change = SessionChange(wednesday.toEpochDay())
+        val cancelled = football.withChange(wednesday, change)
+        assertEquals(football, cancelled.withChange(wednesday, null))
+        // A second change of the same session replaces the first.
+        assertEquals(1, cancelled.withChange(wednesday, change.copy(movedToEpochDay = wednesday.plusDays(1).toEpochDay())).changes.size)
+
+        val ana = child.copy(activities = listOf(cancelled))
+        assertEquals(listOf(change), ana.withoutPastActivities(wednesday).activities.single().changes)
+        assertEquals(emptyList<SessionChange>(), ana.withoutPastActivities(wednesday.plusDays(1)).activities.single().changes)
+    }
+
+    @Test
+    fun upcomingRegularDaysSkipBreaksForPausedActivities() {
+        assertEquals(
+            listOf(wednesday, wednesday.plusDays(5), wednesday.plusDays(7)),
+            child.upcomingRegularDays(football, wednesday, 3),
+        )
+        // Choir pauses in the autumn break (11–13 Nov 2026), so Wednesday 11 Nov is skipped.
+        assertEquals(LocalDate.of(2026, 11, 18), child.upcomingRegularDays(choir, LocalDate.of(2026, 11, 5), 2).first())
+        assertEquals(emptyList<LocalDate>(), child.upcomingRegularDays(camp, wednesday))
+    }
 }

@@ -51,13 +51,13 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.bane23.classschedule.data.ActivitySession
 import com.bane23.classschedule.data.Child
 import com.bane23.classschedule.data.DayInfo
 import com.bane23.classschedule.data.DayStatus
 import com.bane23.classschedule.data.ExtraClass
 import com.bane23.classschedule.data.Extracurricular
 import com.bane23.classschedule.data.Lesson
-import com.bane23.classschedule.data.activitiesOn
 import com.bane23.classschedule.data.dayInfo
 import com.bane23.classschedule.data.dayStatus
 import com.bane23.classschedule.data.isPacked
@@ -67,6 +67,7 @@ import com.bane23.classschedule.data.overrideOn
 import com.bane23.classschedule.data.packNote
 import com.bane23.classschedule.data.packSubjects
 import com.bane23.classschedule.data.regularSubjectsOn
+import com.bane23.classschedule.data.sessionsOn
 import com.bane23.classschedule.data.shiftOn
 import com.bane23.classschedule.data.subjectsOn
 import java.time.LocalDate
@@ -99,6 +100,8 @@ fun TodayScreen(
     // The activity open in the editor; a new one has an empty title.
     var activityEdit by remember { mutableStateOf<Extracurricular?>(null) }
     var addingActivity by remember { mutableStateOf(false) }
+    // The weekly activity session open for a one-time cancel or move.
+    var session by remember { mutableStateOf<ActivitySession?>(null) }
     val now = rememberNow()
     val date = LocalDate.ofEpochDay(epochDay)
     val isToday = date == now.toLocalDate()
@@ -192,12 +195,16 @@ fun TodayScreen(
             }
         }
 
-        if (child.activitiesOn(date).isNotEmpty()) item {
+        if (child.sessionsOn(date).isNotEmpty()) item {
             ActivitiesCard(
                 child,
                 date,
                 clock = if (isToday) clock else null,
-                onOpen = { activityEdit = it },
+                onOpen = { opened ->
+                    // A moved session carries the moved times; the sheets work on the activity as saved.
+                    val saved = child.activities.find { it.id == opened.activity.id } ?: opened.activity
+                    if (saved.weekly) session = opened.copy(activity = saved) else activityEdit = saved
+                },
                 onAdd = { addingActivity = true },
             )
         }
@@ -221,9 +228,26 @@ fun TodayScreen(
         )
     }
 
+    session?.let { open ->
+        ActivitySessionSheet(
+            activity = open.activity,
+            regularDay = open.regularDay,
+            onDismiss = { session = null },
+            onChange = {
+                onSaveActivity(it)
+                session = null
+            },
+            onEditAll = {
+                activityEdit = open.activity
+                session = null
+            },
+        )
+    }
+
     if (addingActivity || activityEdit != null) {
         val initial = activityEdit
         ActivityEditorSheet(
+            child = child,
             initial = initial,
             defaultDate = date,
             onDismiss = {

@@ -283,6 +283,7 @@ fun WeekScreen(
     if (addingActivity || activityEdit != null) {
         val initial = activityEdit
         ActivityEditorSheet(
+            child = child,
             initial = initial,
             defaultDate = if (wholeWeek) today else today.with(TemporalAdjusters.nextOrSame(day)),
             onDismiss = {

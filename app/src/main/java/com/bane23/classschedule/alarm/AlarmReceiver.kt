@@ -145,9 +145,12 @@ class AlarmReceiver : BroadcastReceiver() {
         /** Packing reminders get their own id so they do not replace a child's "classes are over" notification. */
         fun packNotificationId(childId: String): Int = "$childId:pack".hashCode()
 
-        /** One notification per activity and day, so two activities starting together both show. */
+        /**
+         * One notification per activity session, so two activities starting together both show, and so do two
+         * sessions of one activity on a day (when another day's session was moved there).
+         */
         fun activityNotificationId(reminder: ActivityReminder): Int =
-            "${reminder.activity.id}:${reminder.start.toLocalDate()}".hashCode()
+            "${reminder.activity.id}:${reminder.start}".hashCode()
 
         /**
          * Posts a notification; returns false when notifications are not allowed. With [alarmSound] it uses the
