@@ -55,7 +55,9 @@ import com.bane23.classschedule.data.Child
 import com.bane23.classschedule.data.DayInfo
 import com.bane23.classschedule.data.DayStatus
 import com.bane23.classschedule.data.ExtraClass
+import com.bane23.classschedule.data.Extracurricular
 import com.bane23.classschedule.data.Lesson
+import com.bane23.classschedule.data.activitiesOn
 import com.bane23.classschedule.data.dayInfo
 import com.bane23.classschedule.data.dayStatus
 import com.bane23.classschedule.data.isPacked
@@ -75,7 +77,7 @@ private data class DayEdit(val index: Int, val subject: String)
 
 /**
  * One child's day: a big card saying what is happening now, the day's classes as stops on a line (tapping one changes
- * it for that day only) and the packing list for the next school day.
+ * it for that day only), the day's extracurricular activities and the packing list for the next school day.
  */
 @Composable
 fun TodayScreen(
@@ -87,11 +89,16 @@ fun TodayScreen(
     onChangeDay: (LocalDate, Int, String) -> Unit,
     onResetDay: (LocalDate) -> Unit,
     onPacked: (LocalDate, String, Boolean) -> Unit,
+    onSaveActivity: (Extracurricular) -> Unit,
+    onDeleteActivity: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     var epochDay by rememberSaveable { mutableStateOf(LocalDate.now().toEpochDay()) }
     var editing by remember { mutableStateOf<DayEdit?>(null) }
     var details by remember { mutableStateOf<Lesson?>(null) }
+    // The activity open in the editor; a new one has an empty title.
+    var activityEdit by remember { mutableStateOf<Extracurricular?>(null) }
+    var addingActivity by remember { mutableStateOf(false) }
     val now = rememberNow()
     val date = LocalDate.ofEpochDay(epochDay)
     val isToday = date == now.toLocalDate()
@@ -137,6 +144,8 @@ fun TodayScreen(
                     emoji = if (date.dayOfWeek.value >= 6) "🛝" else eventEmoji(noClassesReason),
                     title = "Nema nastave",
                     detail = noClassesReason,
+                    footer = child.nextActivityOn(date, if (isToday) clock else LocalTime.MIN)
+                        ?.let { "Zatim ${it.kind.emoji()} ${it.title} u ${it.start.label()}" },
                 )
             }
         } else {
@@ -183,6 +192,16 @@ fun TodayScreen(
             }
         }
 
+        if (child.activitiesOn(date).isNotEmpty()) item {
+            ActivitiesCard(
+                child,
+                date,
+                clock = if (isToday) clock else null,
+                onOpen = { activityEdit = it },
+                onAdd = { addingActivity = true },
+            )
+        }
+
         if (packDay != null && child.packSubjects(packDay).isNotEmpty()) {
             item { PackingCard(child, date, packDay, onPacked) }
         }
@@ -198,6 +217,29 @@ fun TodayScreen(
             onChange = {
                 details = null
                 editing = DayEdit(lesson.index, lesson.subject)
+            },
+        )
+    }
+
+    if (addingActivity || activityEdit != null) {
+        val initial = activityEdit
+        ActivityEditorSheet(
+            initial = initial,
+            defaultDate = date,
+            onDismiss = {
+                addingActivity = false
+                activityEdit = null
+            },
+            onSave = {
+                onSaveActivity(it)
+                addingActivity = false
+                activityEdit = null
+            },
+            onDelete = initial?.let { activity ->
+                {
+                    onDeleteActivity(activity.id)
+                    activityEdit = null
+                }
             },
         )
     }
@@ -291,6 +333,7 @@ private fun DayHero(child: Child, date: LocalDate, isToday: Boolean, clock: Loca
             emoji = "🏆",
             title = "Gotovo za danas!",
             detail = "${lessonsCount(lessons.size)} završeno. Sutra spakuj torbu.",
+            footer = child.nextActivityOn(date, clock)?.let { "Zatim ${it.kind.emoji()} ${it.title} u ${it.start.label()}" },
         )
     }
 }

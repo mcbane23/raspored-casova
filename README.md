@@ -28,8 +28,9 @@ Serbian.
   child has a short page of topics, each with a live summary and its own page: name, school and shift; timetable
   (opens the Week tab in edit mode); bell times for each shift; subjects and what to bring; notifications (parent
   alarm and packing reminder, each with a test button, plus anything that would hold them back); school calendar
-  (Central Serbia or Vojvodina, 8th grade with its earlier end of classes); and sharing by QR code.
-- When a child has the alarm or packing reminder on but the phone blocks notifications or exact alarms, the Family
+  (Central Serbia or Vojvodina, 8th grade with its earlier end of classes); extracurricular activities; and sharing by
+  QR code.
+- When a child has the alarm or any reminder on but the phone blocks notifications or exact alarms, the Family
   and Today tabs show a warning with a button to the setting that fixes it.
 
 The official calendar lives in `app/src/main/java/com/bane23/classschedule/data/SchoolCalendar.kt` (`SCHOOL_YEARS`).
@@ -41,9 +42,10 @@ Add a new `SchoolYear` there each summer once the ministry publishes the next ye
 - **Pre-class and optional classes:** each shift can have a "pretčas" before the 1st class, and any period can be
   marked as optional remedial ("Dopunska") or advanced ("Dodatna") teaching for a chosen subject, e.g. Tuesday morning
   "Dopunska: Srpski jezik", Tuesday afternoon "Dopunska: Matematika".
-- **QR sharing:** a child's settings show their timetable, bell times, shifts, calendar events and subjects as a
-  QR code; another phone scans it and adds it as a new child or replaces an existing one. One-day changes and alarm
-  settings are not shared. The code is deflate-compressed JSON (`data/ShareCodec.kt`).
+- **QR sharing:** a child's settings show their timetable, bell times, shifts, calendar events, subjects and
+  extracurricular activities as a QR code; another phone scans it and adds it as a new child or replaces an existing
+  one. One-day changes and alarm settings are not shared; activities arrive with their reminders off (when replacing
+  a child, the reminders that phone already had for the same activities are kept). The code is deflate-compressed JSON (`data/ShareCodec.kt`).
 - **Parent alarm:** an optional notification when the day's last class ends (or 5/10/15 minutes before), following
   the shift, the school calendar and one-day changes. Alarms fire with the app closed and in Doze, and are rescheduled after a reboot, app update or clock change. With "Alarms & reminders" allowed (Android 12+) they fire at the exact minute; while it is missing, the child's settings warn and link to it. When battery optimization is on, the child's settings show a shortcut to turn it off. By default it plays a short school-bell chime
   (`res/raw/school_bell.wav`, generated for this app); the "Zvuk" choice "Alarm" makes it ring with the phone's alarm
@@ -54,7 +56,19 @@ Add a new `SchoolYear` there each summer once the ministry publishes the next ye
   each evening before a school day, listing the next day's subjects not yet ticked off in "Sutra u torbu" with what
   to bring for each; it is skipped when everything is packed. It is scheduled and rescheduled like the parent alarm
   and has the same sound choices, on its own notification channels.
-- Tapping either notification opens the app on the Today tab of that child.
+- **Extracurricular activities ("Vanškolske aktivnosti"):** per child, e.g. sport, choir, folklore, a school trip
+  or a school camp (`data/Activities.kt`). Each has a kind (emoji), a title, either a weekly repeat on chosen days
+  (optionally paused during school breaks and holidays) or a single date or date range (for a trip or school camp
+  "Nema nastave" is on by default: those days count as days without classes, so no lessons, parent alarm or packing
+  reminder, and they show on the Raspust tab; it can be switched off when classes still take place), start and end
+  time, place,
+  a note and an optional reminder 15/30/60/120 minutes before the start (30 by default). They are listed on their own
+  settings page, shown in violet on the Today tab (finished ones faded, the current one marked), under the day's
+  classes and in a "whole week" card on the Week tab, and as a line on each child's Family card; the "done for
+  today" card names the next activity. Reminders use one more alarm per child (the next due reminder), scheduled and
+  delivered exactly like the parent alarm, with their own sound choice, test button and notification channels. One-off
+  activities are removed a day after they end.
+- Tapping any notification opens the app on the Today tab of that child.
 - **Widget ("Raspored"):** a resizable home-screen widget for the selected child, built with Jetpack Glance
   (`widget/`). It lists the day's classes with emoji and start times (today until the last class ends, then the next
   school day, `data/WidgetDay.kt`) and the packing status ("🎒 Torba za sutra: 2/4", then "✅ Torba je spremna!").

@@ -24,16 +24,22 @@ import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
 import com.bane23.classschedule.MainActivity
 import com.bane23.classschedule.R
+import com.bane23.classschedule.data.ActivityReminder
 import com.bane23.classschedule.data.Child
 import com.bane23.classschedule.data.ChildRepository
+import com.bane23.classschedule.data.activityRemindersDue
 import com.bane23.classschedule.data.classesEndOn
+import com.bane23.classschedule.ui.activityReminderContent
 import com.bane23.classschedule.ui.label
 import com.bane23.classschedule.ui.packReminderContent
+import java.time.Instant
 import java.time.LocalDate
+import java.time.LocalDateTime
+import java.time.ZoneId
 
 /**
- * Posts a child's reminders when their alarm fires: "classes are over" for the parent and "pack the bag" for the
- * child, then schedules that child's next alarms.
+ * Posts a child's reminders when their alarm fires: "classes are over" for the parent, "pack the bag" for the child
+ * and "an activity starts soon", then schedules that child's next alarms.
  */
 class AlarmReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
@@ -41,6 +47,7 @@ class AlarmReceiver : BroadcastReceiver() {
         val child = ChildRepository.get(context).data.value.children.find { it.id == childId } ?: return
         when (intent.action) {
             AlarmScheduler.ACTION_PACK_BAG -> if (child.packReminderEnabled) showPackReminder(context, child)
+            AlarmScheduler.ACTION_ACTIVITY -> showActivityReminders(context, child, intent.getLongExtra(AlarmScheduler.EXTRA_AT, 0))
             else -> if (child.alarmEnabled) showClassesOver(context, child)
         }
         AlarmScheduler.schedule(context, child)
@@ -80,8 +87,30 @@ class AlarmReceiver : BroadcastReceiver() {
         )
     }
 
+    /**
+     * Posts every activity reminder from the time the alarm was set for ([at], epoch millis) until now, so a late
+     * alarm still posts all the reminders it stood for.
+     */
+    private fun showActivityReminders(context: Context, child: Child, at: Long) {
+        val now = LocalDateTime.now()
+        val from = if (at > 0) LocalDateTime.ofInstant(Instant.ofEpochMilli(at), ZoneId.systemDefault()) else now.minusMinutes(1)
+        child.activityRemindersDue(minOf(from, now), now).forEach { reminder ->
+            val content = activityReminderContent(child, reminder, now)
+            showNotification(
+                context,
+                Reminder.ACTIVITY,
+                child.id,
+                activityNotificationId(reminder),
+                content.title,
+                content.text,
+                alarmSound = child.activityReminderSound,
+                silent = child.activityReminderSilent,
+            )
+        }
+    }
+
     /** Which reminder a notification is for; each has its own notification channels in the phone's settings. */
-    enum class Reminder { CLASSES_OVER, PACK_BAG }
+    enum class Reminder { CLASSES_OVER, PACK_BAG, ACTIVITY }
 
     companion object {
         /**
@@ -106,12 +135,19 @@ class AlarmReceiver : BroadcastReceiver() {
         private const val PACK_BELL_CHANNEL_ID = "pack_bag_bell_vibrate"
         private const val PACK_ALARM_CHANNEL_ID = "pack_bag_alarm_vibrate"
         private const val PACK_SILENT_CHANNEL_ID = "pack_bag_silent_vibrate"
+        private const val ACTIVITY_BELL_CHANNEL_ID = "activity_bell_vibrate"
+        private const val ACTIVITY_ALARM_CHANNEL_ID = "activity_alarm_vibrate"
+        private const val ACTIVITY_SILENT_CHANNEL_ID = "activity_silent_vibrate"
 
         /** Off-on pattern in milliseconds (three long buzzes), shared by the channels and the direct vibration. */
         private val VIBRATION_PATTERN = longArrayOf(0, 600, 300, 600, 300, 600)
 
         /** Packing reminders get their own id so they do not replace a child's "classes are over" notification. */
         fun packNotificationId(childId: String): Int = "$childId:pack".hashCode()
+
+        /** One notification per activity and day, so two activities starting together both show. */
+        fun activityNotificationId(reminder: ActivityReminder): Int =
+            "${reminder.activity.id}:${reminder.start.toLocalDate()}".hashCode()
 
         /**
          * Posts a notification; returns false when notifications are not allowed. With [alarmSound] it uses the
@@ -145,11 +181,22 @@ class AlarmReceiver : BroadcastReceiver() {
                 PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
             )
             val ringing = alarmSound && !silent
-            val pack = reminder == Reminder.PACK_BAG
-            val channel = when {
-                silent -> if (pack) PACK_SILENT_CHANNEL_ID else SILENT_CHANNEL_ID
-                alarmSound -> if (pack) PACK_ALARM_CHANNEL_ID else ALARM_CHANNEL_ID
-                else -> if (pack) PACK_BELL_CHANNEL_ID else BELL_CHANNEL_ID
+            val channel = when (reminder) {
+                Reminder.CLASSES_OVER -> when {
+                    silent -> SILENT_CHANNEL_ID
+                    alarmSound -> ALARM_CHANNEL_ID
+                    else -> BELL_CHANNEL_ID
+                }
+                Reminder.PACK_BAG -> when {
+                    silent -> PACK_SILENT_CHANNEL_ID
+                    alarmSound -> PACK_ALARM_CHANNEL_ID
+                    else -> PACK_BELL_CHANNEL_ID
+                }
+                Reminder.ACTIVITY -> when {
+                    silent -> ACTIVITY_SILENT_CHANNEL_ID
+                    alarmSound -> ACTIVITY_ALARM_CHANNEL_ID
+                    else -> ACTIVITY_BELL_CHANNEL_ID
+                }
             }
             val builder = NotificationCompat.Builder(context, channel)
                 .setSmallIcon(R.drawable.ic_notification)
@@ -247,6 +294,9 @@ class AlarmReceiver : BroadcastReceiver() {
             bellChannel(PACK_BELL_CHANNEL_ID, "Pakovanje torbe (zvono)", "Podsetnik sa zvukom školskog zvona da se spakuje torba")
             alarmChannel(PACK_ALARM_CHANNEL_ID, "Pakovanje torbe (alarm)", "Podsetnik sa glasnim zvukom alarma da se spakuje torba")
             silentChannel(PACK_SILENT_CHANNEL_ID, "Pakovanje torbe (bez zvuka)", "Podsetnik bez zvuka, samo vibracija, da se spakuje torba")
+            bellChannel(ACTIVITY_BELL_CHANNEL_ID, "Aktivnosti (zvono)", "Podsetnik sa zvukom školskog zvona pred vanškolsku aktivnost")
+            alarmChannel(ACTIVITY_ALARM_CHANNEL_ID, "Aktivnosti (alarm)", "Podsetnik sa glasnim zvukom alarma pred vanškolsku aktivnost")
+            silentChannel(ACTIVITY_SILENT_CHANNEL_ID, "Aktivnosti (bez zvuka)", "Podsetnik bez zvuka, samo vibracija, pred vanškolsku aktivnost")
         }
     }
 }

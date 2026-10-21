@@ -8,14 +8,15 @@ import android.os.Build
 import com.bane23.classschedule.MainActivity
 import com.bane23.classschedule.data.AppData
 import com.bane23.classschedule.data.Child
+import com.bane23.classschedule.data.nextActivityReminder
 import com.bane23.classschedule.data.nextAlarm
 import com.bane23.classschedule.data.nextPackReminder
 import java.time.LocalDateTime
 import java.time.ZoneId
 
 /**
- * Schedules two alarms per child: "classes are over" for the parent and the evening "pack the bag" reminder. Alarms
- * survive the app being closed.
+ * Schedules three alarms per child: "classes are over" for the parent, the evening "pack the bag" reminder and the
+ * next extracurricular activity reminder. Alarms survive the app being closed.
  *
  * When exact alarms are allowed (always on Android 11 and older; on Android 12+ once the user grants "Alarms &
  * reminders") they are set with [AlarmManager.setAlarmClock]: they fire at the set minute, wake the phone from Doze
@@ -26,6 +27,10 @@ object AlarmScheduler {
     const val EXTRA_CHILD_ID = "childId"
     const val ACTION_CLASSES_OVER = "com.bane23.classschedule.CLASSES_OVER"
     const val ACTION_PACK_BAG = "com.bane23.classschedule.PACK_BAG"
+    const val ACTION_ACTIVITY = "com.bane23.classschedule.ACTIVITY"
+
+    /** Epoch millis an activity alarm was set for, so the receiver knows which reminders it stands for. */
+    const val EXTRA_AT = "at"
 
     fun scheduleAll(context: Context, data: AppData) {
         data.children.forEach { schedule(context, it) }
@@ -36,6 +41,8 @@ object AlarmScheduler {
         val now = LocalDateTime.now()
         set(context, alarmManager, pendingIntent(context, ACTION_CLASSES_OVER, child.id), child.nextAlarm(now))
         set(context, alarmManager, pendingIntent(context, ACTION_PACK_BAG, child.id), child.nextPackReminder(now))
+        val activity = child.nextActivityReminder(now)
+        set(context, alarmManager, pendingIntent(context, ACTION_ACTIVITY, child.id, activity?.let(::epochMillis)), activity)
     }
 
     /** Sets [intent] to fire at [next], or cancels it when [next] is null. */
@@ -44,7 +51,7 @@ object AlarmScheduler {
             alarmManager.cancel(intent)
             return
         }
-        val triggerAt = next.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
+        val triggerAt = epochMillis(next)
         if (canScheduleExact(context)) {
             // Shown by the system for the upcoming alarm (e.g. on the lock screen); opens the app.
             val show = PendingIntent.getActivity(
@@ -69,12 +76,15 @@ object AlarmScheduler {
         return context.getSystemService(AlarmManager::class.java)?.canScheduleExactAlarms() == true
     }
 
-    private fun pendingIntent(context: Context, action: String, childId: String): PendingIntent {
+    fun epochMillis(time: LocalDateTime): Long = time.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
+
+    private fun pendingIntent(context: Context, action: String, childId: String, at: Long? = null): PendingIntent {
         val intent = Intent(context, AlarmReceiver::class.java)
             .setAction(action)
-            // A distinct data URI keeps one PendingIntent per child (the action keeps the two reminders apart).
+            // A distinct data URI keeps one PendingIntent per child (the action keeps the reminders apart).
             .setData(android.net.Uri.parse("classschedule://child/$childId"))
             .putExtra(EXTRA_CHILD_ID, childId)
+        if (at != null) intent.putExtra(EXTRA_AT, at)
         return PendingIntent.getBroadcast(
             context,
             0,

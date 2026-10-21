@@ -24,7 +24,7 @@ class ChildRepository private constructor(context: Context) {
         if (stored != null && stored.children.isNotEmpty()) {
             val today = LocalDate.now()
             val current = stored.migrated()
-            return current.copy(children = current.children.map { it.withoutPastChanges(today) })
+            return current.copy(children = current.children.map { it.withoutPastChanges(today).withoutPastActivities(today) })
         }
         // First launch: start with one child so the app is usable right away.
         val first = Child(name = DEFAULT_CHILD_NAME, referenceEpochDay = LocalDate.now().toEpochDay())

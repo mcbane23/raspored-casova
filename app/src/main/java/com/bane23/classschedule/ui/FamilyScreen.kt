@@ -41,6 +41,7 @@ import com.bane23.classschedule.data.Child
 import com.bane23.classschedule.data.DayInfo
 import com.bane23.classschedule.data.DayStatus
 import com.bane23.classschedule.data.Shift
+import com.bane23.classschedule.data.activitiesOn
 import com.bane23.classschedule.data.calendarEvents
 import com.bane23.classschedule.data.dayInfo
 import com.bane23.classschedule.data.dayStatus
@@ -156,6 +157,21 @@ private fun KidCard(child: Child, now: LocalDateTime, onClick: () -> Unit, onAla
             }
             Text(line, style = MaterialTheme.typography.bodyLarge)
             if (lessons.isNotEmpty()) MiniStops(lessons.map { it.subject to it.period }, clock)
+            // Today's activities that have not ended yet, on a violet line so they read apart from the classes.
+            val activities = child.activitiesOn(today).filter { !(it.weekly || today == it.lastDay) || clock < it.end }
+            if (activities.isNotEmpty()) {
+                Text(
+                    "🏅 " + activities.joinToString("  ·  ") { "${it.kind.emoji()} ${it.title} ${it.timeLabelOn(today)}" },
+                    style = MaterialTheme.typography.bodyMedium,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(MaterialTheme.shapes.small)
+                        .background(tintOf(ActivityViolet, 0.14f, 0.28f))
+                        .padding(horizontal = 10.dp, vertical = 6.dp),
+                )
+            }
             Row(verticalAlignment = Alignment.CenterVertically) {
                 if (end != null) {
                     Text("Kraj ", style = MaterialTheme.typography.bodyMedium, color = colors.onSurfaceVariant)
