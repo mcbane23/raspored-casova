@@ -322,8 +322,8 @@ fun ActivityEditorSheet(
                     }
                     if (weekly) {
                         SettingsRow(
-                            title = "Pauza za raspust i praznike",
-                            subtitle = "Ne prikazuje se i ne podseća kad nema nastave zbog raspusta",
+                            title = "Pauza za raspust",
+                            subtitle = "Ne prikazuje se i ne podseća tokom raspusta; na Dan škole i praznike ostaje",
                             emoji = "🏖️",
                             trailing = { Switch(checked = paused, onCheckedChange = { paused = it }) },
                             onClick = { paused = !paused },

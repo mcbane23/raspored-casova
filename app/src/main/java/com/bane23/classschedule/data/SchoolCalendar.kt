@@ -88,6 +88,9 @@ val SCHOOL_YEARS: List<SchoolYear> = listOf(
     ),
 )
 
+/** Id prefix of the calendar entries made from one-off activities without classes. */
+const val ACTIVITY_EVENT_PREFIX = "activity:"
+
 fun schoolYearOf(date: LocalDate): SchoolYear? = SCHOOL_YEARS.find { date in it }
 
 /** What kind of day [date] is for this child. */
@@ -107,7 +110,7 @@ fun Child.calendarEvents(): List<CalendarEvent> {
         .filter { (it.region == null || it.region == region) && (it.finalGrade == null || it.finalGrade == finalGrade) }
         .map { it.event }
     val activityDays = activities.filter { !it.weekly && it.noClasses }.map {
-        CalendarEvent(it.startEpochDay, maxOf(it.startEpochDay, it.endEpochDay), it.title, noClasses = true, id = "activity:${it.id}")
+        CalendarEvent(it.startEpochDay, maxOf(it.startEpochDay, it.endEpochDay), it.title, noClasses = true, id = "$ACTIVITY_EVENT_PREFIX${it.id}")
     }
     return (official + customEvents + activityDays).sortedWith(compareBy({ it.startEpochDay }, { it.endEpochDay }))
 }
