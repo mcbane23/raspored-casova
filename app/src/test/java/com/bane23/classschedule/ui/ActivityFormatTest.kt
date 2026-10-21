@@ -4,6 +4,8 @@ import com.bane23.classschedule.data.ActivityKind
 import com.bane23.classschedule.data.ActivityReminder
 import com.bane23.classschedule.data.Child
 import com.bane23.classschedule.data.Extracurricular
+import com.bane23.classschedule.data.SessionChange
+import com.bane23.classschedule.data.sessionsOn
 import org.junit.Assert.assertEquals
 import org.junit.Test
 import java.time.DayOfWeek
@@ -66,5 +68,32 @@ class ActivityFormatTest {
         assertEquals("30 min pre", reminderOffsetLabel(30))
         assertEquals("1 h pre", reminderOffsetLabel(60))
         assertEquals("2 h pre", reminderOffsetLabel(120))
+    }
+
+    @Test
+    fun changedSessionLabels() {
+        val thursday = wednesday.plusDays(1)
+        assertEquals("otkazano", SessionChange(wednesday.toEpochDay()).label())
+        assertEquals(
+            "pomereno na četvrtak, 15. oktobar u 18:00",
+            SessionChange(wednesday.toEpochDay(), thursday.toEpochDay(), 18 * 60, 19 * 60).label(),
+        )
+        assertEquals("pomereno na 19:00", SessionChange(wednesday.toEpochDay(), wednesday.toEpochDay(), 19 * 60, 20 * 60).label())
+
+        val moved = football.withChange(wednesday, SessionChange(wednesday.toEpochDay(), thursday.toEpochDay(), 18 * 60, 19 * 60))
+        val ana = child.copy(activities = listOf(moved))
+        val away = ana.sessionsOn(wednesday).single()
+        assertEquals("Pomereno", away.tag())
+        assertEquals("pomereno na četvrtak, 15. oktobar u 18:00", away.detail())
+        val here = ana.sessionsOn(thursday).single()
+        assertEquals("redovno: sreda, 14. oktobar", here.detail())
+        assertEquals("18:00–19:00", here.activity.timeLabelOn(thursday))
+        assertEquals(null, ana.copy(activities = listOf(football)).sessionsOn(wednesday).single().tag())
+    }
+
+    @Test
+    fun dramaHasItsOwnKind() {
+        assertEquals("🎭 Gluma", "${ActivityKind.DRAMA.emoji()} ${ActivityKind.DRAMA.label()}")
+        assertEquals(false, ActivityKind.DRAMA.usuallyOnce())
     }
 }

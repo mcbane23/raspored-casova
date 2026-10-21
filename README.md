@@ -56,8 +56,8 @@ Add a new `SchoolYear` there each summer once the ministry publishes the next ye
   each evening before a school day, listing the next day's subjects not yet ticked off in "Sutra u torbu" with what
   to bring for each; it is skipped when everything is packed. It is scheduled and rescheduled like the parent alarm
   and has the same sound choices, on its own notification channels.
-- **Extracurricular activities ("Vanškolske aktivnosti"):** per child, e.g. sport, choir, folklore, a school trip
-  or a school camp (`data/Activities.kt`). Each has a kind (emoji), a title, either a weekly repeat on chosen days
+- **Extracurricular activities ("Vanškolske aktivnosti"):** per child, e.g. sport, choir, folklore, drama, a school
+  trip or a school camp (`data/Activities.kt`). Each has a kind (emoji), a title, either a weekly repeat on chosen days
   (optionally paused during school breaks and holidays) or a single date or date range (for a trip or school camp
   "Nema nastave" is on by default: those days count as days without classes, so no lessons, parent alarm or packing
   reminder, and they show on the Raspust tab; it can be switched off when classes still take place), start and end
@@ -68,6 +68,11 @@ Add a new `SchoolYear` there each summer once the ministry publishes the next ye
   today" card names the next activity. Reminders use one more alarm per child (the next due reminder), scheduled and
   delivered exactly like the parent alarm, with their own sound choice, test button and notification channels. One-off
   activities are removed a day after they end.
+  A single session of a weekly activity can be cancelled or moved to another day or time ("Jedan termin", from the
+  Today tab or from the activity's editor, which lists the next sessions). The change is stored on the activity
+  (`Extracurricular.changes`, one `SessionChange` per regular day) and affects only that session: the Today tab
+  shows it as "Otkazano" or "Pomereno" (also on the day it moved to), reminders follow the new time or are skipped,
+  and the regular weekly schedule stays the same for the following weeks. Past changes are dropped automatically.
 - Tapping any notification opens the app on the Today tab of that child.
 - **Widget ("Raspored"):** a resizable home-screen widget for the selected child, built with Jetpack Glance
   (`widget/`). It lists the day's classes with emoji and start times (today until the last class ends, then the next
@@ -113,7 +118,9 @@ as Actions artifacts.
 
 The **debug APK** is signed with `app/debug.keystore`, which is committed to the repository (it is not secret; the
 password is `android`). This keeps the signature stable, so each new debug APK installs over the previous one. The
-debug build has the ID `com.bane23.classschedule.debug`, so it can be installed next to the release version.
+debug build has the ID `com.bane23.classschedule.debug`, so it can be installed next to the release version. Its
+launcher icon has a red "TEST" ribbon (`app/src/debug/res`, a debug-only override of `mipmap/ic_launcher`), so it is
+easy to tell apart from the app installed from Google Play; the release icon is unchanged.
 
 The **release AAB** is signed with your upload key, which is kept only in GitHub secrets.
 

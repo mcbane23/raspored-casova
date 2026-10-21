@@ -819,6 +819,7 @@ fun ActivitiesScreen(child: Child, viewModel: AppViewModel, onBack: () -> Unit, 
     if (adding || editing != null) {
         val initial = editing
         ActivityEditorSheet(
+            child = child,
             initial = initial,
             defaultDate = LocalDate.now(),
             onDismiss = {
