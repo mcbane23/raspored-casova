@@ -38,7 +38,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.bane23.classschedule.alarm.AlarmReceiver
-import com.bane23.classschedule.data.ActivityKind
 import com.bane23.classschedule.data.AppData
 import com.bane23.classschedule.data.Child
 import com.bane23.classschedule.data.DEFAULT_CHILD_NAME
@@ -801,7 +800,11 @@ fun ActivitiesScreen(child: Child, viewModel: AppViewModel, onBack: () -> Unit, 
                     if (i > 0) RowDivider()
                     SettingsRow(
                         title = activity.title,
-                        subtitle = listOfNotNull(activity.scheduleLabel(), activity.place.ifBlank { null }).joinToString(" · "),
+                        subtitle = listOfNotNull(
+                            activity.scheduleLabel(),
+                            activity.place.ifBlank { null },
+                            if (activity.noClasses) "nema nastave" else null,
+                        ).joinToString(" · "),
                         leading = { ActivityTile(activity, size = 36.dp) },
                         value = if (activity.reminderEnabled) "🔔" else null,
                         chevron = true,
@@ -811,9 +814,6 @@ fun ActivitiesScreen(child: Child, viewModel: AppViewModel, onBack: () -> Unit, 
             }
         }
         DashedButton("+ Dodaj aktivnost", onClick = { adding = true })
-        if (once.any { it.kind == ActivityKind.TRIP || it.kind == ActivityKind.CAMP }) {
-            Hint("Ako tog dana nema nastave, dodaj i događaj na kartici Raspust.", Modifier.padding(horizontal = 6.dp))
-        }
     }
 
     if (adding || editing != null) {

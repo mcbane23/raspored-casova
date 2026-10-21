@@ -34,6 +34,8 @@ data class Extracurricular(
     val note: String = "",
     /** A weekly activity that does not take place during school breaks and holidays. */
     val pausedOnBreaks: Boolean = false,
+    /** A one-off (a trip, a school camp) on whose days there are no classes; it then counts as a day off. */
+    val noClasses: Boolean = false,
     val reminderEnabled: Boolean = true,
     val reminderMinutesBefore: Int = DEFAULT_ACTIVITY_REMINDER_MINUTES,
 ) {

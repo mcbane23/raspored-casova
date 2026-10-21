@@ -98,12 +98,18 @@ sealed interface DayInfo {
     data class SchoolDay(val timetableDay: DayOfWeek, val note: String? = null) : DayInfo
 }
 
-/** Official events that apply to this child (by region and grade) plus the child's own events, sorted by date. */
+/**
+ * Official events that apply to this child (by region and grade), the child's own events and the one-off activities
+ * marked as days without classes (e.g. a school camp), sorted by date.
+ */
 fun Child.calendarEvents(): List<CalendarEvent> {
     val official = SCHOOL_YEARS.flatMap { it.events }
         .filter { (it.region == null || it.region == region) && (it.finalGrade == null || it.finalGrade == finalGrade) }
         .map { it.event }
-    return (official + customEvents).sortedWith(compareBy({ it.startEpochDay }, { it.endEpochDay }))
+    val activityDays = activities.filter { !it.weekly && it.noClasses }.map {
+        CalendarEvent(it.startEpochDay, maxOf(it.startEpochDay, it.endEpochDay), it.title, noClasses = true, id = "activity:${it.id}")
+    }
+    return (official + customEvents + activityDays).sortedWith(compareBy({ it.startEpochDay }, { it.endEpochDay }))
 }
 
 fun Child.dayInfo(date: LocalDate): DayInfo {

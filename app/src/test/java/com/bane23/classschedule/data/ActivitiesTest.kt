@@ -112,4 +112,18 @@ class ActivitiesTest {
         assertEquals(listOf("football", "choir"), afterCamp.activities.map { it.id })
         assertEquals(3, child.withoutPastActivities(LocalDate.of(2026, 10, 23)).activities.size)
     }
+
+    @Test
+    fun oneOffWithoutClassesIsADayOff() {
+        val ana = child.copy(shiftMode = ShiftMode.FIXED_MORNING, morning = Timetable.defaultFor(Shift.MORNING).withLesson(DayOfWeek.TUESDAY, 0, "Matematika"))
+        val tuesday = LocalDate.of(2026, 10, 20)
+        assertEquals(1, ana.lessonsOn(tuesday).size)
+
+        val away = ana.withActivity(camp.copy(noClasses = true))
+        assertEquals(DayInfo.NoClasses("Rekreativna nastava"), away.dayInfo(tuesday))
+        assertEquals(emptyList<Lesson>(), away.lessonsOn(tuesday))
+        // The camp is still listed as an activity, and the day after it classes are back.
+        assertEquals(listOf("camp"), away.activitiesOn(tuesday).filter { !it.weekly }.map { it.id })
+        assertEquals(1, away.lessonsOn(LocalDate.of(2026, 10, 27)).size)
+    }
 }

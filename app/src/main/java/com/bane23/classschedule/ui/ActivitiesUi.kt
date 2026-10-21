@@ -172,6 +172,7 @@ fun ActivityEditorSheet(
     var place by remember { mutableStateOf(start.place) }
     var note by remember { mutableStateOf(start.note) }
     var paused by remember { mutableStateOf(start.pausedOnBreaks) }
+    var noClasses by remember { mutableStateOf(start.noClasses) }
     var reminder by remember { mutableStateOf(start.reminderEnabled) }
     var reminderMinutes by remember { mutableStateOf(start.reminderMinutesBefore.takeIf { it in REMINDER_OFFSETS } ?: DEFAULT_ACTIVITY_REMINDER_MINUTES) }
     var pickingTime by remember { mutableStateOf<Boolean?>(null) }
@@ -201,7 +202,10 @@ fun ActivityEditorSheet(
                         onClick = {
                             // A title still blank or still the previous kind's name follows the kind.
                             if (title.isBlank() || title == kind.label()) title = if (k == ActivityKind.OTHER) "" else k.label()
-                            if (initial == null) weekly = !k.usuallyOnce()
+                            if (initial == null) {
+                                weekly = !k.usuallyOnce()
+                                noClasses = k.usuallyOnce()
+                            }
                             kind = k
                         },
                         label = { Text("${k.emoji()} ${k.label()}") },
@@ -265,6 +269,16 @@ fun ActivityEditorSheet(
 
             Surface(shape = MaterialTheme.shapes.large, color = MaterialTheme.colorScheme.surfaceContainerLowest) {
                 Column {
+                    if (!weekly) {
+                        SettingsRow(
+                            title = "Nema nastave",
+                            subtitle = if (noClasses) "Tih dana nema časova, kao za raspust" else "Časovi se održavaju po rasporedu",
+                            emoji = "🏫",
+                            trailing = { Switch(checked = noClasses, onCheckedChange = { noClasses = it }) },
+                            onClick = { noClasses = !noClasses },
+                        )
+                        RowDivider()
+                    }
                     if (weekly) {
                         SettingsRow(
                             title = "Pauza za raspust i praznike",
@@ -303,6 +317,7 @@ fun ActivityEditorSheet(
                         place = place.trim(),
                         note = note.trim(),
                         pausedOnBreaks = weekly && paused,
+                        noClasses = !weekly && noClasses,
                         reminderEnabled = reminder,
                         reminderMinutesBefore = reminderMinutes,
                     ),
