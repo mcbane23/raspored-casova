@@ -58,7 +58,7 @@ Add a new `SchoolYear` there each summer once the ministry publishes the next ye
   and has the same sound choices, on its own notification channels.
 - **Extracurricular activities ("Vanškolske aktivnosti"):** per child, e.g. sport, choir, folklore, drama, a school
   trip or a school camp (`data/Activities.kt`). Each has a kind (emoji), a title, either a weekly repeat on chosen days
-  (optionally paused during school breaks and holidays) or a single date or date range (for a trip or school camp
+  (optionally paused during school breaks; single days off such as the school day or a holiday do not pause it) or a single date or date range (for a trip or school camp
   "Nema nastave" is on by default: those days count as days without classes, so no lessons, parent alarm or packing
   reminder, and they show on the Raspust tab; it can be switched off when classes still take place), start and end
   time, place,

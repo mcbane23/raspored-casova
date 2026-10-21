@@ -203,4 +203,21 @@ class ActivitiesTest {
         assertEquals(LocalDate.of(2026, 11, 18), child.upcomingRegularDays(choir, LocalDate.of(2026, 11, 5), 2).first())
         assertEquals(emptyList<LocalDate>(), child.upcomingRegularDays(camp, wednesday))
     }
+
+    @Test
+    fun pausedActivityStillTakesPlaceOnASingleDayOff() {
+        // The school's day on Wednesday 21 Oct: no classes, but choir (paused only for breaks) and football go on.
+        val schoolDay = LocalDate.of(2026, 10, 21)
+        val ana = child.copy(
+            customEvents = listOf(CalendarEvent(schoolDay.toEpochDay(), schoolDay.toEpochDay(), "Dan škole")),
+            activities = listOf(football, choir.copy(reminderEnabled = true)),
+        )
+        assertEquals(DayInfo.NoClasses("Dan škole"), ana.dayInfo(schoolDay))
+        assertEquals(listOf("choir", "football"), ana.activitiesOn(schoolDay).map { it.id })
+        assertEquals(schoolDay.atTime(15, 30), ana.nextActivityReminder(schoolDay.atTime(8, 0)))
+
+        // A school camp (a one-off without classes) does not pause other activities either.
+        val away = camp.copy(noClasses = true)
+        assertEquals(listOf(away, choir, football), child.copy(activities = listOf(football, choir, away)).activitiesOn(schoolDay))
+    }
 }

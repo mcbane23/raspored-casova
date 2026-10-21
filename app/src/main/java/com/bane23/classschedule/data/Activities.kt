@@ -49,7 +49,7 @@ data class Extracurricular(
     val endMinute: Int,
     val place: String = "",
     val note: String = "",
-    /** A weekly activity that does not take place during school breaks and holidays. */
+    /** A weekly activity that does not take place during school breaks (single days off do not pause it). */
     val pausedOnBreaks: Boolean = false,
     /** A one-off (a trip, a school camp) on whose days there are no classes; it then counts as a day off. */
     val noClasses: Boolean = false,
@@ -103,8 +103,18 @@ data class ActivitySession(
     val takesPlace: Boolean get() = state == SessionState.REGULAR || state == SessionState.MOVED_HERE
 }
 
-/** Whether [date] falls in a school break or holiday for this child (weekends alone do not count). */
-private fun Child.isBreak(date: LocalDate): Boolean = calendarEvents().any { it.noClasses && it.covers(date) }
+/** Shortest day off, in days, that counts as a school break even without "raspust" in its title. */
+private const val MIN_BREAK_DAYS = 3
+
+/**
+ * Whether [date] falls in a school break ("raspust") for this child. Single days off such as the school's day, a
+ * holiday or a non-teaching day do not count, so weekly activities still take place on them; neither do the child's
+ * own one-off activities without classes (a school camp).
+ */
+private fun Child.isBreak(date: LocalDate): Boolean = calendarEvents().any {
+    it.noClasses && it.covers(date) && !it.id.startsWith(ACTIVITY_EVENT_PREFIX) &&
+        (it.title.contains("raspust", ignoreCase = true) || it.endEpochDay - it.startEpochDay + 1 >= MIN_BREAK_DAYS)
+}
 
 /** Whether a weekly [activity] regularly has a session on [date] (before any one-time change). */
 private fun Child.regularlyOn(activity: Extracurricular, date: LocalDate): Boolean =
