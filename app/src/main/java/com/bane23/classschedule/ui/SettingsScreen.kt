@@ -142,7 +142,7 @@ private val ALARM_OFFSETS = listOf(0, 5, 10, 15)
 private enum class AlarmTone(val label: String, val hint: String) {
     BELL("🛎️ Zvono", "Obaveštenje sa kratkim zvukom školskog zvona."),
     ALARM("⏰ Alarm", "Zvoni kao budilnik dok ne otvoriš obaveštenje."),
-    SILENT("🔕 Bez zvuka", "Samo obaveštenje, bez zvuka."),
+    SILENT("🔕 Bez zvuka", "Obaveštenje sa vibracijom, bez zvuka."),
 }
 
 /** "danas u 12:35" or "utorak, 14. oktobar u 12:35" for the next alarm or reminder. */

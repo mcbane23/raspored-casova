@@ -11,9 +11,14 @@ import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.media.AudioAttributes
+import android.media.AudioManager
 import android.media.RingtoneManager
 import android.net.Uri
 import android.os.Build
+import android.os.VibrationAttributes
+import android.os.VibrationEffect
+import android.os.Vibrator
+import android.os.VibratorManager
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
@@ -81,16 +86,29 @@ class AlarmReceiver : BroadcastReceiver() {
     companion object {
         /**
          * Channels from earlier versions, removed so they no longer show in the phone's settings: the single channel
-         * from before custom sounds, and the first bell channel, whose sound URI used the resource id (which can
-         * change between builds) instead of the resource name.
+         * from before custom sounds, the first bell channel, whose sound URI used the resource id (which can change
+         * between builds) instead of the resource name, and the channels from before every reminder vibrated
+         * (a channel's vibration cannot be changed once it exists, so those got new ids).
          */
-        private val OLD_CHANNEL_IDS = listOf("classes_over", "classes_over_bell")
-        private const val BELL_CHANNEL_ID = "classes_over_bell_v2"
-        private const val ALARM_CHANNEL_ID = "classes_over_alarm"
-        private const val SILENT_CHANNEL_ID = "classes_over_silent"
-        private const val PACK_BELL_CHANNEL_ID = "pack_bag_bell"
-        private const val PACK_ALARM_CHANNEL_ID = "pack_bag_alarm"
-        private const val PACK_SILENT_CHANNEL_ID = "pack_bag_silent"
+        private val OLD_CHANNEL_IDS = listOf(
+            "classes_over",
+            "classes_over_bell",
+            "classes_over_bell_v2",
+            "classes_over_alarm",
+            "classes_over_silent",
+            "pack_bag_bell",
+            "pack_bag_alarm",
+            "pack_bag_silent",
+        )
+        private const val BELL_CHANNEL_ID = "classes_over_bell_vibrate"
+        private const val ALARM_CHANNEL_ID = "classes_over_alarm_vibrate"
+        private const val SILENT_CHANNEL_ID = "classes_over_silent_vibrate"
+        private const val PACK_BELL_CHANNEL_ID = "pack_bag_bell_vibrate"
+        private const val PACK_ALARM_CHANNEL_ID = "pack_bag_alarm_vibrate"
+        private const val PACK_SILENT_CHANNEL_ID = "pack_bag_silent_vibrate"
+
+        /** Off-on pattern in milliseconds (three long buzzes), shared by the channels and the direct vibration. */
+        private val VIBRATION_PATTERN = longArrayOf(0, 600, 300, 600, 300, 600)
 
         /** Packing reminders get their own id so they do not replace a child's "classes are over" notification. */
         fun packNotificationId(childId: String): Int = "$childId:pack".hashCode()
@@ -99,6 +117,7 @@ class AlarmReceiver : BroadcastReceiver() {
          * Posts a notification; returns false when notifications are not allowed. With [alarmSound] it uses the
          * phone's alarm tone at alarm volume and repeats it until the notification is opened or dismissed,
          * with [silent] it makes no sound at all, otherwise it plays the app's school-bell chime once.
+         * It always vibrates, also with [silent] and when the phone's sound is off (see [vibrateIfMuted]).
          * Tapping it opens the Today tab for the child [childId].
          */
         fun showNotification(
@@ -144,7 +163,41 @@ class AlarmReceiver : BroadcastReceiver() {
             val notification = builder.build()
             if (ringing) notification.flags = notification.flags or Notification.FLAG_INSISTENT
             NotificationManagerCompat.from(context).notify(id, notification)
+            vibrateIfMuted(context)
             return true
+        }
+
+        /**
+         * The channels vibrate with the ringer on sound or vibrate, but Android skips notification vibration when
+         * the ringer is set to silent. Then the phone is buzzed directly as an alarm, which silent mode does not
+         * block, so the reminder is still noticed on time. Nothing extra happens under Do Not Disturb, so the
+         * user's own quiet hours are kept.
+         */
+        private fun vibrateIfMuted(context: Context) {
+            val audio = context.getSystemService(AudioManager::class.java) ?: return
+            val notifications = context.getSystemService(NotificationManager::class.java) ?: return
+            if (audio.ringerMode != AudioManager.RINGER_MODE_SILENT) return
+            if (notifications.currentInterruptionFilter != NotificationManager.INTERRUPTION_FILTER_ALL) return
+            val vibrator = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                context.getSystemService(VibratorManager::class.java)?.defaultVibrator
+            } else {
+                @Suppress("DEPRECATION")
+                context.getSystemService(Vibrator::class.java)
+            }
+            if (vibrator == null || !vibrator.hasVibrator()) return
+            val effect = VibrationEffect.createWaveform(VIBRATION_PATTERN, -1)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                vibrator.vibrate(effect, VibrationAttributes.createForUsage(VibrationAttributes.USAGE_ALARM))
+            } else {
+                @Suppress("DEPRECATION")
+                vibrator.vibrate(
+                    effect,
+                    AudioAttributes.Builder()
+                        .setUsage(AudioAttributes.USAGE_ALARM)
+                        .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                        .build(),
+                )
+            }
         }
 
         fun ensureChannels(context: Context) {
@@ -167,6 +220,8 @@ class AlarmReceiver : BroadcastReceiver() {
                 NotificationChannel(id, name, NotificationManager.IMPORTANCE_HIGH).apply {
                     this.description = description
                     setSound(bell, bellAudio)
+                    enableVibration(true)
+                    vibrationPattern = VIBRATION_PATTERN
                 },
             )
             fun alarmChannel(id: String, name: String, description: String) = manager.createNotificationChannel(
@@ -174,21 +229,24 @@ class AlarmReceiver : BroadcastReceiver() {
                     this.description = description
                     setSound(alarmTone, alarmAudio)
                     enableVibration(true)
+                    vibrationPattern = VIBRATION_PATTERN
                 },
             )
             fun silentChannel(id: String, name: String, description: String) = manager.createNotificationChannel(
                 NotificationChannel(id, name, NotificationManager.IMPORTANCE_HIGH).apply {
                     this.description = description
                     setSound(null, null)
+                    enableVibration(true)
+                    vibrationPattern = VIBRATION_PATTERN
                 },
             )
 
             bellChannel(BELL_CHANNEL_ID, "Kraj nastave (zvono)", "Obaveštenje sa zvukom školskog zvona kad se završe časovi")
             alarmChannel(ALARM_CHANNEL_ID, "Kraj nastave (alarm)", "Glasan zvuk alarma kad se završe časovi")
-            silentChannel(SILENT_CHANNEL_ID, "Kraj nastave (bez zvuka)", "Obaveštenje bez zvuka kad se završe časovi")
+            silentChannel(SILENT_CHANNEL_ID, "Kraj nastave (bez zvuka)", "Obaveštenje bez zvuka, samo vibracija, kad se završe časovi")
             bellChannel(PACK_BELL_CHANNEL_ID, "Pakovanje torbe (zvono)", "Podsetnik sa zvukom školskog zvona da se spakuje torba")
             alarmChannel(PACK_ALARM_CHANNEL_ID, "Pakovanje torbe (alarm)", "Podsetnik sa glasnim zvukom alarma da se spakuje torba")
-            silentChannel(PACK_SILENT_CHANNEL_ID, "Pakovanje torbe (bez zvuka)", "Podsetnik bez zvuka da se spakuje torba")
+            silentChannel(PACK_SILENT_CHANNEL_ID, "Pakovanje torbe (bez zvuka)", "Podsetnik bez zvuka, samo vibracija, da se spakuje torba")
         }
     }
 }
