@@ -8,8 +8,9 @@ import java.util.zip.Deflater
 import java.util.zip.Inflater
 
 /**
- * Packs a child's timetable, calendar settings and subjects into a short text for a QR code, and back.
- * One-day changes and alarm settings stay on the sharing phone.
+ * Packs a child's timetable, calendar settings, subjects and extracurricular activities into a short text for a QR
+ * code, and back. One-day changes and alarm settings stay on the sharing phone; activities arrive with their
+ * reminders off, since each phone decides which reminders it wants.
  */
 object ShareCodec {
     private const val PREFIX = "RASPORED1:"
@@ -29,6 +30,9 @@ object ShareCodec {
             packReminderSilent = false,
             packedForEpochDay = 0,
             packed = emptyList(),
+            activities = child.activities.map { it.copy(reminderEnabled = false) },
+            activityReminderSound = false,
+            activityReminderSilent = false,
         )
         val raw = json.encodeToString(Child.serializer(), shared).toByteArray(Charsets.UTF_8)
         val deflater = Deflater(Deflater.BEST_COMPRESSION).apply {

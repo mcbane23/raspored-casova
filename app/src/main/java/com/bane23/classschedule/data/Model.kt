@@ -202,6 +202,12 @@ data class Child(
     val packedForEpochDay: Long = 0,
     /** Subjects already ticked off in the packing list for [packedForEpochDay]. */
     val packed: List<String> = emptyList(),
+    /** Extracurricular activities (sport, choir, trips, ...) shown next to the classes. */
+    val activities: List<Extracurricular> = emptyList(),
+    /** Ring like an alarm clock for activity reminders; see [alarmSound]. */
+    val activityReminderSound: Boolean = false,
+    /** Activity reminders without any sound; takes precedence over [activityReminderSound]. */
+    val activityReminderSilent: Boolean = false,
 ) {
     fun timetable(shift: Shift): Timetable = if (shift == Shift.MORNING) morning else afternoon
 

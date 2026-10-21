@@ -11,12 +11,14 @@ import com.bane23.classschedule.data.ChildRepository
 import com.bane23.classschedule.data.DEFAULT_CHILD_NAME
 import com.bane23.classschedule.data.DEFAULT_SUBJECTS
 import com.bane23.classschedule.data.ExtraClass
+import com.bane23.classschedule.data.Extracurricular
 import com.bane23.classschedule.data.Region
 import com.bane23.classschedule.data.Shift
 import com.bane23.classschedule.data.ShiftMode
 import com.bane23.classschedule.data.ThemeMode
 import com.bane23.classschedule.data.Timetable
 import com.bane23.classschedule.data.shiftOn
+import com.bane23.classschedule.data.withActivity
 import com.bane23.classschedule.data.withDayChange
 import com.bane23.classschedule.data.withPackNote
 import com.bane23.classschedule.data.withPacked
@@ -139,6 +141,16 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         it.withPacked(date, subject, packed)
     }
 
+    /** Adds a new activity or saves changes to an existing one. */
+    fun saveActivity(id: String, activity: Extracurricular) = updateChild(id) { it.withActivity(activity) }
+
+    fun deleteActivity(id: String, activityId: String) = updateChild(id) { child ->
+        child.copy(activities = child.activities.filterNot { it.id == activityId })
+    }
+
+    fun setActivityReminderSound(id: String, alarmSound: Boolean, silent: Boolean) =
+        updateChild(id) { it.copy(activityReminderSound = alarmSound, activityReminderSilent = silent) }
+
     /** Adds a child received by QR code, or copies its timetable and settings onto the child [replaceId]. */
     fun importChild(shared: Child, replaceId: String?) = save { data ->
         if (replaceId == null) {
@@ -161,6 +173,14 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
                     packReminderSilent = it.packReminderSilent,
                     packedForEpochDay = it.packedForEpochDay,
                     packed = it.packed,
+                    // Shared activities arrive with reminders off; keep the reminders this phone already had.
+                    activities = shared.activities.map { a ->
+                        it.activities.find { own -> own.id == a.id }
+                            ?.let { own -> a.copy(reminderEnabled = own.reminderEnabled, reminderMinutesBefore = own.reminderMinutesBefore) }
+                            ?: a
+                    },
+                    activityReminderSound = it.activityReminderSound,
+                    activityReminderSilent = it.activityReminderSilent,
                 )
             },
         )

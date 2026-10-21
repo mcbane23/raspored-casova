@@ -37,15 +37,19 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.bane23.classschedule.alarm.AlarmReceiver
+import com.bane23.classschedule.data.ActivityKind
 import com.bane23.classschedule.data.AppData
 import com.bane23.classschedule.data.Child
 import com.bane23.classschedule.data.DEFAULT_CHILD_NAME
+import com.bane23.classschedule.data.Extracurricular
 import com.bane23.classschedule.data.Period
 import com.bane23.classschedule.data.Region
 import com.bane23.classschedule.data.Shift
 import com.bane23.classschedule.data.ShiftMode
 import com.bane23.classschedule.data.ThemeMode
 import com.bane23.classschedule.data.Timetable
+import com.bane23.classschedule.data.nextActivityReminder
 import com.bane23.classschedule.data.nextAlarm
 import com.bane23.classschedule.data.nextPackReminder
 import com.bane23.classschedule.data.packNote
@@ -70,6 +74,7 @@ sealed interface SettingsPage {
     data class SchoolCalendar(override val childId: String) : ForChild
     data class Bells(override val childId: String) : ForChild
     data class Subjects(override val childId: String) : ForChild
+    data class Activities(override val childId: String) : ForChild
 }
 
 /** General settings: the list of children, QR import, theme and the app version. */
@@ -217,21 +222,35 @@ fun ChildSettingsScreen(
                 chevron = true,
                 onClick = { onOpen(SettingsPage.Subjects(child.id)) },
             )
+            RowDivider()
+            SettingsRow(
+                title = "Vanškolske aktivnosti",
+                subtitle = when (val count = child.activities.size) {
+                    0 -> "Sport, hor, folklor, izleti… sa podsetnikom"
+                    else -> child.activities.take(3).joinToString(", ") { "${it.kind.emoji()} ${it.title}" } +
+                        if (count > 3) " i još ${count - 3}" else ""
+                },
+                emoji = "🏅",
+                chevron = true,
+                onClick = { onOpen(SettingsPage.Activities(child.id)) },
+            )
         }
 
         SettingsGroup("Obaveštenja") {
             val alarm = child.nextAlarm(now)
             val pack = child.nextPackReminder(now)
-            val anyOn = child.alarmEnabled || child.packReminderEnabled
+            val activity = child.nextActivityReminder(now)
+            val anyOn = child.hasReminderOn()
             SettingsRow(
-                title = "Alarm i podsetnik za torbu",
+                title = "Alarm i podsetnici",
                 subtitle = when {
                     anyOn && problem != null -> "⚠️ ${problem.title}"
                     !anyOn -> "Isključeno · dodirni da uključiš"
                     else -> listOfNotNull(
                         if (!child.alarmEnabled) null else alarm?.let { "Alarm ${nextTimeLabel(it, today)}" } ?: "Alarm uključen",
                         if (!child.packReminderEnabled) null else pack?.let { "torba ${nextTimeLabel(it, today)}" } ?: "podsetnik uključen",
-                    ).joinToString(" · ")
+                        activity?.let { "aktivnost ${nextTimeLabel(it, today)}" },
+                    ).joinToString(" · ").replaceFirstChar { it.uppercase() }.ifEmpty { "Uključeno" }
                 },
                 emoji = "🔔",
                 chevron = true,
@@ -361,7 +380,8 @@ fun NotificationsScreen(child: Child, viewModel: AppViewModel, onBack: () -> Uni
     val setAlarm = rememberAlarmSwitch(viewModel)
     val setPackReminder = rememberPackReminderSwitch(viewModel)
     val alarmTest = rememberTestNotification(child)
-    val packTest = rememberTestNotification(child, pack = true)
+    val packTest = rememberTestNotification(child, AlarmReceiver.Reminder.PACK_BAG)
+    val activityTest = rememberTestNotification(child, AlarmReceiver.Reminder.ACTIVITY)
     var pickingPackTime by remember { mutableStateOf(false) }
     val batteryRestricted = rememberBatteryRestricted()
     val problem = rememberReminderProblem()
@@ -370,7 +390,7 @@ fun NotificationsScreen(child: Child, viewModel: AppViewModel, onBack: () -> Uni
     val blockedHint = "Obaveštenja su isključena za ovu aplikaciju. Uključi ih u podešavanjima telefona."
 
     SettingsPageLayout(child.name.ifBlank { "Dete" }, "Obaveštenja", onBack, modifier) {
-        val anyOn = child.alarmEnabled || child.packReminderEnabled
+        val anyOn = child.hasReminderOn()
         if (anyOn && (problem != null || batteryRestricted)) {
             SettingsGroup("Da stigne na vreme") {
                 if (problem != null) {
@@ -483,6 +503,46 @@ fun NotificationsScreen(child: Child, viewModel: AppViewModel, onBack: () -> Uni
                     subtitle = if (packTest.blocked) blockedHint else "Da vidiš kako izgleda i zvuči",
                     emoji = "🧪",
                     onClick = packTest.send,
+                )
+            }
+        }
+
+        SettingsGroup("Podsetnici za aktivnosti") {
+            val withReminder = child.activities.filter { it.reminderEnabled }
+            val next = child.nextActivityReminder(LocalDateTime.now())
+            SettingsRow(
+                title = if (withReminder.isEmpty()) "Nijedna aktivnost nema podsetnik" else "Podsetnik pred aktivnost",
+                subtitle = when {
+                    withReminder.isEmpty() -> "Podsetnik se uključuje za svaku aktivnost u „Vanškolske aktivnosti”"
+                    next == null -> withReminder.joinToString(", ") { it.title }
+                    else -> "Sledeći: ${nextTimeLabel(next, today)}"
+                },
+                emoji = "🏅",
+            )
+            if (withReminder.isNotEmpty()) {
+                RowDivider()
+                Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("Zvuk", style = MaterialTheme.typography.titleSmall)
+                    val tone = when {
+                        child.activityReminderSilent -> AlarmTone.SILENT
+                        child.activityReminderSound -> AlarmTone.ALARM
+                        else -> AlarmTone.BELL
+                    }
+                    PillToggle(
+                        AlarmTone.entries,
+                        tone,
+                        { it.label },
+                        { viewModel.setActivityReminderSound(child.id, alarmSound = it == AlarmTone.ALARM, silent = it == AlarmTone.SILENT) },
+                        onCard = true,
+                    )
+                    Hint(tone.hint)
+                }
+                RowDivider()
+                SettingsRow(
+                    title = "Pošalji probni podsetnik",
+                    subtitle = if (activityTest.blocked) blockedHint else "Da vidiš kako izgleda i zvuči",
+                    emoji = "🧪",
+                    onClick = activityTest.send,
                 )
             }
         }
@@ -701,6 +761,80 @@ fun SubjectsScreen(child: Child, viewModel: AppViewModel, onBack: () -> Unit, mo
             extraAction = "Obriši predmet sa spiska" to {
                 viewModel.deleteSubject(child.id, subject)
                 editing = null
+            },
+        )
+    }
+}
+
+/**
+ * The child's extracurricular activities (sport, choir, folklore, trips, school camps): weekly ones first, then the
+ * one-offs by date. Each opens the editor; reminders use the same delivery as the other notifications.
+ */
+@Composable
+fun ActivitiesScreen(child: Child, viewModel: AppViewModel, onBack: () -> Unit, modifier: Modifier = Modifier) {
+    val saveActivity = rememberActivitySaver(viewModel)
+    var editing by remember { mutableStateOf<Extracurricular?>(null) }
+    var adding by remember { mutableStateOf(false) }
+    val weekly = child.activities.filter { it.weekly }.sortedWith(compareBy({ it.days.minOrNull() }, { it.startMinute }))
+    val once = child.activities.filterNot { it.weekly }.sortedWith(compareBy({ it.startEpochDay }, { it.startMinute }))
+
+    SettingsPageLayout(child.name.ifBlank { "Dete" }, "Vanškolske aktivnosti", onBack, modifier) {
+        NoteBanner("🏅", "Sport, hor, folklor, izleti, rekreativna nastava… Prikazuju se na Danas i Nedelja, uz podsetnik pre početka.")
+        if (weekly.isNotEmpty()) {
+            SettingsGroup("Svake nedelje") {
+                weekly.forEachIndexed { i, activity ->
+                    if (i > 0) RowDivider()
+                    SettingsRow(
+                        title = activity.title,
+                        subtitle = listOfNotNull(activity.scheduleLabel(), activity.place.ifBlank { null }).joinToString(" · "),
+                        leading = { ActivityTile(activity, size = 36.dp) },
+                        value = if (activity.reminderEnabled) "🔔" else null,
+                        chevron = true,
+                        onClick = { editing = activity },
+                    )
+                }
+            }
+        }
+        if (once.isNotEmpty()) {
+            SettingsGroup("Jednom") {
+                once.forEachIndexed { i, activity ->
+                    if (i > 0) RowDivider()
+                    SettingsRow(
+                        title = activity.title,
+                        subtitle = listOfNotNull(activity.scheduleLabel(), activity.place.ifBlank { null }).joinToString(" · "),
+                        leading = { ActivityTile(activity, size = 36.dp) },
+                        value = if (activity.reminderEnabled) "🔔" else null,
+                        chevron = true,
+                        onClick = { editing = activity },
+                    )
+                }
+            }
+        }
+        DashedButton("+ Dodaj aktivnost", onClick = { adding = true })
+        if (once.any { it.kind == ActivityKind.TRIP || it.kind == ActivityKind.CAMP }) {
+            Hint("Ako tog dana nema nastave, dodaj i događaj na kartici Raspust.", Modifier.padding(horizontal = 6.dp))
+        }
+    }
+
+    if (adding || editing != null) {
+        val initial = editing
+        ActivityEditorSheet(
+            initial = initial,
+            defaultDate = LocalDate.now(),
+            onDismiss = {
+                adding = false
+                editing = null
+            },
+            onSave = {
+                saveActivity(child.id, it)
+                adding = false
+                editing = null
+            },
+            onDelete = initial?.let { activity ->
+                {
+                    viewModel.deleteActivity(child.id, activity.id)
+                    editing = null
+                }
             },
         )
     }

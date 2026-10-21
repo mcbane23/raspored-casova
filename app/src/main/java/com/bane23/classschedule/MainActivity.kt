@@ -45,6 +45,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.bane23.classschedule.data.ThemeMode
+import com.bane23.classschedule.ui.ActivitiesScreen
 import com.bane23.classschedule.ui.AppViewModel
 import com.bane23.classschedule.ui.BellsScreen
 import com.bane23.classschedule.ui.CalendarScreen
@@ -59,6 +60,7 @@ import com.bane23.classschedule.ui.SettingsPage
 import com.bane23.classschedule.ui.SubjectsScreen
 import com.bane23.classschedule.ui.TodayScreen
 import com.bane23.classschedule.ui.WeekScreen
+import com.bane23.classschedule.ui.rememberActivitySaver
 import com.bane23.classschedule.ui.rememberAlarmSwitch
 import com.bane23.classschedule.ui.theme.RasporedCasovaTheme
 
@@ -130,6 +132,7 @@ private fun SettingsPage.route(): String = when (this) {
     is SettingsPage.SchoolCalendar -> "calendar:$childId"
     is SettingsPage.Bells -> "bells:$childId"
     is SettingsPage.Subjects -> "subjects:$childId"
+    is SettingsPage.Activities -> "activities:$childId"
 }
 
 private fun settingsPage(route: String?): SettingsPage? {
@@ -143,6 +146,7 @@ private fun settingsPage(route: String?): SettingsPage? {
         "calendar" -> SettingsPage.SchoolCalendar(id)
         "bells" -> SettingsPage.Bells(id)
         "subjects" -> SettingsPage.Subjects(id)
+        "activities" -> SettingsPage.Activities(id)
         else -> null
     }
 }
@@ -167,6 +171,7 @@ fun App(viewModel: AppViewModel = viewModel(), openTodayFor: String? = null, onO
     val shownTab = if (tab == Tab.FAMILY && !family) Tab.TODAY else tab
     val page = settingsPage(settingsRoute)
     val setAlarm = rememberAlarmSwitch(viewModel)
+    val saveActivity = rememberActivitySaver(viewModel)
     fun openSettings(next: SettingsPage?) { settingsRoute = next?.route() }
     fun editTimetable(childId: String) {
         viewModel.selectChild(childId)
@@ -264,6 +269,8 @@ fun App(viewModel: AppViewModel = viewModel(), openTodayFor: String? = null, onO
                     BellsScreen(settingsChild, viewModel, onBack = { openSettings(page.parent()) }, modifier = modifier)
                 page is SettingsPage.Subjects && settingsChild != null ->
                     SubjectsScreen(settingsChild, viewModel, onBack = { openSettings(page.parent()) }, modifier = modifier)
+                page is SettingsPage.Activities && settingsChild != null ->
+                    ActivitiesScreen(settingsChild, viewModel, onBack = { openSettings(page.parent()) }, modifier = modifier)
                 else -> when (screenTab) {
                     Tab.FAMILY -> FamilyScreen(
                         children = data.children,
@@ -284,6 +291,8 @@ fun App(viewModel: AppViewModel = viewModel(), openTodayFor: String? = null, onO
                         onChangeDay = { date, index, subject -> viewModel.changeDay(child.id, date, index, subject) },
                         onResetDay = { date -> viewModel.resetDay(child.id, date) },
                         onPacked = { date, subject, packed -> viewModel.setPacked(child.id, date, subject, packed) },
+                        onSaveActivity = { saveActivity(child.id, it) },
+                        onDeleteActivity = { viewModel.deleteActivity(child.id, it) },
                         modifier = modifier,
                     )
                     Tab.WEEK -> WeekScreen(
@@ -296,6 +305,8 @@ fun App(viewModel: AppViewModel = viewModel(), openTodayFor: String? = null, onO
                         onEditModeChange = { editingWeek = it },
                         onTimetableChange = { shift, timetable -> viewModel.setTimetable(child.id, shift, timetable) },
                         onSubjectUsed = { viewModel.addSubject(child.id, it) },
+                        onSaveActivity = { saveActivity(child.id, it) },
+                        onDeleteActivity = { viewModel.deleteActivity(child.id, it) },
                         modifier = modifier,
                     )
                     Tab.BREAKS -> CalendarScreen(

@@ -25,6 +25,18 @@ class ShareCodecTest {
         customEvents = listOf(CalendarEvent(1, 1, "Dan škole", id = "e1")),
         alarmEnabled = true,
         alarmSilent = true,
+        activities = listOf(
+            Extracurricular(
+                id = "a1",
+                title = "Folklor",
+                kind = ActivityKind.DANCE,
+                days = listOf(2, 4),
+                startMinute = 18 * 60,
+                endMinute = 19 * 60 + 30,
+                place = "Dom kulture",
+            ),
+        ),
+        activityReminderSound = true,
     )
 
     @Test
@@ -45,6 +57,14 @@ class ShareCodecTest {
         assertEquals(false, decoded.alarmEnabled)
         assertEquals(false, decoded.alarmSilent)
         assertNotEquals(child.id, decoded.id)
+    }
+
+    @Test
+    fun activitiesAreSharedWithRemindersOff() {
+        val decoded = ShareCodec.decode(ShareCodec.encode(child))!!
+
+        assertEquals(child.activities.map { it.copy(reminderEnabled = false) }, decoded.activities)
+        assertEquals(false, decoded.activityReminderSound)
     }
 
     @Test

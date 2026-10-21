@@ -46,20 +46,24 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.bane23.classschedule.data.Child
 import com.bane23.classschedule.data.ExtraClass
+import com.bane23.classschedule.data.Extracurricular
 import com.bane23.classschedule.data.SCHOOL_DAYS
 import com.bane23.classschedule.data.Shift
 import com.bane23.classschedule.data.ShiftMode
 import com.bane23.classschedule.data.Timetable
 import com.bane23.classschedule.data.other
 import com.bane23.classschedule.data.shiftOn
+import com.bane23.classschedule.data.weeklyActivitiesOn
 import java.time.DayOfWeek
 import java.time.LocalDate
+import java.time.temporal.TemporalAdjusters
 
 private data class WeekEdit(val day: DayOfWeek, val index: Int, val subject: String)
 
 /**
  * The regular weekly timetable for one shift: one day at a time in big rows (for children) or the whole week as a
- * table. "Uredi" switches to editing, where tapping a period picks its subject for every week.
+ * table. "Uredi" switches to editing, where tapping a period picks its subject for every week. Weekly
+ * extracurricular activities show under the day's classes and, for the whole week, in their own card.
  */
 @Composable
 fun WeekScreen(
@@ -72,6 +76,8 @@ fun WeekScreen(
     onEditModeChange: (Boolean) -> Unit,
     onTimetableChange: (Shift, Timetable) -> Unit,
     onSubjectUsed: (String) -> Unit,
+    onSaveActivity: (Extracurricular) -> Unit,
+    onDeleteActivity: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val today = LocalDate.now()
@@ -80,6 +86,8 @@ fun WeekScreen(
     var dayIndex by rememberSaveable { mutableIntStateOf(SCHOOL_DAYS.indexOf(today.dayOfWeek).coerceAtLeast(0)) }
     var wholeWeek by rememberSaveable { mutableStateOf(false) }
     var editing by remember { mutableStateOf<WeekEdit?>(null) }
+    var activityEdit by remember { mutableStateOf<Extracurricular?>(null) }
+    var addingActivity by remember { mutableStateOf(false) }
     val timetable = child.timetable(shift)
     val rotates = child.shiftMode == ShiftMode.WEEKLY || child.shiftMode == ShiftMode.MONTHLY
     val day = SCHOOL_DAYS[dayIndex]
@@ -177,6 +185,7 @@ fun WeekScreen(
                 }
             }
             item { BellTimes(timetable) }
+            item { WeeklyActivitiesCard(child, onOpen = { activityEdit = it }, onAdd = { addingActivity = true }) }
             return@LazyColumn
         }
 
@@ -235,6 +244,17 @@ fun WeekScreen(
                 )
             }
         }
+        val dayActivities = child.weeklyActivitiesOn(day)
+        if (!editMode && dayActivities.isNotEmpty()) {
+            item {
+                AppCard(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                    Text("🏅 Aktivnosti", style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(bottom = 4.dp))
+                    dayActivities.forEach { activity ->
+                        ActivityRow(activity, "${activity.start.label()}–${activity.end.label()}") { activityEdit = activity }
+                    }
+                }
+            }
+        }
         if (editMode) {
             if (subjects.size < timetable.periods.size) {
                 item {
@@ -258,6 +278,29 @@ fun WeekScreen(
                 }
             }
         }
+    }
+
+    if (addingActivity || activityEdit != null) {
+        val initial = activityEdit
+        ActivityEditorSheet(
+            initial = initial,
+            defaultDate = if (wholeWeek) today else today.with(TemporalAdjusters.nextOrSame(day)),
+            onDismiss = {
+                addingActivity = false
+                activityEdit = null
+            },
+            onSave = {
+                onSaveActivity(it)
+                addingActivity = false
+                activityEdit = null
+            },
+            onDelete = initial?.let { activity ->
+                {
+                    onDeleteActivity(activity.id)
+                    activityEdit = null
+                }
+            },
+        )
     }
 
     editing?.let { edit ->
@@ -407,6 +450,31 @@ private fun WeekTable(timetable: Timetable, today: DayOfWeek, onEdit: () -> Unit
                 }
             }
         }
+    }
+}
+
+/** Every weekly activity, Monday to Sunday, with a button to add one. */
+@Composable
+private fun WeeklyActivitiesCard(child: Child, onOpen: (Extracurricular) -> Unit, onAdd: () -> Unit) {
+    AppCard(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+        Text("🏅 Aktivnosti svake nedelje", style = MaterialTheme.typography.titleMedium)
+        DayOfWeek.entries.forEach { d ->
+            val activities = child.weeklyActivitiesOn(d)
+            if (activities.isEmpty()) return@forEach
+            Text(
+                d.label(),
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(top = 6.dp),
+            )
+            activities.forEach { activity ->
+                ActivityRow(activity, "${activity.start.label()}–${activity.end.label()}") { onOpen(activity) }
+            }
+        }
+        if (child.activities.none { it.weekly }) {
+            Hint("Sport, hor, folklor… Dodaj ih da se vide pored časova, sa podsetnikom pre početka.")
+        }
+        TextButton(onClick = onAdd, modifier = Modifier.align(Alignment.End)) { Text("+ Dodaj aktivnost") }
     }
 }
 

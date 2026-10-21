@@ -25,7 +25,9 @@ import androidx.core.content.ContextCompat
 import com.bane23.classschedule.alarm.AlarmReceiver
 import com.bane23.classschedule.alarm.AlarmScheduler
 import com.bane23.classschedule.data.Child
+import com.bane23.classschedule.data.Extracurricular
 import com.bane23.classschedule.data.classesEndOn
+import com.bane23.classschedule.data.hasActivityOn
 import java.time.LocalDate
 
 /** Fixed id so repeated test notifications replace each other instead of piling up. */
@@ -44,6 +46,26 @@ fun rememberAlarmSwitch(viewModel: AppViewModel): (childId: String, enabled: Boo
 @Composable
 fun rememberPackReminderSwitch(viewModel: AppViewModel): (childId: String, enabled: Boolean) -> Unit =
     rememberNotificationSwitch(viewModel::setPackReminder)
+
+/**
+ * Saves an activity for a child; when its reminder is on, first asks for the notification permission (saving it with
+ * the reminder off if refused) and opens the "Alarms & reminders" switch when needed, like the other reminders.
+ */
+@Composable
+fun rememberActivitySaver(viewModel: AppViewModel): (childId: String, activity: Extracurricular) -> Unit {
+    val pending = remember { mutableMapOf<String, Extracurricular>() }
+    val ask = rememberNotificationSwitch { childId, granted ->
+        pending.remove(childId)?.let { viewModel.saveActivity(childId, it.copy(reminderEnabled = it.reminderEnabled && granted)) }
+    }
+    return { childId, activity ->
+        if (activity.reminderEnabled) {
+            pending[childId] = activity
+            ask(childId, true)
+        } else {
+            viewModel.saveActivity(childId, activity)
+        }
+    }
+}
 
 /**
  * Turning a reminder on first asks for the notification permission when it is needed, then opens the "Alarms &
@@ -96,14 +118,27 @@ fun openExactAlarmSettings(context: Context) {
 /** Sends a test notification for [child]; [blocked] is true when the phone refused to show it. */
 class TestNotification(val send: () -> Unit, val blocked: Boolean)
 
-/** A test of the parent's "classes are over" notification, or with [pack] of the child's packing reminder. */
+/** A test of the parent's "classes are over" notification, the child's packing reminder or an activity reminder. */
 @Composable
-fun rememberTestNotification(child: Child, pack: Boolean = false): TestNotification {
+fun rememberTestNotification(child: Child, reminder: AlarmReceiver.Reminder = AlarmReceiver.Reminder.CLASSES_OVER): TestNotification {
     val context = LocalContext.current
     var blocked by remember { mutableStateOf(false) }
 
     fun show() {
-        blocked = if (pack) {
+        blocked = if (reminder == AlarmReceiver.Reminder.ACTIVITY) {
+            val today = LocalDate.now()
+            val activity = child.activities.firstOrNull { child.hasActivityOn(it, today) } ?: child.activities.firstOrNull()
+            !AlarmReceiver.showNotification(
+                context,
+                AlarmReceiver.Reminder.ACTIVITY,
+                child.id,
+                TEST_NOTIFICATION_ID,
+                activity?.let { "${it.kind.emoji()} ${it.title} u ${it.start.label()}" } ?: "🏅 Aktivnost uskoro",
+                "Probni podsetnik radi.",
+                alarmSound = child.activityReminderSound,
+                silent = child.activityReminderSilent,
+            )
+        } else if (reminder == AlarmReceiver.Reminder.PACK_BAG) {
             val content = packReminderContent(child, LocalDate.now())
             !AlarmReceiver.showNotification(
                 context,
@@ -168,7 +203,7 @@ fun openBatterySettings(context: Context) {
 
 /** Something that keeps the alarms and reminders from arriving on time. */
 enum class ReminderProblem(val title: String, val detail: String) {
-    NOTIFICATIONS_OFF("Obaveštenja su isključena", "Alarm i podsetnik neće stići dok ih ne uključiš."),
+    NOTIFICATIONS_OFF("Obaveštenja su isključena", "Alarmi i podsetnici neće stići dok ih ne uključiš."),
     NOT_EXACT("Alarm može da kasni", "Dozvoli „Alarmi i podsetnici” da obaveštenje stigne tačno na vreme."),
 }
 
@@ -209,8 +244,11 @@ fun openFix(context: Context, problem: ReminderProblem) {
 @Composable
 fun rememberReminderWarning(children: List<Child>): ReminderProblem? {
     val problem = rememberReminderProblem()
-    return problem.takeIf { children.any { it.alarmEnabled || it.packReminderEnabled } }
+    return problem.takeIf { children.any { it.hasReminderOn() } }
 }
+
+/** Whether any of the child's alarms or reminders is turned on. */
+fun Child.hasReminderOn(): Boolean = alarmEnabled || packReminderEnabled || activities.any { it.reminderEnabled }
 
 /**
  * Warning on the main tabs that the phone will hold back the reminders, so a parent who switched the alarm on from
