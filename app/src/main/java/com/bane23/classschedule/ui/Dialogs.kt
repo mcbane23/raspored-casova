@@ -30,6 +30,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -98,7 +100,11 @@ fun SubjectPickerSheet(
         if (initialSubject.isBlank() || subjects.any { it.equals(initialSubject, ignoreCase = true) }) subjects
         else listOf(initialSubject) + subjects
     }
-    fun pick(subject: String) = onConfirm(kind?.lesson(subject) ?: subject.trim())
+    val haptic = LocalHapticFeedback.current
+    fun pick(subject: String) {
+        haptic.performHapticFeedback(HapticFeedbackType.Confirm)
+        onConfirm(kind?.lesson(subject) ?: subject.trim())
+    }
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,

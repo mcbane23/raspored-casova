@@ -23,6 +23,7 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
@@ -35,7 +36,9 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.unit.dp
@@ -168,10 +171,45 @@ private fun appVersion(context: Context): String =
 
 private val ALARM_OFFSETS = listOf(0, 5, 10, 15)
 
-private enum class AlarmTone(val label: String, val hint: String) {
-    BELL("🛎️ Zvono", "Obaveštenje sa kratkim zvukom školskog zvona."),
-    ALARM("⏰ Alarm", "Zvoni kao budilnik dok ne otvoriš obaveštenje."),
-    SILENT("🔕 Bez zvuka", "Obaveštenje sa vibracijom, bez zvuka."),
+private enum class AlarmTone(val emoji: String, val label: String, val hint: String) {
+    BELL("🛎️", "Zvono", "Obaveštenje sa kratkim zvukom školskog zvona."),
+    ALARM("⏰", "Alarm", "Zvoni kao budilnik dok ne otvoriš obaveštenje."),
+    SILENT("🔕", "Bez zvuka", "Obaveštenje sa vibracijom, bez zvuka."),
+}
+
+private fun toneOf(alarmSound: Boolean, silent: Boolean): AlarmTone = when {
+    silent -> AlarmTone.SILENT
+    alarmSound -> AlarmTone.ALARM
+    else -> AlarmTone.BELL
+}
+
+/** "Zvuk" with the chosen tone as its value; tapping it opens a short list of the three tones with what each does. */
+@Composable
+private fun SoundRow(tone: AlarmTone, onSelect: (AlarmTone) -> Unit) {
+    var picking by remember { mutableStateOf(false) }
+    SettingsRow(title = "Zvuk", subtitle = tone.hint, emoji = tone.emoji, value = tone.label, chevron = true, onClick = { picking = true })
+    if (picking) {
+        AlertDialog(
+            onDismissRequest = { picking = false },
+            title = { Text("Zvuk") },
+            text = {
+                Column {
+                    AlarmTone.entries.forEach { option ->
+                        SettingsRow(
+                            title = "${option.emoji} ${option.label}",
+                            subtitle = option.hint,
+                            trailing = { RadioButton(selected = option == tone, onClick = null) },
+                            onClick = {
+                                onSelect(option)
+                                picking = false
+                            },
+                        )
+                    }
+                }
+            },
+            confirmButton = { TextButton(colors = accentTextButton(), onClick = { picking = false }) { Text("Zatvori") } },
+        )
+    }
 }
 
 /** "danas u 12:35" or "utorak, 14. oktobar u 12:35" for the next alarm or reminder. */
@@ -468,20 +506,10 @@ fun NotificationsScreen(child: Child, viewModel: AppViewModel, onBack: () -> Uni
                         { viewModel.setAlarmMinutesBefore(child.id, it) },
                         onCard = true,
                     )
-                    Text("Zvuk", style = MaterialTheme.typography.titleSmall)
-                    val tone = when {
-                        child.alarmSilent -> AlarmTone.SILENT
-                        child.alarmSound -> AlarmTone.ALARM
-                        else -> AlarmTone.BELL
-                    }
-                    PillToggle(
-                        AlarmTone.entries,
-                        tone,
-                        { it.label },
-                        { viewModel.setAlarmSound(child.id, alarmSound = it == AlarmTone.ALARM, silent = it == AlarmTone.SILENT) },
-                        onCard = true,
-                    )
-                    Hint(tone.hint)
+                }
+                RowDivider()
+                SoundRow(toneOf(child.alarmSound, child.alarmSilent)) {
+                    viewModel.setAlarmSound(child.id, alarmSound = it == AlarmTone.ALARM, silent = it == AlarmTone.SILENT)
                 }
                 RowDivider()
                 SettingsRow(
@@ -516,21 +544,8 @@ fun NotificationsScreen(child: Child, viewModel: AppViewModel, onBack: () -> Uni
                     onClick = { pickingPackTime = true },
                 )
                 RowDivider()
-                Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text("Zvuk", style = MaterialTheme.typography.titleSmall)
-                    val tone = when {
-                        child.packReminderSilent -> AlarmTone.SILENT
-                        child.packReminderSound -> AlarmTone.ALARM
-                        else -> AlarmTone.BELL
-                    }
-                    PillToggle(
-                        AlarmTone.entries,
-                        tone,
-                        { it.label },
-                        { viewModel.setPackReminderSound(child.id, alarmSound = it == AlarmTone.ALARM, silent = it == AlarmTone.SILENT) },
-                        onCard = true,
-                    )
-                    Hint(tone.hint)
+                SoundRow(toneOf(child.packReminderSound, child.packReminderSilent)) {
+                    viewModel.setPackReminderSound(child.id, alarmSound = it == AlarmTone.ALARM, silent = it == AlarmTone.SILENT)
                 }
                 RowDivider()
                 SettingsRow(
@@ -556,21 +571,8 @@ fun NotificationsScreen(child: Child, viewModel: AppViewModel, onBack: () -> Uni
             )
             if (withReminder.isNotEmpty()) {
                 RowDivider()
-                Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text("Zvuk", style = MaterialTheme.typography.titleSmall)
-                    val tone = when {
-                        child.activityReminderSilent -> AlarmTone.SILENT
-                        child.activityReminderSound -> AlarmTone.ALARM
-                        else -> AlarmTone.BELL
-                    }
-                    PillToggle(
-                        AlarmTone.entries,
-                        tone,
-                        { it.label },
-                        { viewModel.setActivityReminderSound(child.id, alarmSound = it == AlarmTone.ALARM, silent = it == AlarmTone.SILENT) },
-                        onCard = true,
-                    )
-                    Hint(tone.hint)
+                SoundRow(toneOf(child.activityReminderSound, child.activityReminderSilent)) {
+                    viewModel.setActivityReminderSound(child.id, alarmSound = it == AlarmTone.ALARM, silent = it == AlarmTone.SILENT)
                 }
                 RowDivider()
                 SettingsRow(
@@ -938,6 +940,7 @@ fun SettingsRow(
     onCheckedChange: ((Boolean) -> Unit)? = null,
     onClick: (() -> Unit)? = null,
 ) {
+    val haptic = LocalHapticFeedback.current
     Row(
         Modifier
             .fillMaxWidth()
@@ -945,7 +948,10 @@ fun SettingsRow(
             .then(
                 when {
                     checked != null && onCheckedChange != null ->
-                        Modifier.toggleable(value = checked, role = Role.Switch, onValueChange = onCheckedChange)
+                        Modifier.toggleable(value = checked, role = Role.Switch) {
+                            haptic.performHapticFeedback(if (it) HapticFeedbackType.ToggleOn else HapticFeedbackType.ToggleOff)
+                            onCheckedChange(it)
+                        }
                     onClick != null -> Modifier.clickable(onClick = onClick)
                     else -> Modifier
                 },
