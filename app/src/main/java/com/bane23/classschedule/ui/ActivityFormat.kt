@@ -60,11 +60,11 @@ fun Extracurricular.scheduleLabel(): String =
         "${dateRangeLabel(firstDay, lastDay)} · od ${start.label()} do ${end.label()}"
     }
 
-/** "pomereno na sreda, 22. oktobar u 18:00" or "otkazano" for a changed session; null for a regular one. */
+/** "pomereno na sredu, 22. oktobar u 18:00" or "otkazano" for a changed session; null for a regular one. */
 fun SessionChange.label(): String {
     val to = movedTo ?: return "otkazano"
     val time = minuteLabel(startMinute)
-    return if (to == regularDay) "pomereno na $time" else "pomereno na ${to.label().lowercase()} u $time"
+    return if (to == regularDay) "pomereno na $time" else "pomereno na ${to.accusativeLabel()} u $time"
 }
 
 /** Short tag for a session that is not as planned: "Otkazano" or "Pomereno"; null for a regular one. */

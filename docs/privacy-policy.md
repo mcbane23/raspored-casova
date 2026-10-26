@@ -1,6 +1,6 @@
 # Privacy Policy – Raspored časova
 
-_Effective 14 October 2026_
+_Effective 26 October 2026_
 
 Published at https://mcbane23.github.io/privacy/raspored-casova/ (source: the `mcbane23/privacy` repository).
 When this policy changes, update both copies.
@@ -10,7 +10,8 @@ your data.
 
 ## Data the app stores
 
-Everything you enter (children's names, school, timetable, subjects, bell times, calendar events, alarm settings) is
+Everything you enter (children's names, school, timetable, subjects, bell times, calendar events, extracurricular
+activities with their times, places and notes, alarm and reminder settings) is
 stored **only on your device**, in the app's private storage. The app has no account, no server and no analytics.
 
 ## Data the app collects or shares
@@ -20,7 +21,8 @@ third-party SDKs that collect data. The app does not request internet access.
 
 ## Permissions
 
-- **Notifications** – used only to show the "classes are over" and "pack the bag" reminders you turn on in Settings.
+- **Notifications** – used only to show the "classes are over", "pack the bag" and activity reminders you turn on in
+  the app.
 - **Alarms & reminders (exact alarms)** – used only so those reminders arrive at the exact minute.
 - **Run at startup** – used only to set the reminders again after the phone restarts or the time changes.
 - **Camera** – used only while you scan a timetable QR code shared from another phone. Camera images are not
@@ -29,7 +31,7 @@ third-party SDKs that collect data. The app does not request internet access.
 ## Sharing a timetable
 
 When you choose "Prikaži QR kod", the app shows the child's name, school, timetable, bell times, shift settings,
-calendar events and subject list as a QR code on your screen. Nothing leaves the phone unless someone scans that
+calendar events, subject list and extracurricular activities as a QR code on your screen. Nothing leaves the phone unless someone scans that
 code; sharing happens only between the two phones.
 
 ## Backups
@@ -54,9 +56,10 @@ Questions about this policy: citisdevelopment@gmail.com
 
 # Politika privatnosti – Raspored časova (srpski)
 
-Sve što uneseš u aplikaciju (imena dece, škola, raspored, predmeti, zvona, događaji, alarm) čuva se **samo na
+Sve što uneseš u aplikaciju (imena dece, škola, raspored, predmeti, zvona, događaji, vanškolske aktivnosti, alarm i
+podsetnici) čuva se **samo na
 tvom telefonu**. Aplikacija nema nalog, server ni analitiku, ne šalje i ne deli nikakve podatke i ne koristi
-internet. Dozvola za obaveštenja služi samo za podsetnike o kraju nastave i pakovanju torbe, a dozvola za pokretanje pri uključivanju
+internet. Dozvola za obaveštenja služi samo za podsetnike o kraju nastave, pakovanju torbe i aktivnostima, a dozvola za pokretanje pri uključivanju
 telefona samo da se podsetnici vrate posle restarta; dozvola za alarme i podsetnike služi da stignu u minut. Kamera se koristi samo dok skeniraš QR kod rasporeda sa
 drugog telefona; slike se ne čuvaju niti šalju. Podaci se brišu deinstalacijom aplikacije ili brisanjem
 njene memorije u podešavanjima telefona.

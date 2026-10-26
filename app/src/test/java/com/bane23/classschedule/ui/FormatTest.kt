@@ -32,4 +32,21 @@ class FormatTest {
         assertEquals("", packHint(thursday, thursday.plusDays(11)))
         assertEquals("", packHint(thursday, null))
     }
+
+    @Test
+    fun datesInTheRightCase() {
+        assertEquals("sredu, 28. oktobar", LocalDate.of(2026, 10, 28).accusativeLabel())
+        assertEquals("13. novembra", LocalDate.of(2026, 11, 13).genitiveLabel())
+        assertEquals("15. januara", LocalDate.of(2027, 1, 15).genitiveLabel())
+        assertEquals("svaku sredu", DayOfWeek.WEDNESDAY.every())
+        assertEquals("svaki ponedeljak", DayOfWeek.MONDAY.every())
+    }
+
+    @Test
+    fun subjectPlural() {
+        assertEquals("1 predmet", subjectsCount(1))
+        assertEquals("19 predmeta", subjectsCount(19))
+        assertEquals("21 predmet", subjectsCount(21))
+        assertEquals("11 predmeta", subjectsCount(11))
+    }
 }

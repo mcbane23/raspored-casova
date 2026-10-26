@@ -31,18 +31,27 @@ import com.journeyapps.barcodescanner.ScanOptions
 /** Shows [child]'s timetable as a QR code for another phone to scan. */
 @Composable
 fun QrCodeDialog(child: Child, onDismiss: () -> Unit) {
-    val bitmap = remember(child) { qrBitmap(ShareCodec.encode(child), 720) }
+    // Null when the data does not fit in one QR code (a very long list of activities or events).
+    val bitmap = remember(child) { runCatching { qrBitmap(ShareCodec.encode(child), 720) }.getOrNull() }
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("Raspored: ${child.name}") },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Image(bitmap.asImageBitmap(), contentDescription = "QR kod rasporeda", Modifier.size(280.dp))
-                Text(
-                    "Na drugom telefonu: Podešavanja → Uvezi raspored sa QR koda. Deli se raspored, zvona, smene, " +
-                        "kalendar, predmeti i šta se nosi; jednodnevne izmene i alarm ostaju samo ovde.",
-                    style = MaterialTheme.typography.bodySmall,
-                )
+                if (bitmap == null) {
+                    Text(
+                        "Raspored ima previše podataka za jedan QR kod. Obriši aktivnosti ili događaje koji više nisu " +
+                            "potrebni pa pokušaj ponovo.",
+                        style = MaterialTheme.typography.bodyMedium,
+                    )
+                } else {
+                    Image(bitmap.asImageBitmap(), contentDescription = "QR kod rasporeda", Modifier.size(280.dp))
+                    Text(
+                        "Na drugom telefonu: Podešavanja → Uvezi raspored sa QR koda. Deli se raspored, zvona, smene, " +
+                            "kalendar, predmeti, aktivnosti i šta se nosi; jednodnevne izmene i podsetnici ostaju samo ovde.",
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                }
             }
         },
         confirmButton = { TextButton(colors = accentTextButton(), onClick = onDismiss) { Text("Zatvori") } },

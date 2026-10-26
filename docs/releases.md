@@ -23,7 +23,8 @@ The note is taken from the **Release notes** section of the merged pull request'
 The note is built by `.github/scripts/release_notes.py` in the "Write release note" workflow step. That step never
 fails the release: if the PR cannot be found or parsed, the release still gets a generic note.
 
-Releases from a direct push to `main` (no PR) or from a manual workflow run fall back the same way.
+A direct push to `main` (no PR) falls back the same way. A manual workflow run reuses the note of the PR that the
+current `main` commit came from.
 
 ## Google Play "What's new"
 

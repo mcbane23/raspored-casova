@@ -80,8 +80,10 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        // Only a fresh launch; after rotation the same intent must not jump back to Today.
-        if (savedInstanceState == null) openTodayFor = intent?.getStringExtra(EXTRA_OPEN_TODAY_FOR)
+        // Only a fresh launch; after rotation, or when reopened from Recents with the old intent, it must not jump back
+        // to Today.
+        val fromRecents = (intent?.flags ?: 0) and Intent.FLAG_ACTIVITY_LAUNCHED_FROM_HISTORY != 0
+        if (savedInstanceState == null && !fromRecents) openTodayFor = intent?.getStringExtra(EXTRA_OPEN_TODAY_FOR)
         enableEdgeToEdge()
         setContent {
             val viewModel: AppViewModel = viewModel()
@@ -182,6 +184,8 @@ fun App(viewModel: AppViewModel = viewModel(), openTodayFor: String? = null, onO
     var editingWeek by rememberSaveable { mutableStateOf(false) }
     // The settings page the timetable editor was opened from, so "Gotovo" leads back there.
     var returnAfterEdit by rememberSaveable { mutableStateOf<String?>(null) }
+    // The bells page was opened from the timetable editor, so going back returns to the editor.
+    var bellsFromEditor by rememberSaveable { mutableStateOf(false) }
     val child = data.children.find { it.id == data.selectedChildId } ?: data.children.first()
     val shownTab = if (tab == Tab.FAMILY && !family) Tab.TODAY else tab
     val page = settingsPage(settingsRoute)
@@ -199,7 +203,13 @@ fun App(viewModel: AppViewModel = viewModel(), openTodayFor: String? = null, onO
             }
         }
     }
-    fun openSettings(next: SettingsPage?) { settingsRoute = next?.route() }
+    fun openSettings(next: SettingsPage?) {
+        settingsRoute = next?.route()
+        bellsFromEditor = false
+    }
+    fun back(from: SettingsPage) {
+        if (from is SettingsPage.Bells && bellsFromEditor) openSettings(null) else openSettings(from.parent(!family))
+    }
     fun editTimetable(childId: String) {
         viewModel.selectChild(childId)
         returnAfterEdit = settingsRoute
@@ -213,7 +223,7 @@ fun App(viewModel: AppViewModel = viewModel(), openTodayFor: String? = null, onO
         returnAfterEdit = null
     }
 
-    BackHandler(enabled = page != null) { openSettings(page?.parent(!family)) }
+    BackHandler(enabled = page != null) { page?.let(::back) }
     BackHandler(enabled = page == null && shownTab == Tab.WEEK && editingWeek) { finishEditing() }
 
     LaunchedEffect(openTodayFor) {
@@ -221,6 +231,9 @@ fun App(viewModel: AppViewModel = viewModel(), openTodayFor: String? = null, onO
         if (data.children.any { it.id == id }) viewModel.selectChild(id)
         tab = Tab.TODAY
         settingsRoute = null
+        editingWeek = false
+        returnAfterEdit = null
+        bellsFromEditor = false
         onOpenedToday()
     }
 
@@ -249,7 +262,7 @@ fun App(viewModel: AppViewModel = viewModel(), openTodayFor: String? = null, onO
                                 onClick = {
                                     tab = t
                                     if (t != Tab.WEEK) editingWeek = false
-                                returnAfterEdit = null
+                                    returnAfterEdit = null
                                 },
                                 icon = { Icon(t.icon, contentDescription = null) },
                                 label = { Text(t.label, style = MaterialTheme.typography.labelLarge) },
@@ -304,7 +317,7 @@ fun App(viewModel: AppViewModel = viewModel(), openTodayFor: String? = null, onO
                     page is SettingsPage.SchoolCalendar && settingsChild != null ->
                         SchoolCalendarScreen(settingsChild, viewModel, onBack = { openSettings(page.parent(!family)) }, modifier = modifier)
                     page is SettingsPage.Bells && settingsChild != null ->
-                        BellsScreen(settingsChild, viewModel, onBack = { openSettings(page.parent(!family)) }, modifier = modifier)
+                        BellsScreen(settingsChild, viewModel, onBack = { back(page) }, modifier = modifier)
                     page is SettingsPage.Subjects && settingsChild != null ->
                         SubjectsScreen(settingsChild, viewModel, onBack = { openSettings(page.parent(!family)) }, modifier = modifier)
                     page is SettingsPage.Activities && settingsChild != null ->
@@ -340,7 +353,10 @@ fun App(viewModel: AppViewModel = viewModel(), openTodayFor: String? = null, onO
                             child = child,
                             onSelectChild = { viewModel.selectChild(it) },
                             onOpenSettings = { openSettings(SettingsPage.Home) },
-                            onOpenBells = { openSettings(SettingsPage.Bells(child.id)) },
+                            onOpenBells = {
+                                openSettings(SettingsPage.Bells(child.id))
+                                bellsFromEditor = true
+                            },
                             editMode = editingWeek,
                             onEditModeChange = { if (it) editingWeek = true else finishEditing() },
                             onTimetableChange = { shift, timetable -> viewModel.setTimetable(child.id, shift, timetable) },

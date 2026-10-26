@@ -82,4 +82,24 @@ class SchoolCalendarTest {
         val changed = child.withDayChange(tuesday, 0, "Muzičko")
         assertEquals(listOf("Muzičko"), subjects(changed, tuesday))
     }
+
+    @Test
+    fun vojvodinaHasTwoSaturdaysWithClasses() {
+        val vojvodina = child.copy(region = Region.VOJVODINA)
+        assertEquals(DayInfo.SchoolDay(DayOfWeek.FRIDAY, "Nastava po rasporedu za petak"), vojvodina.dayInfo(LocalDate.of(2027, 2, 27)))
+        assertEquals(listOf("Likovno"), subjects(vojvodina, LocalDate.of(2027, 2, 27)))
+        assertEquals(listOf("Srpski jezik"), subjects(vojvodina, LocalDate.of(2027, 4, 3)))
+        // Central Serbia has no such Saturday.
+        assertEquals(DayInfo.NoClasses("Vikend"), child.dayInfo(LocalDate.of(2027, 2, 27)))
+    }
+
+    @Test
+    fun summerBreakStartsAfterTheFinalExam() {
+        val eighth = child.copy(finalGrade = true)
+        assertEquals(DayInfo.NoClasses("Kraj nastave za osmi razred"), eighth.dayInfo(LocalDate.of(2027, 6, 1)))
+        assertEquals(DayInfo.NoClasses("Završni ispit"), eighth.dayInfo(LocalDate.of(2027, 6, 14)))
+        assertEquals(DayInfo.NoClasses("Letnji raspust"), eighth.dayInfo(LocalDate.of(2027, 6, 17)))
+        assertEquals(DayInfo.NoClasses("Letnji raspust"), child.dayInfo(LocalDate.of(2027, 6, 14)))
+        assertEquals(listOf("Matematika"), subjects(child, LocalDate.of(2027, 6, 8)))
+    }
 }

@@ -29,6 +29,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.SelectableDates
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -68,7 +69,8 @@ fun CalendarScreen(
     onDeleteEvent: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val today = LocalDate.now()
+    // Follows the clock, so the countdown moves on at midnight while the app stays open.
+    val today = rememberNow().toLocalDate()
     var adding by remember { mutableStateOf(false) }
     var deleting by remember { mutableStateOf<CalendarEvent?>(null) }
     val customIds = child.customEvents.map { it.id }.toSet()
@@ -149,7 +151,7 @@ private fun CountdownCard(next: CalendarEvent, today: LocalDate) {
                 Text("Sada je", style = MaterialTheme.typography.titleSmall, color = Color.White.copy(alpha = 0.9f))
                 Text(eventEmoji(next.title), fontSize = 56.sp)
                 Text(next.title, style = MaterialTheme.typography.headlineSmall, color = Color.White, textAlign = TextAlign.Center)
-                Text("Traje do ${dateRangeLabel(next.end, next.end)} 🎉", style = MaterialTheme.typography.bodyLarge, color = Color.White)
+                Text("Traje do ${next.end.genitiveLabel()} 🎉", style = MaterialTheme.typography.bodyLarge, color = Color.White)
             } else {
                 Text("${eventEmoji(next.title)} ${next.title} za", style = MaterialTheme.typography.titleSmall, color = Color.White.copy(alpha = 0.9f), textAlign = TextAlign.Center)
                 Text("$days", fontSize = 72.sp, lineHeight = 76.sp, style = MaterialTheme.typography.displaySmall, color = Color.White)
@@ -235,6 +237,11 @@ private fun AddEventDialog(onDismiss: () -> Unit, onConfirm: (CalendarEvent) -> 
         val state = rememberDateRangePickerState(
             initialSelectedStartDateMillis = start.toEpochDay() * MILLIS_PER_DAY,
             initialSelectedEndDateMillis = end.toEpochDay() * MILLIS_PER_DAY,
+            // Past days are not offered: the list shows only coming events, so a past one would just disappear.
+            selectableDates = object : SelectableDates {
+                override fun isSelectableDate(utcTimeMillis: Long): Boolean =
+                    utcTimeMillis / MILLIS_PER_DAY >= LocalDate.now().toEpochDay()
+            },
         )
         DatePickerDialog(
             onDismissRequest = { picking = false },

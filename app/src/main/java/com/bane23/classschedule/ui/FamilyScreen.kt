@@ -32,6 +32,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
@@ -70,6 +72,8 @@ fun FamilyScreen(
     val upcoming = children.flatMap { it.calendarEvents() }
         .filter { it.endEpochDay >= today.toEpochDay() }
         .distinctBy { it.title to it.startEpochDay }
+        // Children imported from one QR code share activity ids, so also drop repeats of the list key below.
+        .distinctBy { it.id to it.startEpochDay }
         .sortedBy { it.startEpochDay }
         .take(3)
 
@@ -183,24 +187,31 @@ private fun KidCard(child: Child, now: LocalDateTime, onClick: () -> Unit, onAla
                 )
             }
             Row(verticalAlignment = Alignment.CenterVertically) {
-                if (end != null) {
-                    Text("Kraj ", style = MaterialTheme.typography.bodyMedium, color = colors.onSurfaceVariant)
-                    Text(end.label(), style = MaterialTheme.typography.titleSmall)
-                    Spacer(Modifier.width(14.dp))
+                // The texts take the room left by the switch, so with large fonts they wrap instead of pushing it out.
+                Row(Modifier.weight(1f), verticalAlignment = Alignment.CenterVertically) {
+                    if (end != null) {
+                        Text("Kraj ", style = MaterialTheme.typography.bodyMedium, color = colors.onSurfaceVariant)
+                        Text(end.label(), style = MaterialTheme.typography.titleSmall)
+                        Spacer(Modifier.width(14.dp))
+                    }
+                    Text("Alarm ", style = MaterialTheme.typography.bodyMedium, color = colors.onSurfaceVariant)
+                    Text(
+                        when {
+                            !child.alarmEnabled -> "isključen"
+                            alarm == null -> "🔔 uključen"
+                            alarm.toLocalDate() == today -> "🔔 ${alarm.toLocalTime().label()}"
+                            alarm.toLocalDate() == today.plusDays(1) -> "🔔 sutra ${alarm.toLocalTime().label()}"
+                            else -> "🔔 ${alarm.dayOfWeek.shortLabel().lowercase()} ${alarm.toLocalTime().label()}"
+                        },
+                        style = MaterialTheme.typography.titleSmall,
+                        modifier = Modifier.weight(1f, fill = false),
+                    )
                 }
-                Text("Alarm ", style = MaterialTheme.typography.bodyMedium, color = colors.onSurfaceVariant)
-                Text(
-                    when {
-                        !child.alarmEnabled -> "isključen"
-                        alarm == null -> "🔔 uključen"
-                        alarm.toLocalDate() == today -> "🔔 ${alarm.toLocalTime().label()}"
-                        alarm.toLocalDate() == today.plusDays(1) -> "🔔 sutra ${alarm.toLocalTime().label()}"
-                        else -> "🔔 ${alarm.dayOfWeek.shortLabel().lowercase()} ${alarm.toLocalTime().label()}"
-                    },
-                    style = MaterialTheme.typography.titleSmall,
+                Switch(
+                    checked = child.alarmEnabled,
+                    onCheckedChange = onAlarmChange,
+                    modifier = Modifier.semantics { contentDescription = "Alarm za kraj nastave, ${child.name}" },
                 )
-                Spacer(Modifier.weight(1f))
-                Switch(checked = child.alarmEnabled, onCheckedChange = onAlarmChange)
             }
         }
     }

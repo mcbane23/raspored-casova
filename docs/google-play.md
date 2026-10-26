@@ -55,13 +55,13 @@ No account, no ads, all data stays on your phone.
 
 ## Permissions declared
 
-- `POST_NOTIFICATIONS` – the optional "classes are over" and "pack the bag" reminders.
-- `RECEIVE_BOOT_COMPLETED` – reschedules that reminder after a restart.
-- `SCHEDULE_EXACT_ALARM` – lets both reminders fire at the exact minute set. On Android 12+ the user grants it under "Alarms & reminders"; the app links there and warns while it is missing.
+- `POST_NOTIFICATIONS` – the optional "classes are over", "pack the bag" and extracurricular activity reminders.
+- `RECEIVE_BOOT_COMPLETED` – reschedules the reminders after a restart, an app update or a time change.
+- `SCHEDULE_EXACT_ALARM` – lets the reminders fire at the exact minute set. On Android 12+ the user grants it under "Alarms & reminders"; the app links there and warns while it is missing.
 - `VIBRATE` – every reminder vibrates; when the ringer is set to silent the app buzzes the phone itself so the reminder is still noticed.
 - `CAMERA` (from the zxing-android-embedded scanner) – scanning a shared timetable QR code.
 
-With exact alarms allowed the app uses `AlarmManager.setAlarmClock`, which fires on time even in Doze; without the permission it falls back to `setAndAllowWhileIdle`, which Android may delay by 10-15 minutes. It uses the user-granted `SCHEDULE_EXACT_ALARM`, not `USE_EXACT_ALARM` (reserved by Play policy for alarm-clock and calendar apps), so no exact-alarm declaration form is needed. It does not request `REQUEST_IGNORE_BATTERY_OPTIMIZATIONS`; Settings only links to the system battery optimization list.
+With exact alarms allowed the app uses `AlarmManager.setAlarmClock`, which fires on time even in Doze; without the permission it falls back to `setAndAllowWhileIdle`, which Android may deliver up to an hour late. It uses the user-granted `SCHEDULE_EXACT_ALARM`, not `USE_EXACT_ALARM` (reserved by Play policy for alarm-clock and calendar apps), so no exact-alarm declaration form is needed. It does not request `REQUEST_IGNORE_BATTERY_OPTIMIZATIONS`; Settings only links to the system battery optimization list.
 
 ## Store listing (Serbian)
 
@@ -84,6 +84,8 @@ sledećeg raspusta. Podržani su centralna Srbija i Vojvodina, kao i raniji kraj
 • Događaji škole – dodajte Dan škole, školsku slavu ili druge slobodne dane.
 • Roditeljski alarm – obaveštenje kad se završi poslednji čas (ili nekoliko minuta ranije).
 • Podsetnik za torbu – uveče pred školski dan podseća dete šta da spakuje za sutra.
+• Vanškolske aktivnosti – trening, hor, škola stranog jezika ili izlet, sa podsetnikom pre početka; jedan termin
+može da se otkaže ili pomeri, a redovan raspored ostaje.
 • Više dece – svako dete ima svoj raspored, smenu i kalendar.
 • Spisak predmeta – izaberite predmet iz liste umesto kucanja, uz dopunsku i dodatnu nastavu iz bilo kog predmeta.
 • Pretčas – za smene koje počinju pretčasom.

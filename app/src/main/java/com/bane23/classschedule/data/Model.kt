@@ -83,6 +83,9 @@ enum class ShiftMode {
 data class Period(val startMinute: Int, val endMinute: Int) {
     val start: LocalTime get() = LocalTime.of(startMinute / 60, startMinute % 60)
     val end: LocalTime get() = LocalTime.of(endMinute / 60, endMinute % 60)
+
+    /** Starts and ends on the same day, in that order. */
+    fun withinDay(): Boolean = startMinute >= 0 && endMinute > startMinute && endMinute < 24 * 60
 }
 
 /**
@@ -129,6 +132,51 @@ data class Timetable(
         )
     }
 
+    /**
+     * Moves period [index] to start at [minute], keeping its length. A regular class also moves every later class by
+     * the same amount, so breaks stay as they were; the pre-class moves alone, and so does a class whose later bells
+     * are already out of order (saved before bells were checked), so it can be put right without dragging them along.
+     * Null when the moved periods would overlap the period before or after them, or run past midnight.
+     */
+    fun withPeriodStart(index: Int, minute: Int): Timetable? {
+        val period = periods.getOrNull(index) ?: return null
+        val delta = minute - period.startMinute
+        val alone = (hasPreClass && index == 0) || periods.drop(index).zipWithNext().any { (a, b) -> a.endMinute > b.startMinute }
+        val last = if (alone) index else periods.lastIndex
+        val moved = periods.mapIndexed { i, p -> if (i in index..last) Period(p.startMinute + delta, p.endMinute + delta) else p }
+        val fits = (index..last).all { moved[it].withinDay() } &&
+            (index == 0 || periods[index - 1].endMinute <= moved[index].startMinute) &&
+            (last == periods.lastIndex || moved[last].endMinute <= periods[last + 1].startMinute)
+        return if (fits) copy(periods = moved) else null
+    }
+
+    /** Sets the end of period [index]; null when it would not be after its start or would run into the next period. */
+    fun withPeriodEnd(index: Int, minute: Int): Timetable? {
+        val period = periods.getOrNull(index)?.let { Period(it.startMinute, minute) } ?: return null
+        val fits = period.withinDay() && (index == periods.lastIndex || minute <= periods[index + 1].startMinute)
+        return if (fits) copy(periods = periods.toMutableList().also { it[index] = period }) else null
+    }
+
+    /** Every period ends after it starts, before the next one starts, and within the day. */
+    fun bellsInOrder(): Boolean = periods.all { it.withinDay() } && periods.zipWithNext().all { (a, b) -> a.endMinute <= b.startMinute }
+
+    /** Removes the last period together with the classes placed in it. */
+    fun withoutLastPeriod(): Timetable {
+        val count = (periods.size - 1).coerceAtLeast(0)
+        return copy(periods = periods.take(count), lessons = lessons.map { it.take(count).dropLastWhile { s -> s.isBlank() } })
+    }
+
+    /**
+     * The usual bell times of [shift] for the same number of classes, so no class loses its time; the pre-class, when
+     * there is one, keeps its subjects and sits right before the 1st class.
+     */
+    fun withDefaultBells(shift: Shift): Timetable {
+        val regular = defaultPeriods(shift, (periods.size - if (hasPreClass) 1 else 0).coerceAtLeast(1))
+        if (!hasPreClass) return copy(periods = regular)
+        val first = regular.first().startMinute
+        return copy(periods = listOf(Period(first - 50, first - 5)) + regular)
+    }
+
     fun lessonsFor(day: DayOfWeek): List<String> = SCHOOL_DAYS.indexOf(day).let { lessons.getOrNull(it) }.orEmpty()
 
     fun withLesson(day: DayOfWeek, periodIndex: Int, subject: String): Timetable {
@@ -144,15 +192,17 @@ data class Timetable(
 
     companion object {
         /** Typical Serbian bell schedule: 45-minute classes, 5-minute breaks and a 20-minute break after the 2nd. */
-        fun defaultFor(shift: Shift): Timetable {
-            val firstStart = if (shift == Shift.MORNING) 8 * 60 else 14 * 60
+        fun defaultFor(shift: Shift): Timetable = Timetable(defaultPeriods(shift, 7))
+
+        private fun defaultPeriods(shift: Shift, count: Int): List<Period> {
             val periods = mutableListOf<Period>()
-            var start = firstStart
-            repeat(7) { index ->
+            var start = if (shift == Shift.MORNING) 8 * 60 else 14 * 60
+            repeat(count) { index ->
+                if (start + 45 >= 24 * 60) return periods
                 periods += Period(start, start + 45)
                 start += 45 + if (index == 1) 20 else 5
             }
-            return Timetable(periods)
+            return periods
         }
     }
 }

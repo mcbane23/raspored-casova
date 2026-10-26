@@ -57,6 +57,7 @@ object WidgetUpdater {
             Intent(context, ScheduleWidgetReceiver::class.java).setAction(ACTION_REFRESH),
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
         )
-        alarmManager.set(AlarmManager.RTC, at, intent)
+        // A plain set() may be delivered up to an hour late on Android 12+; a 10-minute window needs no permission.
+        alarmManager.setWindow(AlarmManager.RTC, at, 10 * 60 * 1000L, intent)
     }
 }

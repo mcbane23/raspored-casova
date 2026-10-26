@@ -33,6 +33,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.bane23.classschedule.data.Child
+import com.bane23.classschedule.data.DEFAULT_CHILD_NAME
 import com.bane23.classschedule.data.hasTimetable
 
 /** Steps of the first-run setup; the ones between [WELCOME] and [DONE] show as progress dots. */
@@ -49,7 +50,8 @@ private val DOTTED_STEPS = listOf(SetupStep.CHILD, SetupStep.SHIFT, SetupStep.BE
 fun OnboardingScreen(child: Child, viewModel: AppViewModel, onFinish: (enterTimetable: Boolean) -> Unit) {
     var step by rememberSaveable { mutableStateOf(SetupStep.WELCOME) }
     val scanQr = rememberQrImport(viewModel, replaceable = child, onImported = { step = SetupStep.NOTIFY })
-    val name = child.name.ifBlank { "dete" }
+    // The default name "Dete" reads oddly mid-sentence ("Kada Dete ide u školu?").
+    val name = child.name.takeIf { it.isNotBlank() && it != DEFAULT_CHILD_NAME } ?: "dete"
 
     BackHandler(enabled = step != SetupStep.WELCOME && step != SetupStep.DONE) {
         step = SetupStep.entries[step.ordinal - 1]

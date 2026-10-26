@@ -136,7 +136,8 @@ fun TodayScreen(
     val nextFreeIndex = child.subjectsOn(date).size
     val info = child.dayInfo(date)
     val noClassesReason = (info as? DayInfo.NoClasses)?.reason?.takeIf { child.overrideOn(date) == null }
-    val packDay = child.nextSchoolDayAfter(date)
+    // Packing is about the real tomorrow; other days would tick the bag for the wrong date and reset today's ticks.
+    val packDay = if (isToday) child.nextSchoolDayAfter(date) else null
 
     val warning = rememberReminderWarning(listOf(child))
 
@@ -247,7 +248,7 @@ fun TodayScreen(
             lesson = lesson,
             periodLabel = timetable.periodLabel(lesson.index),
             note = child.packNote(lesson.subject),
-            dateLabel = if (isToday) "danas" else date.label().lowercase(),
+            dateLabel = if (isToday) "danas" else "za ${date.accusativeLabel()}",
             onDismiss = { details = null },
             onChange = {
                 details = null
@@ -307,7 +308,7 @@ fun TodayScreen(
             onConfirm = {
                 if (it.isNotEmpty() || !isNew) onChangeDay(date, edit.index, it)
                 if (it.isEmpty() && !isNew) {
-                    offerUndo("${timetable.periodLabel(edit.index)} je otkazan za ${date.label().lowercase()}") {
+                    offerUndo("${timetable.periodLabel(edit.index)} je otkazan za ${date.accusativeLabel()}") {
                         onChangeDay(date, edit.index, edit.subject)
                     }
                 }
@@ -404,7 +405,7 @@ private fun DayHero(child: Child, date: LocalDate, isToday: Boolean, clock: Loca
             eyebrow = "🏁 Kraj nastave",
             emoji = "🏆",
             title = "Gotovo za danas!",
-            detail = "${lessonsCount(lessons.size)} završeno." + packHint(date, child.nextSchoolDayAfter(date)),
+            detail = "Završeno: ${lessonsCount(lessons.size)}." + packHint(date, child.nextSchoolDayAfter(date)),
             footer = child.nextActivityOn(date, clock)?.let { "Zatim ${it.kind.emoji()} ${it.title} u ${it.start.label()}" },
         )
     }

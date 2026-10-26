@@ -298,7 +298,9 @@ fun <T> PillToggle(
     ) {
         options.forEach { option ->
             val isSelected = option == selected
+            // A selectable surface, so TalkBack also says which option is chosen, not only the color.
             Surface(
+                selected = isSelected,
                 onClick = { onSelect(option) },
                 modifier = Modifier.weight(1f).heightIn(min = 40.dp),
                 shape = if (onCard) RoundedCornerShape(11.dp) else CircleShape,
@@ -420,6 +422,7 @@ fun ChildTopRow(
                 children.forEach { c ->
                     val selected = c.id == selectedId
                     Surface(
+                        selected = selected,
                         onClick = { onSelect(c.id) },
                         shape = CircleShape,
                         color = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceContainerLowest,

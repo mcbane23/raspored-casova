@@ -79,4 +79,16 @@ class ShareCodecTest {
         assertNull(ShareCodec.decode("RASPORED1:not-base64!!"))
         assertNull(ShareCodec.decode(ShareCodec.encode(child).dropLast(10)))
     }
+
+    @Test
+    fun rejectsTimesTheAppCannotShow() {
+        val badBell = child.copy(morning = child.morning.copy(periods = listOf(Period(2000, 2045))))
+        assertNull(ShareCodec.decode(ShareCodec.encode(badBell)))
+        val badActivity = child.copy(activities = listOf(child.activities.first().copy(startMinute = -5)))
+        assertNull(ShareCodec.decode(ShareCodec.encode(badActivity)))
+        val badSwap = child.copy(customEvents = listOf(CalendarEvent(1, 1, "Zamena", noClasses = false, timetableDay = 9)))
+        assertNull(ShareCodec.decode(ShareCodec.encode(badSwap)))
+        val badDate = child.copy(referenceEpochDay = Long.MAX_VALUE)
+        assertNull(ShareCodec.decode(ShareCodec.encode(badDate)))
+    }
 }

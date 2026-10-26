@@ -56,6 +56,23 @@ fun Child.withDayChange(date: LocalDate, index: Int, subject: String): Child {
     return copy(overrides = if (updated == regular) others else others + DayOverride(date.toEpochDay(), updated))
 }
 
+/**
+ * Returns this child with [timetable] as the timetable of [shift]. When the pre-class is turned on or off, the one-day
+ * changes on that shift's days move along with the classes, as [Timetable.withPreClass] moves the regular ones.
+ */
+fun Child.withTimetableKeepingChanges(shift: Shift, timetable: Timetable): Child {
+    val before = timetable(shift).hasPreClass
+    val updated = withTimetable(shift, timetable)
+    if (before == timetable.hasPreClass) return updated
+    return updated.copy(
+        overrides = overrides.map { change ->
+            if (shiftOn(LocalDate.ofEpochDay(change.epochDay)) != shift || change.lessons.isEmpty()) change
+            else if (timetable.hasPreClass) change.copy(lessons = listOf("") + change.lessons)
+            else change.copy(lessons = change.lessons.drop(1).dropLastWhile { it.isBlank() })
+        },
+    )
+}
+
 /** Returns this child with the one-off change for [date] removed. */
 fun Child.withoutDayChange(date: LocalDate): Child =
     copy(overrides = overrides.filterNot { it.epochDay == date.toEpochDay() })
@@ -67,3 +84,14 @@ fun Child.withoutPastChanges(today: LocalDate): Child =
 fun Shift.other(): Shift = if (this == Shift.MORNING) Shift.AFTERNOON else Shift.MORNING
 
 fun LocalDate.mondayOfWeek(): LocalDate = with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY))
+
+/**
+ * The day whose shift counts as "this week's" for a weekly rotation: on a weekend that is the coming Monday, since
+ * parents set the shift up for the school week ahead.
+ */
+fun LocalDate.upcomingSchoolWeekDay(): LocalDate =
+    if (dayOfWeek == DayOfWeek.SATURDAY || dayOfWeek == DayOfWeek.SUNDAY) with(TemporalAdjusters.next(DayOfWeek.MONDAY)) else this
+
+/** The date whose shift the settings and the week view call the current one; see [upcomingSchoolWeekDay]. */
+fun Child.currentShiftDate(today: LocalDate): LocalDate =
+    if (shiftMode == ShiftMode.WEEKLY) today.upcomingSchoolWeekDay() else today

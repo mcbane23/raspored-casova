@@ -58,6 +58,7 @@ import com.bane23.classschedule.data.nextActivityReminder
 import com.bane23.classschedule.data.nextAlarm
 import com.bane23.classschedule.data.nextPackReminder
 import com.bane23.classschedule.data.packNote
+import com.bane23.classschedule.data.currentShiftDate
 import com.bane23.classschedule.data.shiftOn
 import java.time.LocalDate
 import java.time.LocalDateTime
@@ -281,7 +282,8 @@ private fun ChildTopics(child: Child, onOpen: (SettingsPage) -> Unit, onEditTime
     val today = LocalDate.now()
     val now = LocalDateTime.now()
     val shift = child.shiftOn(today)
-    val firstBell = child.timetable(shift).periods.firstOrNull()?.start
+    // The 1st class, not the pre-class before it.
+    val firstBell = child.timetable(shift).let { it.periods.getOrNull(if (it.hasPreClass) 1 else 0) }?.start
 
     SettingsGroup(null) {
         SettingsRow(
@@ -312,7 +314,7 @@ private fun ChildTopics(child: Child, onOpen: (SettingsPage) -> Unit, onEditTime
         RowDivider()
         SettingsRow(
             title = "Predmeti i torba",
-            subtitle = "${child.subjects.size} predmeta · šta se nosi za koji",
+            subtitle = "${subjectsCount(child.subjects.size)} · šta se nosi za koji",
             emoji = "📚",
             chevron = true,
             onClick = { onOpen(SettingsPage.Subjects(child.id)) },
@@ -388,9 +390,14 @@ fun ProfileScreen(child: Child, viewModel: AppViewModel, onBack: () -> Unit, mod
 /** Text fields for the child's name and school; the default name "Dete" shows as an empty field to type into. */
 @Composable
 fun NameAndSchoolFields(child: Child, viewModel: AppViewModel) {
+    // Kept as typed, so a name that passes through "Dete" while typing (e.g. "Detelina") does not vanish.
+    var name by remember(child.id) { mutableStateOf(if (child.name == DEFAULT_CHILD_NAME) "" else child.name) }
     OutlinedTextField(
-        value = if (child.name == DEFAULT_CHILD_NAME) "" else child.name,
-        onValueChange = { viewModel.renameChild(child.id, it) },
+        value = name,
+        onValueChange = {
+            name = it
+            viewModel.renameChild(child.id, it)
+        },
         label = { Text("Ime") },
         singleLine = true,
         shape = MaterialTheme.shapes.small,
@@ -409,7 +416,8 @@ fun NameAndSchoolFields(child: Child, viewModel: AppViewModel) {
 /** How the shift rotates and which shift the child is in now. */
 @Composable
 fun ShiftPicker(child: Child, viewModel: AppViewModel) {
-    val current = child.shiftOn(LocalDate.now())
+    val today = LocalDate.now()
+    val current = child.shiftOn(child.currentShiftDate(today))
     val fixed = child.shiftMode == ShiftMode.FIXED_MORNING || child.shiftMode == ShiftMode.FIXED_AFTERNOON
     Text("Kako se smenjuje", style = MaterialTheme.typography.titleSmall)
     PillToggle(
@@ -429,7 +437,7 @@ fun ShiftPicker(child: Child, viewModel: AppViewModel) {
     )
     Text(
         when (child.shiftMode) {
-            ShiftMode.WEEKLY -> "Ove nedelje ide:"
+            ShiftMode.WEEKLY -> if (child.currentShiftDate(today) != today) "Od ponedeljka ide:" else "Ove nedelje ide:"
             ShiftMode.MONTHLY -> "Ovog meseca ide:"
             else -> "Uvek ide:"
         },
@@ -635,9 +643,10 @@ fun BellsScreen(child: Child, viewModel: AppViewModel, onBack: () -> Unit, modif
 /** The bells of one shift at a time (switched at the top), placed in the caller's column: pre-class, each period's times and add/remove/reset. */
 @Composable
 fun BellsEditor(child: Child, viewModel: AppViewModel) {
-    var shift by rememberSaveable(child.id) { mutableStateOf(child.shiftOn(LocalDate.now())) }
+    var shift by rememberSaveable(child.id) { mutableStateOf(child.shiftOn(child.currentShiftDate(LocalDate.now()))) }
     var editing by remember { mutableStateOf<BellEdit?>(null) }
     var confirmReset by remember { mutableStateOf(false) }
+    val offerUndo = LocalUndo.current
     val timetable = child.timetable(shift)
     val periods = timetable.periods
     fun change(updated: Timetable) = viewModel.setTimetable(child.id, shift, updated)
@@ -684,11 +693,15 @@ fun BellsEditor(child: Child, viewModel: AppViewModel) {
             }
         }
         if (periods.size > 1) {
-            PillButton("Ukloni poslednji", Modifier.weight(1f)) { change(timetable.copy(periods = periods.dropLast(1))) }
+            PillButton("Ukloni poslednji", Modifier.weight(1f)) {
+                val label = timetable.periodLabel(periods.lastIndex)
+                change(timetable.withoutLastPeriod())
+                offerUndo("Uklonjen je $label") { change(timetable) }
+            }
         }
     }
     PillButton("Vrati uobičajena zvona", Modifier.fillMaxWidth()) { confirmReset = true }
-    NoteBanner("💡", "Dodirni vreme da ga promeniš. Zvona su posebna za svako dete i svaku smenu.")
+    NoteBanner("💡", "Dodirni vreme da ga promeniš. Kad pomeriš početak časa, za isto vreme se pomeraju i časovi posle njega. Zvona su posebna za svako dete i svaku smenu.")
 
     if (confirmReset) {
         AlertDialog(
@@ -697,8 +710,7 @@ fun BellsEditor(child: Child, viewModel: AppViewModel) {
             text = { Text("Vremena za ${shift.shortLabel().lowercase()} biće vraćena na 45 minuta po času, sa velikim odmorom posle 2. časa.") },
             confirmButton = {
                 TextButton(colors = accentTextButton(), onClick = {
-                    val reset = timetable.withPreClass(false).copy(periods = Timetable.defaultFor(shift).periods)
-                    change(reset.withPreClass(timetable.hasPreClass))
+                    change(timetable.withDefaultBells(shift))
                     confirmReset = false
                 }) { Text("Vrati") }
             },
@@ -713,21 +725,29 @@ fun BellsEditor(child: Child, viewModel: AppViewModel) {
             initialMinute = if (edit.isStart) period.startMinute else period.endMinute,
             onDismiss = { editing = null },
             onConfirm = { minute ->
-                val duration = period.endMinute - period.startMinute
-                val updated = if (edit.isStart) {
-                    // Moving the start keeps the class length the same.
-                    Period(minute, (minute + duration).coerceAtMost(24 * 60 - 1))
-                } else {
-                    Period(period.startMinute, minute)
-                }
-                if (updated.endMinute > updated.startMinute) {
-                    change(timetable.copy(periods = periods.toMutableList().also { it[edit.index] = updated }))
-                }
+                bellChange(timetable, edit, minute)?.let { change(it) }
                 editing = null
+            },
+            error = { minute ->
+                when {
+                    bellChange(timetable, edit, minute) != null -> null
+                    !edit.isStart && minute <= period.startMinute -> "Kraj mora biti posle početka (${period.start.label()})."
+                    edit.isStart && edit.index > 0 && minute < periods[edit.index - 1].endMinute ->
+                        "${timetable.periodLabel(edit.index - 1)} se završava u ${periods[edit.index - 1].end.label()}."
+                    !edit.isStart && edit.index < periods.lastIndex ->
+                        "${timetable.periodLabel(edit.index + 1)} počinje u ${periods[edit.index + 1].start.label()}."
+                    edit.isStart && edit.index == 0 && timetable.hasPreClass && periods.size > 1 ->
+                        "Pretčas mora da se završi pre 1. časa (${periods[1].start.label()})."
+                    else -> "Časovi bi prešli u sledeći dan."
+                }
             },
         )
     }
 }
+
+/** The timetable with [edit] set to [minute], or null when the bells would overlap. */
+private fun bellChange(timetable: Timetable, edit: BellEdit, minute: Int): Timetable? =
+    if (edit.isStart) timetable.withPeriodStart(edit.index, minute) else timetable.withPeriodEnd(edit.index, minute)
 
 /** The child's subject list with what to bring for each; the notes fill the "Sutra u torbu" list. */
 @Composable

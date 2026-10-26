@@ -105,7 +105,16 @@ fun ActivityRow(
             Modifier
                 .fillMaxWidth()
                 .padding(vertical = 4.dp)
-                .semantics(mergeDescendants = true) { contentDescription = "${activity.title}, $time" },
+                .semantics(mergeDescendants = true) {
+                    // Read without emoji, but with whether it was cancelled or moved and where it takes place.
+                    contentDescription = listOfNotNull(
+                        activity.title,
+                        time,
+                        tag ?: if (now) "Sada" else null,
+                        detail,
+                        activity.place.ifBlank { null },
+                    ).joinToString(", ")
+                },
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Box(Modifier.alpha(if (crossed) 0.5f else 1f)) { ActivityTile(activity, done = done) }
@@ -267,10 +276,11 @@ fun ActivityEditorSheet(
                     DayOfWeek.entries.forEach { d ->
                         val selected = d.value in days
                         Surface(
-                            onClick = { days = if (selected) days - d.value else days + d.value },
+                            checked = selected,
+                            onCheckedChange = { days = if (it) days + d.value else days - d.value },
                             shape = CircleShape,
                             color = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceContainerLowest,
-                            modifier = Modifier.weight(1f).height(44.dp),
+                            modifier = Modifier.weight(1f).heightIn(min = 44.dp),
                         ) {
                             Box(contentAlignment = Alignment.Center) {
                                 Text(

@@ -17,15 +17,19 @@ import com.bane23.classschedule.data.Shift
 import com.bane23.classschedule.data.ShiftMode
 import com.bane23.classschedule.data.ThemeMode
 import com.bane23.classschedule.data.Timetable
+import com.bane23.classschedule.data.currentShiftDate
 import com.bane23.classschedule.data.shiftOn
 import com.bane23.classschedule.data.withActivity
 import com.bane23.classschedule.data.withDayChange
 import com.bane23.classschedule.data.withPackNote
 import com.bane23.classschedule.data.withPacked
+import com.bane23.classschedule.data.withTimetableKeepingChanges
 import com.bane23.classschedule.data.withoutDayChange
 import com.bane23.classschedule.widget.WidgetUpdater
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.time.LocalDate
 import java.util.UUID
 
@@ -47,9 +51,12 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
 
     private fun save(transform: (AppData) -> AppData) {
         viewModelScope.launch {
-            repository.update(transform)
-            AlarmScheduler.scheduleAll(getApplication<Application>(), data.value)
-            WidgetUpdater.update(getApplication<Application>())
+            // Finish writing and rescheduling even if the screen closes right after the change.
+            withContext(NonCancellable) {
+                repository.update(transform)
+                AlarmScheduler.scheduleAll(getApplication<Application>(), data.value)
+                WidgetUpdater.update(getApplication<Application>())
+            }
         }
     }
 
@@ -71,11 +78,15 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         save { it.copy(children = it.children + child, selectedChildId = child.id) }
     }
 
-    fun deleteChild(id: String) = save { data ->
-        val remaining = data.children.filterNot { it.id == id }
-        if (remaining.isEmpty()) return@save data
-        val selected = data.selectedChildId.takeIf { sel -> remaining.any { it.id == sel } } ?: remaining.first().id
-        data.copy(children = remaining, selectedChildId = selected)
+    fun deleteChild(id: String) {
+        if (data.value.children.none { it.id != id }) return
+        AlarmScheduler.cancel(getApplication<Application>(), id)
+        save { data ->
+            val remaining = data.children.filterNot { it.id == id }
+            if (remaining.isEmpty()) return@save data
+            val selected = data.selectedChildId.takeIf { sel -> remaining.any { it.id == sel } } ?: remaining.first().id
+            data.copy(children = remaining, selectedChildId = selected)
+        }
     }
 
     fun renameChild(id: String, name: String) = updateChild(id) { it.copy(name = name) }
@@ -84,17 +95,17 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
 
     /** Changes the rotation while keeping today's shift what it currently is. */
     fun setShiftMode(id: String, mode: ShiftMode) = updateChild(id) { child ->
-        val today = LocalDate.now()
-        child.copy(shiftMode = mode, referenceEpochDay = today.toEpochDay(), referenceShift = child.shiftOn(today))
+        val day = child.copy(shiftMode = mode).currentShiftDate(LocalDate.now())
+        child.copy(shiftMode = mode, referenceEpochDay = day.toEpochDay(), referenceShift = child.shiftOn(day))
     }
 
-    /** Sets which shift the child is in this week (or month); the rotation continues from there. */
+    /** Sets which shift the child is in this week (on a weekend, the coming week) or month; the rotation continues from there. */
     fun setCurrentShift(id: String, shift: Shift) = updateChild(id) {
-        it.copy(referenceEpochDay = LocalDate.now().toEpochDay(), referenceShift = shift)
+        it.copy(referenceEpochDay = it.currentShiftDate(LocalDate.now()).toEpochDay(), referenceShift = shift)
     }
 
     fun setTimetable(id: String, shift: Shift, timetable: Timetable) = updateChild(id) {
-        it.withTimetable(shift, timetable)
+        it.withTimetableKeepingChanges(shift, timetable)
     }
 
     fun addSubject(id: String, subject: String) = updateChild(id) { it.withSubject(subject) }
@@ -159,7 +170,12 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     /** Adds a child received by QR code, or copies its timetable and settings onto the child [replaceId]. */
     fun importChild(shared: Child, replaceId: String?) = save { data ->
         if (replaceId == null) {
-            val added = shared.copy(id = UUID.randomUUID().toString())
+            // Fresh ids, so a second import of the same QR code does not share activity or event ids with the first.
+            val added = shared.copy(
+                id = UUID.randomUUID().toString(),
+                activities = shared.activities.map { it.copy(id = UUID.randomUUID().toString()) },
+                customEvents = shared.customEvents.map { it.copy(id = UUID.randomUUID().toString()) },
+            )
             return@save data.copy(children = data.children + added, selectedChildId = added.id)
         }
         data.copy(

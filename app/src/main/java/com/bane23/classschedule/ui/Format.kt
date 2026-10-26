@@ -37,7 +37,21 @@ private val EMOJI = Regex("[\\p{So}\\p{Sk}\\x{FE0F}\\x{200D}\\x{20E3}]")
 /** The day after "za": "za ponedeljak", "za sredu". */
 fun DayOfWeek.accusative(): String = label().lowercase().let { if (it.endsWith("a")) it.dropLast(1) + "u" else it }
 
+/** "svaki ponedeljak", "svaku sredu". */
+fun DayOfWeek.every(): String = (if (label().endsWith("a")) "svaku " else "svaki ") + accusative()
+
 fun LocalDate.label(): String = "${dayOfWeek.label()}, $dayOfMonth. ${MONTHS[monthValue - 1]}"
+
+/** The date after "za" or "na": "sredu, 28. oktobar". */
+fun LocalDate.accusativeLabel(): String = "${dayOfWeek.accusative()}, $dayOfMonth. ${MONTHS[monthValue - 1]}"
+
+private val MONTHS_GENITIVE = listOf(
+    "januara", "februara", "marta", "aprila", "maja", "juna",
+    "jula", "avgusta", "septembra", "oktobra", "novembra", "decembra",
+)
+
+/** The date after "do": "13. novembra". */
+fun LocalDate.genitiveLabel(): String = "$dayOfMonth. ${MONTHS_GENITIVE[monthValue - 1]}"
 
 /** "okt" for calendar date badges. */
 fun LocalDate.monthShortLabel(): String = MONTHS[monthValue - 1].take(3)
@@ -87,6 +101,9 @@ fun lessonsWord(count: Int): String = when {
 
 /** "5 časova", "1 čas". */
 fun lessonsCount(count: Int): String = "$count ${lessonsWord(count)}"
+
+/** "1 predmet", "5 predmeta", "21 predmet". */
+fun subjectsCount(count: Int): String = if (count % 10 == 1 && count % 100 != 11) "$count predmet" else "$count predmeta"
 
 /** "1 dan", "5 dana", "21 dan". */
 fun daysCount(days: Long): String = if (days % 10 == 1L && days % 100 != 11L) "$days dan" else "$days dana"

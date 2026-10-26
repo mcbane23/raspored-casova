@@ -20,7 +20,7 @@ fun packReminderContent(child: Child, date: LocalDate): PackReminderContent? {
     val left = subjects.filterNot { child.isPacked(day, it) }
     if (subjects.isNotEmpty() && left.isEmpty()) return null
     val title = child.name.ifBlank { null }?.let { "🎒 $it, spakuj torbu" } ?: "🎒 Spakuj torbu"
-    val forDay = if (day == date.plusDays(1)) "Za sutra" else "Za ${day.dayOfWeek.label().lowercase()}"
+    val forDay = if (day == date.plusDays(1)) "Za sutra" else "Za ${day.dayOfWeek.accusative()}"
     if (left.isEmpty()) {
         val text = "Vreme je da spakuješ knjige i pribor ${forDay.lowercase()}."
         return PackReminderContent(title, text, text)

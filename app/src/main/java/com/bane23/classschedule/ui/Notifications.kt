@@ -1,8 +1,10 @@
 package com.bane23.classschedule.ui
 
 import android.Manifest
+import android.app.Activity
 import android.content.ActivityNotFoundException
 import android.content.Context
+import android.content.ContextWrapper
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
@@ -17,9 +19,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.compose.LifecycleResumeEffect
+import androidx.core.app.ActivityCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
 import com.bane23.classschedule.alarm.AlarmReceiver
@@ -48,8 +52,9 @@ fun rememberPackReminderSwitch(viewModel: AppViewModel): (childId: String, enabl
     rememberNotificationSwitch(viewModel::setPackReminder)
 
 /**
- * Saves an activity for a child; when its reminder is on, first asks for the notification permission (saving it with
- * the reminder off if refused) and opens the "Alarms & reminders" switch when needed, like the other reminders.
+ * Saves an activity for a child; when its reminder is being turned on (a new activity, or one whose reminder was off),
+ * first asks for the notification permission (saving it with the reminder off if refused) and opens the "Alarms &
+ * reminders" switch when needed, like the other reminders. Other edits, such as cancelling one session, save directly.
  */
 @Composable
 fun rememberActivitySaver(viewModel: AppViewModel): (childId: String, activity: Extracurricular) -> Unit {
@@ -58,7 +63,8 @@ fun rememberActivitySaver(viewModel: AppViewModel): (childId: String, activity: 
         pending.remove(childId)?.let { viewModel.saveActivity(childId, it.copy(reminderEnabled = it.reminderEnabled && granted)) }
     }
     return { childId, activity ->
-        if (activity.reminderEnabled) {
+        val saved = viewModel.data.value.children.find { it.id == childId }?.activities?.find { it.id == activity.id }
+        if (activity.reminderEnabled && saved?.reminderEnabled != true) {
             pending[childId] = activity
             ask(childId, true)
         } else {
@@ -74,11 +80,14 @@ fun rememberActivitySaver(viewModel: AppViewModel): (childId: String, activity: 
 @Composable
 private fun rememberNotificationSwitch(set: (childId: String, enabled: Boolean) -> Unit): (String, Boolean) -> Unit {
     val context = LocalContext.current
-    var pending by remember { mutableStateOf<String?>(null) }
+    var pending by rememberSaveable { mutableStateOf<String?>(null) }
     val launcher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
         pending?.let { set(it, granted) }
         pending = null
         if (granted && !AlarmScheduler.canScheduleExact(context)) openExactAlarmSettings(context)
+        // Once refused for good Android no longer asks, so the switch would just stay off; the app's notification
+        // settings are where it can be allowed again.
+        if (!granted && !shouldExplainNotifications(context)) openFix(context, ReminderProblem.NOTIFICATIONS_OFF)
     }
     return { id, enabled ->
         if (enabled && needsNotificationPermission(context)) {
@@ -89,6 +98,14 @@ private fun rememberNotificationSwitch(set: (childId: String, enabled: Boolean) 
             if (enabled && !AlarmScheduler.canScheduleExact(context)) openExactAlarmSettings(context)
         }
     }
+}
+
+/** Whether Android would still show its notification permission dialog (false once the user refused it for good). */
+private fun shouldExplainNotifications(context: Context): Boolean {
+    var current: Context? = context
+    while (current is ContextWrapper && current !is Activity) current = current.baseContext
+    val activity = current as? Activity ?: return true
+    return ActivityCompat.shouldShowRequestPermissionRationale(activity, Manifest.permission.POST_NOTIFICATIONS)
 }
 
 /** Whether alarms can fire at the exact minute. Rechecked each time the screen comes back from the phone's settings. */
