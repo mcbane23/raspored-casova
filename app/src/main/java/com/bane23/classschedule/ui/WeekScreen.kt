@@ -12,7 +12,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -55,7 +54,6 @@ import com.bane23.classschedule.data.other
 import com.bane23.classschedule.data.shiftOn
 import com.bane23.classschedule.data.weeklyActivitiesOn
 import java.time.DayOfWeek
-import java.time.LocalDate
 import java.time.temporal.TemporalAdjusters
 
 private data class WeekEdit(val day: DayOfWeek, val index: Int, val subject: String)
@@ -80,7 +78,8 @@ fun WeekScreen(
     onDeleteActivity: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val today = LocalDate.now()
+    val today = rememberNow().toLocalDate()
+    val offerUndo = LocalUndo.current
     val currentShift = child.shiftOn(today)
     var shift by rememberSaveable(child.id) { mutableStateOf(currentShift) }
     var dayIndex by rememberSaveable { mutableIntStateOf(SCHOOL_DAYS.indexOf(today.dayOfWeek).coerceAtLeast(0)) }
@@ -240,7 +239,10 @@ fun WeekScreen(
                     subject = subject,
                     editMode = editMode,
                     onClick = { if (editMode) editing = WeekEdit(day, index, subject) },
-                    onClear = { onTimetableChange(shift, timetable.withLesson(day, index, "")) },
+                    onClear = {
+                        onTimetableChange(shift, timetable.withLesson(day, index, ""))
+                        offerUndo("${timetable.periodLabel(index)} je uklonjen iz rasporeda") { onTimetableChange(shift, timetable) }
+                    },
                 )
             }
         }
@@ -274,7 +276,7 @@ fun WeekScreen(
             }
             item {
                 NoteBanner("⏰", "Vreme časova se menja u zvonima.") {
-                    TextButton(onClick = onOpenBells) { Text("Zvona") }
+                    TextButton(colors = accentTextButton(), onClick = onOpenBells) { Text("Zvona") }
                 }
             }
         }
@@ -299,6 +301,7 @@ fun WeekScreen(
                 {
                     onDeleteActivity(activity.id)
                     activityEdit = null
+                    offerUndo("Aktivnost „${activity.title}” je obrisana") { onSaveActivity(activity) }
                 }
             },
         )
@@ -326,12 +329,16 @@ private fun DayChip(day: DayOfWeek, count: Int, selected: Boolean, isToday: Bool
     val colors = MaterialTheme.colorScheme
     Surface(
         onClick = onClick,
-        modifier = modifier.height(56.dp),
+        modifier = modifier.heightIn(min = 56.dp),
         shape = MaterialTheme.shapes.medium,
         color = if (selected) colors.primary else colors.surfaceContainerLowest,
         border = if (isToday && !selected) BorderStroke(2.dp, colors.primary) else null,
     ) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
+        Column(
+            Modifier.padding(vertical = 6.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center,
+        ) {
             Text(day.shortLabel(), style = MaterialTheme.typography.titleMedium, color = if (selected) colors.onPrimary else colors.onSurface)
             Text(
                 if (count == 0) "—" else "$count č.",
@@ -378,7 +385,7 @@ private fun LessonRow(
             }
             Column(Modifier.weight(1f).padding(horizontal = 12.dp)) {
                 if (kind != null) {
-                    Text(kind.prefix.uppercase(), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
+                    Text(kind.prefix.uppercase(), style = MaterialTheme.typography.labelSmall, color = accentText())
                 }
                 Text(
                     if (free) "Slobodan čas" else name,
@@ -475,7 +482,7 @@ private fun WeeklyActivitiesCard(child: Child, onOpen: (Extracurricular) -> Unit
         if (child.activities.none { it.weekly }) {
             Hint("Sport, hor, folklor… Dodaj ih da se vide pored časova, sa podsetnikom pre početka.")
         }
-        TextButton(onClick = onAdd, modifier = Modifier.align(Alignment.End)) { Text("+ Dodaj aktivnost") }
+        TextButton(colors = accentTextButton(), onClick = onAdd, modifier = Modifier.align(Alignment.End)) { Text("+ Dodaj aktivnost") }
     }
 }
 

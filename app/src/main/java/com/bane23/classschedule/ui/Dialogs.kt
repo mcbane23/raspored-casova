@@ -36,7 +36,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.bane23.classschedule.data.ExtraClass
 
-/** Asks for a line of text, e.g. a subject or a child's name. [extraAction] adds a third button such as "cancel class". */
+/** Asks for a line of text, e.g. a subject or a child's name. [extraAction] adds a red button such as "delete subject". */
 @Composable
 fun TextInputDialog(
     title: String,
@@ -54,12 +54,12 @@ fun TextInputDialog(
             Column {
                 OutlinedTextField(value = text, onValueChange = { text = it }, label = { Text(label) }, singleLine = true)
                 if (extraAction != null) {
-                    TextButton(onClick = extraAction.second) { Text(extraAction.first) }
+                    TextButton(onClick = extraAction.second) { Text(extraAction.first, color = MaterialTheme.colorScheme.error) }
                 }
             }
         },
-        confirmButton = { TextButton(onClick = { onConfirm(text) }) { Text("Sačuvaj") } },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Odustani") } },
+        confirmButton = { TextButton(colors = accentTextButton(), onClick = { onConfirm(text) }) { Text("Sačuvaj") } },
+        dismissButton = { TextButton(colors = accentTextButton(), onClick = onDismiss) { Text("Odustani") } },
     )
 }
 
@@ -71,8 +71,8 @@ fun TimeInputDialog(title: String, initialMinute: Int, onDismiss: () -> Unit, on
         onDismissRequest = onDismiss,
         title = { Text(title) },
         text = { TimePicker(state = state) },
-        confirmButton = { TextButton(onClick = { onConfirm(state.hour * 60 + state.minute) }) { Text("Sačuvaj") } },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Odustani") } },
+        confirmButton = { TextButton(colors = accentTextButton(), onClick = { onConfirm(state.hour * 60 + state.minute) }) { Text("Sačuvaj") } },
+        dismissButton = { TextButton(colors = accentTextButton(), onClick = onDismiss) { Text("Odustani") } },
     )
 }
 

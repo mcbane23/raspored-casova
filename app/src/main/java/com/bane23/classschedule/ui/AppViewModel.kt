@@ -101,6 +101,9 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         child.copy(subjects = child.subjects - subject)
     }
 
+    /** Puts back a subject list as it was, e.g. to undo a deletion. */
+    fun setSubjects(id: String, subjects: List<String>) = updateChild(id) { it.copy(subjects = subjects) }
+
     fun resetSubjects(id: String) = updateChild(id) { it.copy(subjects = DEFAULT_SUBJECTS) }
 
     /** Changes one period on one date only, e.g. a substitute subject, or "" for a cancelled class. */

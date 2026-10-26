@@ -27,7 +27,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberDatePickerState
@@ -165,7 +164,7 @@ fun ActivitiesCard(child: Child, date: LocalDate, clock: LocalTime?, onOpen: (Ac
                 crossed = !session.takesPlace,
             ) { onOpen(session) }
         }
-        TextButton(onClick = onAdd, modifier = Modifier.align(Alignment.End)) { Text("+ Dodaj aktivnost") }
+        TextButton(colors = accentTextButton(), onClick = onAdd, modifier = Modifier.align(Alignment.End)) { Text("+ Dodaj aktivnost") }
     }
 }
 
@@ -315,8 +314,8 @@ fun ActivityEditorSheet(
                             title = "Nema nastave",
                             subtitle = if (noClasses) "Tih dana nema časova, kao za raspust" else "Časovi se održavaju po rasporedu",
                             emoji = "🏫",
-                            trailing = { Switch(checked = noClasses, onCheckedChange = { noClasses = it }) },
-                            onClick = { noClasses = !noClasses },
+                            checked = noClasses,
+                            onCheckedChange = { noClasses = it },
                         )
                         RowDivider()
                     }
@@ -325,8 +324,8 @@ fun ActivityEditorSheet(
                             title = "Pauza za raspust",
                             subtitle = "Ne prikazuje se i ne podseća tokom raspusta; na Dan škole i praznike ostaje",
                             emoji = "🏖️",
-                            trailing = { Switch(checked = paused, onCheckedChange = { paused = it }) },
-                            onClick = { paused = !paused },
+                            checked = paused,
+                            onCheckedChange = { paused = it },
                         )
                         RowDivider()
                     }
@@ -334,8 +333,8 @@ fun ActivityEditorSheet(
                         title = "Podsetnik",
                         subtitle = if (reminder) "Obaveštenje ${reminderOffsetLabel(reminderMinutes).lowercase()} početka" else "Bez obaveštenja",
                         emoji = "🔔",
-                        trailing = { Switch(checked = reminder, onCheckedChange = { reminder = it }) },
-                        onClick = { reminder = !reminder },
+                        checked = reminder,
+                        onCheckedChange = { reminder = it },
                     )
                     if (reminder) {
                         Column(Modifier.padding(start = 14.dp, end = 14.dp, bottom = 14.dp)) {
@@ -398,7 +397,7 @@ fun ActivityEditorSheet(
                 )
             }
             if (onDelete != null) {
-                TextButton(onClick = onDelete, modifier = Modifier.fillMaxWidth()) {
+                TextButton(colors = accentTextButton(), onClick = onDelete, modifier = Modifier.fillMaxWidth()) {
                     Text("Obriši aktivnost", color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.titleSmall)
                 }
             }
@@ -445,6 +444,7 @@ fun ActivityEditorSheet(
             onDismissRequest = { pickingDate = false },
             confirmButton = {
                 TextButton(
+                    colors = accentTextButton(),
                     enabled = state.selectedStartDateMillis != null,
                     onClick = {
                         // The picker reports UTC midnight of the chosen days; one tapped day is a one-day activity.
@@ -456,7 +456,7 @@ fun ActivityEditorSheet(
                     },
                 ) { Text("U redu") }
             },
-            dismissButton = { TextButton(onClick = { pickingDate = false }) { Text("Odustani") } },
+            dismissButton = { TextButton(colors = accentTextButton(), onClick = { pickingDate = false }) { Text("Odustani") } },
         ) {
             DateRangePicker(
                 state = state,
@@ -569,7 +569,7 @@ fun ActivitySessionSheet(
                     val moved = SessionChange(regularDay.toEpochDay(), moveDay.toEpochDay(), startMinute, endMinute)
                     onChange(activity.withChange(regularDay, if (unchanged) null else moved))
                 }
-                TextButton(onClick = { moving = false }, modifier = Modifier.fillMaxWidth()) { Text("Nazad") }
+                TextButton(colors = accentTextButton(), onClick = { moving = false }, modifier = Modifier.fillMaxWidth()) { Text("Nazad") }
             }
         }
     }
@@ -598,6 +598,7 @@ fun ActivitySessionSheet(
             onDismissRequest = { pickingDate = false },
             confirmButton = {
                 TextButton(
+                    colors = accentTextButton(),
                     enabled = state.selectedDateMillis != null,
                     onClick = {
                         state.selectedDateMillis?.let { moveDay = LocalDate.ofEpochDay(it / MILLIS_PER_DAY) }
@@ -605,7 +606,7 @@ fun ActivitySessionSheet(
                     },
                 ) { Text("U redu") }
             },
-            dismissButton = { TextButton(onClick = { pickingDate = false }) { Text("Odustani") } },
+            dismissButton = { TextButton(colors = accentTextButton(), onClick = { pickingDate = false }) { Text("Odustani") } },
         ) {
             DatePicker(state = state, showModeToggle = false)
         }

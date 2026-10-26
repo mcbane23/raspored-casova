@@ -115,12 +115,12 @@ fun CalendarScreen(
             onDismissRequest = { deleting = null },
             title = { Text("Obrisati „${event.title}”?") },
             confirmButton = {
-                TextButton(onClick = {
+                TextButton(colors = accentTextButton(), onClick = {
                     onDeleteEvent(event.id)
                     deleting = null
                 }) { Text("Obriši") }
             },
-            dismissButton = { TextButton(onClick = { deleting = null }) { Text("Odustani") } },
+            dismissButton = { TextButton(colors = accentTextButton(), onClick = { deleting = null }) { Text("Odustani") } },
         )
     }
 
@@ -210,7 +210,7 @@ private fun AddEventDialog(onDismiss: () -> Unit, onConfirm: (CalendarEvent) -> 
                             Text("Datum", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             Text(dateRangeLabel(start, end), style = MaterialTheme.typography.titleSmall)
                         }
-                        Text("Promeni", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
+                        Text("Promeni", style = MaterialTheme.typography.labelLarge, color = accentText())
                     }
                 }
                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -221,13 +221,14 @@ private fun AddEventDialog(onDismiss: () -> Unit, onConfirm: (CalendarEvent) -> 
         },
         confirmButton = {
             TextButton(
+                colors = accentTextButton(),
                 enabled = title.isNotBlank(),
                 onClick = {
                     onConfirm(CalendarEvent(start.toEpochDay(), maxOf(start, end).toEpochDay(), title.trim(), noClasses))
                 },
             ) { Text("Sačuvaj") }
         },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Odustani") } },
+        dismissButton = { TextButton(colors = accentTextButton(), onClick = onDismiss) { Text("Odustani") } },
     )
 
     if (picking) {
@@ -239,6 +240,7 @@ private fun AddEventDialog(onDismiss: () -> Unit, onConfirm: (CalendarEvent) -> 
             onDismissRequest = { picking = false },
             confirmButton = {
                 TextButton(
+                    colors = accentTextButton(),
                     enabled = state.selectedStartDateMillis != null,
                     onClick = {
                         // The picker reports UTC midnight of the chosen days; one tapped day is a one-day event.
@@ -250,7 +252,7 @@ private fun AddEventDialog(onDismiss: () -> Unit, onConfirm: (CalendarEvent) -> 
                     },
                 ) { Text("U redu") }
             },
-            dismissButton = { TextButton(onClick = { picking = false }) { Text("Odustani") } },
+            dismissButton = { TextButton(colors = accentTextButton(), onClick = { picking = false }) { Text("Odustani") } },
         ) {
             DateRangePicker(
                 state = state,
