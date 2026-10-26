@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
@@ -35,6 +36,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.bane23.classschedule.alarm.AlarmReceiver
@@ -270,7 +273,7 @@ fun ChildSettingsScreen(
         }
 
         if (data.children.size > 1) {
-            TextButton(onClick = { confirmDelete = true }, modifier = Modifier.fillMaxWidth()) {
+            TextButton(colors = accentTextButton(), onClick = { confirmDelete = true }, modifier = Modifier.fillMaxWidth()) {
                 Text("Obriši dete ${child.name}", color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.titleSmall)
             }
         }
@@ -283,13 +286,13 @@ fun ChildSettingsScreen(
             title = { Text("Obrisati ${child.name}?") },
             text = { Text("Biće obrisani raspored i sva podešavanja za ovo dete.") },
             confirmButton = {
-                TextButton(onClick = {
+                TextButton(colors = accentTextButton(), onClick = {
                     confirmDelete = false
                     onBack()
                     viewModel.deleteChild(child.id)
                 }) { Text("Obriši") }
             },
-            dismissButton = { TextButton(onClick = { confirmDelete = false }) { Text("Odustani") } },
+            dismissButton = { TextButton(colors = accentTextButton(), onClick = { confirmDelete = false }) { Text("Odustani") } },
         )
     }
 }
@@ -418,8 +421,8 @@ fun NotificationsScreen(child: Child, viewModel: AppViewModel, onBack: () -> Uni
                     else -> "Sledeće: ${nextTimeLabel(next, today)}"
                 },
                 emoji = "🔔",
-                trailing = { Switch(checked = child.alarmEnabled, onCheckedChange = { setAlarm(child.id, it) }) },
-                onClick = { setAlarm(child.id, !child.alarmEnabled) },
+                checked = child.alarmEnabled,
+                onCheckedChange = { setAlarm(child.id, it) },
             )
             if (child.alarmEnabled) {
                 RowDivider()
@@ -467,8 +470,8 @@ fun NotificationsScreen(child: Child, viewModel: AppViewModel, onBack: () -> Uni
                     else -> "Sledeće: ${nextTimeLabel(next, today)}"
                 },
                 emoji = "🎒",
-                trailing = { Switch(checked = child.packReminderEnabled, onCheckedChange = { setPackReminder(child.id, it) }) },
-                onClick = { setPackReminder(child.id, !child.packReminderEnabled) },
+                checked = child.packReminderEnabled,
+                onCheckedChange = { setPackReminder(child.id, it) },
             )
             if (child.packReminderEnabled) {
                 RowDivider()
@@ -575,8 +578,8 @@ fun SchoolCalendarScreen(child: Child, viewModel: AppViewModel, onBack: () -> Un
                 title = "Osmi razred",
                 subtitle = "Ranije završava nastavu",
                 emoji = "🎓",
-                trailing = { Switch(checked = child.finalGrade, onCheckedChange = { viewModel.setFinalGrade(child.id, it) }) },
-                onClick = { viewModel.setFinalGrade(child.id, !child.finalGrade) },
+                checked = child.finalGrade,
+                onCheckedChange = { viewModel.setFinalGrade(child.id, it) },
             )
         }
         NoteBanner("🏫", "Dan škole, školsku slavu i izlete dodaješ na kartici Raspust.")
@@ -610,8 +613,8 @@ fun BellsEditor(child: Child, viewModel: AppViewModel) {
             title = "Pretčas",
             subtitle = "Čas pre 1. časa",
             emoji = "🌅",
-            trailing = { Switch(checked = timetable.hasPreClass, onCheckedChange = { change(timetable.withPreClass(it)) }) },
-            onClick = { change(timetable.withPreClass(!timetable.hasPreClass)) },
+            checked = timetable.hasPreClass,
+            onCheckedChange = { change(timetable.withPreClass(it)) },
         )
     }
     SettingsGroup(null) {
@@ -658,13 +661,13 @@ fun BellsEditor(child: Child, viewModel: AppViewModel) {
             title = { Text("Vratiti uobičajena zvona?") },
             text = { Text("Vremena za ${shift.shortLabel().lowercase()} biće vraćena na 45 minuta po času, sa velikim odmorom posle 2. časa.") },
             confirmButton = {
-                TextButton(onClick = {
+                TextButton(colors = accentTextButton(), onClick = {
                     val reset = timetable.withPreClass(false).copy(periods = Timetable.defaultFor(shift).periods)
                     change(reset.withPreClass(timetable.hasPreClass))
                     confirmReset = false
                 }) { Text("Vrati") }
             },
-            dismissButton = { TextButton(onClick = { confirmReset = false }) { Text("Odustani") } },
+            dismissButton = { TextButton(colors = accentTextButton(), onClick = { confirmReset = false }) { Text("Odustani") } },
         )
     }
 
@@ -697,6 +700,7 @@ fun SubjectsScreen(child: Child, viewModel: AppViewModel, onBack: () -> Unit, mo
     var adding by remember { mutableStateOf(false) }
     var editing by remember { mutableStateOf<String?>(null) }
     var confirmReset by remember { mutableStateOf(false) }
+    val offerUndo = LocalUndo.current
 
     SettingsPageLayout(child.name.ifBlank { "Dete" }, "Predmeti i torba", onBack, modifier) {
         NoteBanner("🎒", "Ono što upišeš ovde pojavljuje se u listi „Sutra u torbu“.")
@@ -715,7 +719,7 @@ fun SubjectsScreen(child: Child, viewModel: AppViewModel, onBack: () -> Unit, mo
             RowDivider()
             SettingsRow(title = "Dodaj predmet", emoji = "➕", accent = true, onClick = { adding = true })
         }
-        TextButton(onClick = { confirmReset = true }, modifier = Modifier.fillMaxWidth()) {
+        TextButton(colors = accentTextButton(), onClick = { confirmReset = true }, modifier = Modifier.fillMaxWidth()) {
             Text("Vrati podrazumevani spisak predmeta")
         }
     }
@@ -724,14 +728,14 @@ fun SubjectsScreen(child: Child, viewModel: AppViewModel, onBack: () -> Unit, mo
         AlertDialog(
             onDismissRequest = { confirmReset = false },
             title = { Text("Vratiti podrazumevani spisak?") },
-            text = { Text("Predmeti koje si dodao biće uklonjeni sa spiska. Raspored i beleške šta se nosi ostaju.") },
+            text = { Text("Dodati predmeti biće uklonjeni sa spiska. Raspored i beleške šta se nosi ostaju.") },
             confirmButton = {
-                TextButton(onClick = {
+                TextButton(colors = accentTextButton(), onClick = {
                     viewModel.resetSubjects(child.id)
                     confirmReset = false
                 }) { Text("Vrati") }
             },
-            dismissButton = { TextButton(onClick = { confirmReset = false }) { Text("Odustani") } },
+            dismissButton = { TextButton(colors = accentTextButton(), onClick = { confirmReset = false }) { Text("Odustani") } },
         )
     }
 
@@ -758,8 +762,10 @@ fun SubjectsScreen(child: Child, viewModel: AppViewModel, onBack: () -> Unit, mo
                 editing = null
             },
             extraAction = "Obriši predmet sa spiska" to {
+                val before = child.subjects
                 viewModel.deleteSubject(child.id, subject)
                 editing = null
+                offerUndo("Predmet „$subject” je obrisan") { viewModel.setSubjects(child.id, before) }
             },
         )
     }
@@ -774,6 +780,7 @@ fun ActivitiesScreen(child: Child, viewModel: AppViewModel, onBack: () -> Unit, 
     val saveActivity = rememberActivitySaver(viewModel)
     var editing by remember { mutableStateOf<Extracurricular?>(null) }
     var adding by remember { mutableStateOf(false) }
+    val offerUndo = LocalUndo.current
     val weekly = child.activities.filter { it.weekly }.sortedWith(compareBy({ it.days.minOrNull() }, { it.startMinute }))
     val once = child.activities.filterNot { it.weekly }.sortedWith(compareBy({ it.startEpochDay }, { it.startMinute }))
 
@@ -835,6 +842,7 @@ fun ActivitiesScreen(child: Child, viewModel: AppViewModel, onBack: () -> Unit, 
                 {
                     viewModel.deleteActivity(child.id, activity.id)
                     editing = null
+                    offerUndo("Aktivnost „${activity.title}” je obrisana") { viewModel.saveActivity(child.id, activity) }
                 }
             },
         )
@@ -879,7 +887,10 @@ fun RowDivider() {
     HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
 }
 
-/** One settings row: an emoji tile (or [leading]), a title with an optional subtitle, and a value, switch or chevron. */
+/**
+ * One settings row: an emoji tile (or [leading]), a title with an optional subtitle, and a value, switch or chevron.
+ * With [checked] the whole row is one switch, so a screen reader announces it once, with its state.
+ */
 @Composable
 fun SettingsRow(
     title: String,
@@ -890,19 +901,32 @@ fun SettingsRow(
     chevron: Boolean = false,
     accent: Boolean = false,
     trailing: (@Composable () -> Unit)? = null,
+    checked: Boolean? = null,
+    onCheckedChange: ((Boolean) -> Unit)? = null,
     onClick: (() -> Unit)? = null,
 ) {
     Row(
         Modifier
             .fillMaxWidth()
             .heightIn(min = 56.dp)
-            .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier)
+            .then(
+                when {
+                    checked != null && onCheckedChange != null ->
+                        Modifier.toggleable(value = checked, role = Role.Switch, onValueChange = onCheckedChange)
+                    onClick != null -> Modifier.clickable(onClick = onClick)
+                    else -> Modifier
+                },
+            )
             .padding(horizontal = 14.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         when {
             leading != null -> leading()
-            emoji != null -> Surface(color = MaterialTheme.colorScheme.background, shape = MaterialTheme.shapes.extraSmall, modifier = Modifier.size(36.dp)) {
+            emoji != null -> Surface(
+                color = MaterialTheme.colorScheme.background,
+                shape = MaterialTheme.shapes.extraSmall,
+                modifier = Modifier.size(36.dp).clearAndSetSemantics {},
+            ) {
                 Box(contentAlignment = Alignment.Center) { Text(emoji, fontSize = 18.sp) }
             }
         }
@@ -910,7 +934,7 @@ fun SettingsRow(
             Text(
                 title,
                 style = MaterialTheme.typography.titleSmall,
-                color = if (accent) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
+                color = if (accent) accentText() else MaterialTheme.colorScheme.onSurface,
             )
             if (subtitle != null) {
                 Text(subtitle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -918,6 +942,7 @@ fun SettingsRow(
         }
         if (value != null) Text(value, style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
         trailing?.invoke()
+        if (checked != null) Switch(checked = checked, onCheckedChange = null)
         if (chevron) Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }

@@ -28,6 +28,15 @@ private val MONTHS = listOf(
     "jul", "avgust", "septembar", "oktobar", "novembar", "decembar",
 )
 
+/** [text] without emoji, for screen readers: "🎉 Bravo!" is read as "Bravo!", not "party popper Bravo". */
+fun spoken(text: String): String =
+    text.replace(EMOJI, "").replace(Regex("\\s+"), " ").replace(" ,", ",").trim()
+
+private val EMOJI = Regex("[\\p{So}\\p{Sk}\\x{FE0F}\\x{200D}\\x{20E3}]")
+
+/** The day after "za": "za ponedeljak", "za sredu". */
+fun DayOfWeek.accusative(): String = label().lowercase().let { if (it.endsWith("a")) it.dropLast(1) + "u" else it }
+
 fun LocalDate.label(): String = "${dayOfWeek.label()}, $dayOfMonth. ${MONTHS[monthValue - 1]}"
 
 /** "okt" for calendar date badges. */
@@ -98,3 +107,13 @@ fun ThemeMode.label(): String = when (this) {
 fun LocalTime.label(): String = "%02d:%02d".format(hour, minute)
 
 fun Period.label(): String = "${start.label()}–${end.label()}"
+
+/**
+ * What to pack for: " Sutra spakuj torbu." when the next school day is tomorrow, " Za ponedeljak spakuj torbu." over
+ * a weekend, nothing before a break or when no school day follows.
+ */
+fun packHint(date: LocalDate, packDay: LocalDate?): String = when {
+    packDay == null || packDay > date.plusDays(3) -> ""
+    packDay == date.plusDays(1) -> " Sutra spakuj torbu."
+    else -> " Za ${packDay.dayOfWeek.accusative()} spakuj torbu."
+}

@@ -45,7 +45,7 @@ fun QrCodeDialog(child: Child, onDismiss: () -> Unit) {
                 )
             }
         },
-        confirmButton = { TextButton(onClick = onDismiss) { Text("Zatvori") } },
+        confirmButton = { TextButton(colors = accentTextButton(), onClick = onDismiss) { Text("Zatvori") } },
     )
 }
 
@@ -84,17 +84,17 @@ fun rememberQrImport(viewModel: AppViewModel, replaceable: Child?, onImported: (
             },
             confirmButton = {
                 Column(horizontalAlignment = androidx.compose.ui.Alignment.End) {
-                    TextButton(onClick = {
+                    TextButton(colors = accentTextButton(), onClick = {
                         viewModel.importChild(shared, replaceId = null)
                         scanned = null
                     }) { Text("Dodaj kao novo dete") }
                     if (replaceable != null) {
-                        TextButton(onClick = {
+                        TextButton(colors = accentTextButton(), onClick = {
                             viewModel.importChild(shared, replaceId = replaceable.id)
                             scanned = null
                         }) { Text("Zameni za ${replaceable.name}") }
                     }
-                    TextButton(onClick = { scanned = null }) { Text("Odustani") }
+                    TextButton(colors = accentTextButton(), onClick = { scanned = null }) { Text("Odustani") }
                 }
             },
         )
@@ -105,7 +105,7 @@ fun rememberQrImport(viewModel: AppViewModel, replaceable: Child?, onImported: (
             onDismissRequest = { scanFailed = false },
             title = { Text("Nepoznat QR kod") },
             text = { Text("Ovaj QR kod nije raspored iz aplikacije Raspored časova.") },
-            confirmButton = { TextButton(onClick = { scanFailed = false }) { Text("U redu") } },
+            confirmButton = { TextButton(colors = accentTextButton(), onClick = { scanFailed = false }) { Text("U redu") } },
         )
     }
 

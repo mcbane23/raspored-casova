@@ -19,7 +19,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -72,7 +71,7 @@ fun OnboardingScreen(child: Child, viewModel: AppViewModel, onFinish: (enterTime
             if (step in DOTTED_STEPS) ProgressDots(DOTTED_STEPS.indexOf(step), DOTTED_STEPS.size)
             Box(Modifier.weight(1f), contentAlignment = Alignment.CenterEnd) {
                 if (step != SetupStep.DONE) {
-                    TextButton(onClick = { onFinish(false) }) { Text("Preskoči") }
+                    TextButton(colors = accentTextButton(), onClick = { onFinish(false) }) { Text("Preskoči") }
                 }
             }
         }
@@ -144,7 +143,7 @@ fun OnboardingScreen(child: Child, viewModel: AppViewModel, onFinish: (enterTime
                         Text("➕ Dodaj još jedno dete", style = MaterialTheme.typography.titleMedium)
                     }
                     if (!imported) {
-                        TextButton(onClick = { onFinish(false) }, modifier = Modifier.fillMaxWidth()) { Text("Kasnije") }
+                        TextButton(colors = accentTextButton(), onClick = { onFinish(false) }, modifier = Modifier.fillMaxWidth()) { Text("Kasnije") }
                     }
                 }
             }
@@ -170,16 +169,16 @@ private fun NotifyStep(child: Child, viewModel: AppViewModel) {
             title = "Javi mi kad se završe časovi",
             subtitle = "Za roditelja, kad zvoni za kraj poslednjeg časa",
             emoji = "🔔",
-            trailing = { Switch(checked = child.alarmEnabled, onCheckedChange = { setAlarm(child.id, it) }) },
-            onClick = { setAlarm(child.id, !child.alarmEnabled) },
+            checked = child.alarmEnabled,
+            onCheckedChange = { setAlarm(child.id, it) },
         )
         RowDivider()
         SettingsRow(
             title = "Podseti da se spakuje torba",
             subtitle = "Za dete, uveče u 19:00 pred školski dan",
             emoji = "🎒",
-            trailing = { Switch(checked = child.packReminderEnabled, onCheckedChange = { setPackReminder(child.id, it) }) },
-            onClick = { setPackReminder(child.id, !child.packReminderEnabled) },
+            checked = child.packReminderEnabled,
+            onCheckedChange = { setPackReminder(child.id, it) },
         )
     }
 }

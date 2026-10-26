@@ -21,6 +21,9 @@ import com.bane23.classschedule.R
 // Subjects bring their own colors (ui/Components.kt), so the base stays calm and the accent marks only what is
 // current or tappable. The home-screen widget uses the same two palettes.
 
+/** Deeper tangerine for accent text on light backgrounds; the bright [LightColors] primary is 3.4:1 on white. */
+val AccentTextLight = Color(0xFFC2410C)
+
 internal val LightColors = lightColorScheme(
     primary = Color(0xFFE8620C),
     onPrimary = Color.White,
@@ -51,6 +54,9 @@ internal val LightColors = lightColorScheme(
     error = Color(0xFFC8323A),
     onError = Color.White,
     errorContainer = Color(0xFFFBDADC),
+    inverseSurface = Color(0xFF131A33),
+    inverseOnSurface = Color(0xFFF1F4FF),
+    inversePrimary = Color(0xFFFF9A4D),
 )
 
 internal val DarkColors = darkColorScheme(
@@ -83,6 +89,9 @@ internal val DarkColors = darkColorScheme(
     error = Color(0xFFFF8A8F),
     onError = Color(0xFF1A1208),
     errorContainer = Color(0xFF5A2430),
+    inverseSurface = Color(0xFFF1F4FF),
+    inverseOnSurface = Color(0xFF131A33),
+    inversePrimary = AccentTextLight,
 )
 
 private val AppShapes = Shapes(

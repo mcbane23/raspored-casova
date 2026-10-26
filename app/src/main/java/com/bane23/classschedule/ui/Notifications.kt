@@ -258,6 +258,6 @@ fun Child.hasReminderOn(): Boolean = alarmEnabled || packReminderEnabled || acti
 fun ReminderProblemBanner(problem: ReminderProblem) {
     val context = LocalContext.current
     NoteBanner("⚠️", "${problem.title}. ${problem.detail}") {
-        TextButton(onClick = { openFix(context, problem) }) { Text("Popravi") }
+        TextButton(colors = accentTextButton(), onClick = { openFix(context, problem) }) { Text("Popravi") }
     }
 }

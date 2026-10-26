@@ -30,6 +30,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonColors
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -40,6 +42,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -49,6 +52,9 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.onClick
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
@@ -56,8 +62,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.bane23.classschedule.data.Child
 import com.bane23.classschedule.data.ExtraClass
-import kotlinx.coroutines.delay
+import com.bane23.classschedule.ui.theme.AccentTextLight
 import java.time.LocalDateTime
+import kotlinx.coroutines.delay
 
 /** Emoji and color that make a subject recognizable at a glance, even for children who don't read well yet. */
 data class SubjectStyle(val emoji: String, val color: Color)
@@ -169,17 +176,34 @@ fun eventEmoji(title: String): String {
 fun tintOf(color: Color, light: Float = 0.18f, dark: Float = 0.30f): Color =
     lerp(MaterialTheme.colorScheme.surfaceContainerLowest, color, if (isDarkTheme()) dark else light)
 
-/** Background of the big status card: the color itself, slightly deepened (light) or blended into the night (dark). */
+/**
+ * Background of the big status card: the color itself, deepened (light) or blended into the night (dark), so white
+ * text on it stays at 4.5:1 or more even for the lightest subject colors.
+ */
 @Composable
 fun heroColorOf(color: Color): Color =
-    if (isDarkTheme()) lerp(MaterialTheme.colorScheme.surfaceContainerLowest, color, 0.42f) else lerp(color, Color.Black, 0.16f)
+    if (isDarkTheme()) lerp(MaterialTheme.colorScheme.surfaceContainerLowest, color, 0.42f) else lerp(color, Color.Black, 0.30f)
+
+/** Accent color for text and text buttons: the bright primary is too light for small text on the light theme. */
+@Composable
+fun accentText(): Color = if (isDarkTheme()) MaterialTheme.colorScheme.primary else AccentTextLight
+
+/** Text button colors in the readable accent. */
+@Composable
+fun accentTextButton(): ButtonColors = ButtonDefaults.textButtonColors(contentColor = accentText())
+
+/**
+ * Shows a short message with "Poništi" at the bottom of the screen; the action runs when it is tapped. The app's
+ * scaffold provides it, so a one-tap deletion or change can be taken back.
+ */
+val LocalUndo = staticCompositionLocalOf<(message: String, undo: () -> Unit) -> Unit> { { _, _ -> } }
 
 /** Rounded tile with a subject's emoji on a tint of its color; [done] shows a check instead. */
 @Composable
 fun SubjectBadge(lesson: String, size: Dp = 48.dp, done: Boolean = false, shape: RoundedCornerShape = RoundedCornerShape(size / 3)) {
     val style = subjectStyle(lesson)
     Box(
-        Modifier.size(size).clip(shape).background(tintOf(style.color, 0.30f, 0.38f)),
+        Modifier.size(size).clip(shape).background(tintOf(style.color, 0.30f, 0.38f)).clearAndSetSemantics {},
         contentAlignment = Alignment.Center,
     ) {
         Text(if (done) "✓" else style.emoji, fontSize = (size.value * 0.48f).sp, color = MaterialTheme.colorScheme.onSurface)
@@ -190,7 +214,7 @@ fun SubjectBadge(lesson: String, size: Dp = 48.dp, done: Boolean = false, shape:
 @Composable
 fun ChildAvatar(name: String, size: Dp = 36.dp) {
     Box(
-        Modifier.size(size).clip(CircleShape).background(childColor(name)),
+        Modifier.size(size).clip(CircleShape).background(childColor(name)).clearAndSetSemantics {},
         contentAlignment = Alignment.Center,
     ) {
         Text(
@@ -329,7 +353,7 @@ fun EmptyState(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(6.dp),
     ) {
-        Text(emoji, fontSize = 52.sp)
+        Text(emoji, fontSize = 52.sp, modifier = Modifier.clearAndSetSemantics {})
         Text(title, style = MaterialTheme.typography.titleLarge, textAlign = TextAlign.Center)
         if (hint != null) {
             Text(hint, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = TextAlign.Center)
@@ -436,8 +460,23 @@ fun HeroCard(
     footer: String? = null,
     onClick: (() -> Unit)? = null,
 ) {
+    // Read as one sentence, e.g. "Sada, 2. čas. Matematika, do 09:30, još 12 minuta. Zatim Srpski u 09:35".
+    val description = listOfNotNull(
+        spoken(eyebrow),
+        listOfNotNull(spoken(title), detail?.let(::spoken), ringMinutes?.let { "još ${durationLabel(it)}" }).joinToString(", "),
+        footer?.let(::spoken),
+    ).filter { it.isNotEmpty() }.joinToString(". ")
     Surface(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier.fillMaxWidth().clearAndSetSemantics {
+            contentDescription = description
+            val click = onClick
+            if (click != null) {
+                this.onClick {
+                    click()
+                    true
+                }
+            }
+        },
         shape = MaterialTheme.shapes.extraLarge,
         color = heroColorOf(color),
         contentColor = Color.White,
@@ -446,14 +485,14 @@ fun HeroCard(
             (if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier).padding(horizontal = 18.dp, vertical = 14.dp),
             verticalArrangement = Arrangement.spacedBy(2.dp),
         ) {
-            Text(eyebrow.uppercase(), style = MaterialTheme.typography.labelLarge, letterSpacing = 0.8.sp, color = Color.White.copy(alpha = 0.9f))
+            Text(eyebrow.uppercase(), style = MaterialTheme.typography.labelLarge, letterSpacing = 0.8.sp, color = Color.White)
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(emoji, fontSize = 46.sp)
                 Spacer(Modifier.width(12.dp))
                 Column(Modifier.weight(1f)) {
                     Text(title, style = MaterialTheme.typography.headlineSmall, color = Color.White)
                     if (detail != null) {
-                        Text(detail, style = MaterialTheme.typography.bodyLarge, color = Color.White.copy(alpha = 0.92f))
+                        Text(detail, style = MaterialTheme.typography.bodyLarge, color = Color.White)
                     }
                 }
                 if (ringMinutes != null) {
@@ -505,7 +544,7 @@ fun NoteBanner(emoji: String, text: String, action: (@Composable () -> Unit)? = 
             .padding(start = 14.dp, end = 6.dp, top = 6.dp, bottom = 6.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Text(emoji, fontSize = 18.sp)
+        Text(emoji, fontSize = 18.sp, modifier = Modifier.clearAndSetSemantics {})
         Spacer(Modifier.width(10.dp))
         Text(
             text,
@@ -530,7 +569,7 @@ fun DashedButton(text: String, onClick: () -> Unit, modifier: Modifier = Modifie
             .padding(10.dp),
         contentAlignment = Alignment.Center,
     ) {
-        Text(text, style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary)
+        Text(text, style = MaterialTheme.typography.titleSmall, color = accentText())
     }
 }
 
