@@ -331,6 +331,8 @@ fun App(viewModel: AppViewModel = viewModel(), openTodayFor: String? = null, onO
                             onPacked = { date, subject, packed -> viewModel.setPacked(child.id, date, subject, packed) },
                             onSaveActivity = { saveActivity(child.id, it) },
                             onDeleteActivity = { viewModel.deleteActivity(child.id, it) },
+                            showLessonHint = !data.lessonHintSeen,
+                            onLessonHintSeen = { viewModel.markLessonHintSeen() },
                             modifier = modifier,
                         )
                         Tab.WEEK -> WeekScreen(

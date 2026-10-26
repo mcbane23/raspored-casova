@@ -64,6 +64,8 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     /** Ends the first-run setup, whether it was completed or skipped. */
     fun finishOnboarding() = save { it.copy(onboarded = true) }
 
+    fun markLessonHintSeen() = save { it.copy(lessonHintSeen = true) }
+
     fun addChild(name: String) {
         val child = Child(name = name.trim().ifEmpty { DEFAULT_CHILD_NAME }, referenceEpochDay = LocalDate.now().toEpochDay())
         save { it.copy(children = it.children + child, selectedChildId = child.id) }

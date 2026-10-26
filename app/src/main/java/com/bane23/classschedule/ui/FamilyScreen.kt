@@ -19,6 +19,9 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
@@ -155,7 +158,12 @@ private fun KidCard(child: Child, now: LocalDateTime, onClick: () -> Unit, onAla
                     tintOf(if (shift == Shift.MORNING) Color(0xFFF2B01E) else Color(0xFF5B6CF0), 0.22f, 0.35f),
                     colors.onSurface,
                 )
-                Text("›", fontSize = 24.sp, color = colors.onSurfaceVariant, modifier = Modifier.padding(start = 6.dp))
+                Icon(
+                    Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                    contentDescription = null,
+                    tint = colors.onSurfaceVariant,
+                    modifier = Modifier.padding(start = 4.dp),
+                )
             }
             Text(line, style = MaterialTheme.typography.bodyLarge)
             if (lessons.isNotEmpty()) MiniStops(lessons.map { it.subject to it.period }, clock)

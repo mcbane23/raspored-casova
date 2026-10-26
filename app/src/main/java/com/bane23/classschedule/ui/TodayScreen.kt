@@ -1,7 +1,13 @@
 package com.bane23.classschedule.ui
 
+import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -35,7 +41,6 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.minimumInteractiveComponentSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -47,7 +52,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
@@ -102,6 +109,8 @@ fun TodayScreen(
     onPacked: (LocalDate, String, Boolean) -> Unit,
     onSaveActivity: (Extracurricular) -> Unit,
     onDeleteActivity: (String) -> Unit,
+    showLessonHint: Boolean,
+    onLessonHintSeen: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     // The day the user moved to, or null to follow today, so the screen turns to the new day after midnight.
@@ -176,7 +185,7 @@ fun TodayScreen(
                             EmptyState(
                                 "🗓️",
                                 "Raspored još nije unet",
-                                "Upiši koje časove ${child.name.ifBlank { "dete" }} ima svakog dana.",
+                                "Upiši časove za svaki dan u nedelji.",
                                 action = "✏️ Upiši raspored",
                                 onAction = onEditTimetable,
                             )
@@ -203,7 +212,11 @@ fun TodayScreen(
                         title = (if (isToday) "Danas " else "") + lessonsCount(lessons.size),
                         clock = if (isToday) clock else null,
                         canAdd = nextFreeIndex < timetable.periods.size,
-                        onLesson = { details = it },
+                        showHint = showLessonHint,
+                        onLesson = {
+                            details = it
+                            if (showLessonHint) onLessonHintSeen()
+                        },
                         onAdd = { editing = DayEdit(nextFreeIndex, "") },
                     )
                 }
@@ -312,18 +325,27 @@ private fun DaySwitcher(date: LocalDate, isToday: Boolean, onPrevious: () -> Uni
             Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, contentDescription = "Prethodni dan")
         }
         Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
-            Text(date.label(), style = MaterialTheme.typography.titleMedium)
+            // The date slides in from the side the user moved to, so a swipe visibly changes the day.
+            AnimatedContent(
+                targetState = date,
+                transitionSpec = {
+                    val forward = targetState > initialState
+                    (slideInHorizontally { if (forward) it / 2 else -it / 2 } + fadeIn()) togetherWith
+                        (slideOutHorizontally { if (forward) -it / 2 else it / 2 } + fadeOut())
+                },
+                label = "day",
+            ) { shown ->
+                Text(shown.label(), style = MaterialTheme.typography.titleMedium)
+            }
             if (!isToday) {
-                Text(
-                    "Nazad na danas",
-                    style = MaterialTheme.typography.labelLarge,
-                    color = accentText(),
-                    modifier = Modifier
-                        .minimumInteractiveComponentSize()
-                        .clip(CircleShape)
-                        .clickable(role = Role.Button, onClick = onToday)
-                        .padding(horizontal = 12.dp, vertical = 2.dp),
-                )
+                Surface(onClick = onToday, shape = CircleShape, color = MaterialTheme.colorScheme.primaryContainer) {
+                    Text(
+                        "Danas",
+                        style = MaterialTheme.typography.labelLarge,
+                        color = MaterialTheme.colorScheme.onPrimaryContainer,
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
+                    )
+                }
             }
         }
         IconButton(onClick = onNext) {
@@ -339,12 +361,13 @@ private fun DayHero(child: Child, date: LocalDate, isToday: Boolean, clock: Loca
     val first = lessons.first()
     val last = lessons.last()
     if (!isToday) {
+        // Another day: when it starts and with what, the first thing a child checks the evening before.
         HeroCard(
             color = AccentOrange,
-            eyebrow = "${shift.icon()} ${shift.shortLabel()}",
-            emoji = "🗓️",
-            title = lessonsCount(lessons.size),
-            detail = "${first.period.start.label()} – ${last.period.end.label()}",
+            eyebrow = "${shift.icon()} ${shift.shortLabel()} · ${lessonsCount(lessons.size)}",
+            emoji = subjectStyle(first.subject).emoji,
+            title = "Škola u ${first.period.start.label()}",
+            detail = "Prvi čas: ${first.subject} · kraj u ${last.period.end.label()}",
         )
         return
     }
@@ -378,7 +401,7 @@ private fun DayHero(child: Child, date: LocalDate, isToday: Boolean, clock: Loca
         )
         DayStatus.Done, null -> HeroCard(
             color = DoneGreen,
-            eyebrow = "🎉 Bravo!",
+            eyebrow = "🏁 Kraj nastave",
             emoji = "🏆",
             title = "Gotovo za danas!",
             detail = "${lessonsCount(lessons.size)} završeno." + packHint(date, child.nextSchoolDayAfter(date)),
@@ -397,6 +420,7 @@ private fun StopsCard(
     title: String,
     clock: LocalTime?,
     canAdd: Boolean,
+    showHint: Boolean,
     onLesson: (Lesson) -> Unit,
     onAdd: () -> Unit,
 ) {
@@ -437,12 +461,11 @@ private fun StopsCard(
             }
         }
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(
-                "Dodirni čas za detalje",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.weight(1f).padding(start = 6.dp),
-            )
+            Box(Modifier.weight(1f).padding(start = 6.dp)) {
+                if (showHint) {
+                    Text("Dodirni čas za detalje", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            }
             if (canAdd) TextButton(colors = accentTextButton(), onClick = onAdd) { Text("+ Dodaj čas") }
         }
     }
@@ -503,6 +526,7 @@ private fun PackingCard(child: Child, from: LocalDate, packDay: LocalDate, onPac
     val subjects = child.packSubjects(packDay)
     val packedCount = subjects.count { child.isPacked(packDay, it) }
     val allPacked = packedCount == subjects.size
+    val haptic = LocalHapticFeedback.current
     AppCard(verticalArrangement = Arrangement.spacedBy(2.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(bottom = 4.dp)) {
             Text("🎒 $heading", style = MaterialTheme.typography.titleMedium)
@@ -535,7 +559,10 @@ private fun PackingCard(child: Child, from: LocalDate, packDay: LocalDate, onPac
             val packed = child.isPacked(packDay, subject)
             val note = child.packNote(subject)
             Surface(
-                onClick = { onPacked(packDay, subject, !packed) },
+                onClick = {
+                    haptic.performHapticFeedback(if (packed) HapticFeedbackType.ToggleOff else HapticFeedbackType.ToggleOn)
+                    onPacked(packDay, subject, !packed)
+                },
                 color = Color.Transparent,
                 shape = MaterialTheme.shapes.small,
                 // Announced as a checkbox: "Matematika, označeno".
@@ -590,7 +617,7 @@ private fun LessonDetailsSheet(
     onChange: () -> Unit,
 ) {
     val (kind, name) = ExtraClass.parse(lesson.subject)
-    ModalBottomSheet(onDismissRequest = onDismiss, containerColor = MaterialTheme.colorScheme.surfaceContainerLowest) {
+    ModalBottomSheet(onDismissRequest = onDismiss, containerColor = MaterialTheme.colorScheme.background) {
         Column(
             Modifier.fillMaxWidth().padding(start = 20.dp, end = 20.dp, bottom = 28.dp),
             horizontalAlignment = Alignment.CenterHorizontally,

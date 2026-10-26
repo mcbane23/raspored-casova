@@ -234,6 +234,8 @@ data class AppData(
     val dataVersion: Int = 1,
     /** The first-run setup was finished or skipped; until then the app opens on the setup steps. */
     val onboarded: Boolean = false,
+    /** The user has tapped a class on Today once, so the "tap a class for details" hint is no longer shown. */
+    val lessonHintSeen: Boolean = false,
 )
 
 const val CURRENT_DATA_VERSION = 4

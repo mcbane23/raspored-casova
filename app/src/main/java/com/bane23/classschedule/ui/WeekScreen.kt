@@ -163,15 +163,24 @@ fun WeekScreen(
             item {
                 Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     PillToggle(Shift.entries, shift, { "${it.icon()} ${it.shortLabel()}" }, { shift = it })
-                    Text(
-                        (if (child.shiftMode == ShiftMode.WEEKLY) "Ove nedelje" else "Ovog meseca") +
-                            " ${currentShift.shortLabel().lowercase()}, " +
-                            (if (child.shiftMode == ShiftMode.WEEKLY) "sledeće" else "sledećeg") +
-                            " ${currentShift.other().shortLabel().lowercase()}",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(start = 8.dp),
-                    )
+                    val next = if (child.shiftMode == ShiftMode.WEEKLY) "sledeće nedelje" else "sledećeg meseca"
+                    if (shift != currentShift) {
+                        // The other shift is easy to mistake for this week's timetable, so it is named plainly.
+                        Text(
+                            "Prikazuješ smenu ${shift.shortLabel().lowercase()}, koja je $next",
+                            style = MaterialTheme.typography.labelLarge,
+                            color = accentText(),
+                            modifier = Modifier.padding(start = 8.dp),
+                        )
+                    } else {
+                        Text(
+                            (if (child.shiftMode == ShiftMode.WEEKLY) "Ove nedelje" else "Ovog meseca") +
+                                " ${currentShift.shortLabel().lowercase()}, $next ${currentShift.other().shortLabel().lowercase()}",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(start = 8.dp),
+                        )
+                    }
                 }
             }
         }
@@ -270,12 +279,8 @@ fun WeekScreen(
             item {
                 NoteBanner(
                     "💡",
-                    "Dodirni čas da promeniš predmet. Važi za svaki ${day.label().lowercase()} (${shift.shortLabel().lowercase()}). " +
-                        "Za promenu samo jednog dana idi na Danas.",
-                )
-            }
-            item {
-                NoteBanner("⏰", "Vreme časova se menja u zvonima.") {
+                    "Dodirni čas da ga promeniš za svaki ${day.label().lowercase()}. Jedan dan menjaš na Danas, a vreme časova u zvonima.",
+                ) {
                     TextButton(colors = accentTextButton(), onClick = onOpenBells) { Text("Zvona") }
                 }
             }
