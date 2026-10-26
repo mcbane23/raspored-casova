@@ -46,6 +46,7 @@ import com.bane23.classschedule.data.calendarEvents
 import com.bane23.classschedule.data.dayInfo
 import com.bane23.classschedule.data.dayStatus
 import com.bane23.classschedule.data.lessonsOn
+import com.bane23.classschedule.data.nextAlarm
 import com.bane23.classschedule.data.overrideOn
 import com.bane23.classschedule.data.shiftOn
 import java.time.LocalDate
@@ -132,7 +133,8 @@ private fun KidCard(child: Child, now: LocalDateTime, onClick: () -> Unit, onAla
         }
     }
     val end = lessons.lastOrNull()?.period?.end
-    val alarm = end?.minusMinutes(child.alarmMinutesBefore.toLong())
+    // The next alarm that will really ring: once today's has passed, the one on the next school day.
+    val alarm = child.nextAlarm(now)
 
     Surface(onClick = onClick, shape = MaterialTheme.shapes.extraLarge, color = colors.surfaceContainerLowest, modifier = Modifier.fillMaxWidth()) {
         Column(Modifier.padding(horizontal = 14.dp, vertical = 12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -182,8 +184,10 @@ private fun KidCard(child: Child, now: LocalDateTime, onClick: () -> Unit, onAla
                 Text(
                     when {
                         !child.alarmEnabled -> "isključen"
-                        alarm != null -> "🔔 ${alarm.label()}"
-                        else -> "🔔 uključen"
+                        alarm == null -> "🔔 uključen"
+                        alarm.toLocalDate() == today -> "🔔 ${alarm.toLocalTime().label()}"
+                        alarm.toLocalDate() == today.plusDays(1) -> "🔔 sutra ${alarm.toLocalTime().label()}"
+                        else -> "🔔 ${alarm.dayOfWeek.shortLabel().lowercase()} ${alarm.toLocalTime().label()}"
                     },
                     style = MaterialTheme.typography.titleSmall,
                 )

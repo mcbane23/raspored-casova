@@ -161,11 +161,14 @@ private fun settingsPage(route: String?): SettingsPage? {
     }
 }
 
-/** Where the back button leads from a settings page: a child's topic pages go back to that child's hub. */
-private fun SettingsPage.parent(): SettingsPage? = when (this) {
+/**
+ * Where the back button leads from a settings page: a child's topic pages go back to that child's hub, or straight to
+ * Settings when there is only one child, since its topics are listed there.
+ */
+private fun SettingsPage.parent(singleChild: Boolean): SettingsPage? = when (this) {
     SettingsPage.Home -> null
     is SettingsPage.ChildPage -> SettingsPage.Home
-    is SettingsPage.ForChild -> SettingsPage.ChildPage(childId)
+    is SettingsPage.ForChild -> if (singleChild) SettingsPage.Home else SettingsPage.ChildPage(childId)
 }
 
 /** The whole app; [openTodayFor] is a child id from a tapped notification, cleared through [onOpenedToday]. */
@@ -177,6 +180,8 @@ fun App(viewModel: AppViewModel = viewModel(), openTodayFor: String? = null, onO
     var settingsRoute by rememberSaveable { mutableStateOf<String?>(null) }
     // Hoisted so empty states, settings and the setup steps can open the Week tab straight in edit mode.
     var editingWeek by rememberSaveable { mutableStateOf(false) }
+    // The settings page the timetable editor was opened from, so "Gotovo" leads back there.
+    var returnAfterEdit by rememberSaveable { mutableStateOf<String?>(null) }
     val child = data.children.find { it.id == data.selectedChildId } ?: data.children.first()
     val shownTab = if (tab == Tab.FAMILY && !family) Tab.TODAY else tab
     val page = settingsPage(settingsRoute)
@@ -197,13 +202,19 @@ fun App(viewModel: AppViewModel = viewModel(), openTodayFor: String? = null, onO
     fun openSettings(next: SettingsPage?) { settingsRoute = next?.route() }
     fun editTimetable(childId: String) {
         viewModel.selectChild(childId)
+        returnAfterEdit = settingsRoute
         settingsRoute = null
         tab = Tab.WEEK
         editingWeek = true
     }
+    fun finishEditing() {
+        editingWeek = false
+        settingsRoute = returnAfterEdit
+        returnAfterEdit = null
+    }
 
-    BackHandler(enabled = page != null) { openSettings(page?.parent()) }
-    BackHandler(enabled = page == null && shownTab == Tab.WEEK && editingWeek) { editingWeek = false }
+    BackHandler(enabled = page != null) { openSettings(page?.parent(!family)) }
+    BackHandler(enabled = page == null && shownTab == Tab.WEEK && editingWeek) { finishEditing() }
 
     LaunchedEffect(openTodayFor) {
         val id = openTodayFor ?: return@LaunchedEffect
@@ -238,6 +249,7 @@ fun App(viewModel: AppViewModel = viewModel(), openTodayFor: String? = null, onO
                                 onClick = {
                                     tab = t
                                     if (t != Tab.WEEK) editingWeek = false
+                                returnAfterEdit = null
                                 },
                                 icon = { Icon(t.icon, contentDescription = null) },
                                 label = { Text(t.label, style = MaterialTheme.typography.labelLarge) },
@@ -272,6 +284,8 @@ fun App(viewModel: AppViewModel = viewModel(), openTodayFor: String? = null, onO
                         viewModel = viewModel,
                         onBack = { openSettings(null) },
                         onOpenChild = { openSettings(SettingsPage.ChildPage(it)) },
+                        onOpen = { openSettings(it) },
+                        onEditTimetable = { editTimetable(it) },
                         modifier = modifier,
                     )
                     page is SettingsPage.ChildPage && settingsChild != null -> ChildSettingsScreen(
@@ -284,17 +298,17 @@ fun App(viewModel: AppViewModel = viewModel(), openTodayFor: String? = null, onO
                         modifier = modifier,
                     )
                     page is SettingsPage.Profile && settingsChild != null ->
-                        ProfileScreen(settingsChild, viewModel, onBack = { openSettings(page.parent()) }, modifier = modifier)
+                        ProfileScreen(settingsChild, viewModel, onBack = { openSettings(page.parent(!family)) }, modifier = modifier)
                     page is SettingsPage.Notifications && settingsChild != null ->
-                        NotificationsScreen(settingsChild, viewModel, onBack = { openSettings(page.parent()) }, modifier = modifier)
+                        NotificationsScreen(settingsChild, viewModel, onBack = { openSettings(page.parent(!family)) }, modifier = modifier)
                     page is SettingsPage.SchoolCalendar && settingsChild != null ->
-                        SchoolCalendarScreen(settingsChild, viewModel, onBack = { openSettings(page.parent()) }, modifier = modifier)
+                        SchoolCalendarScreen(settingsChild, viewModel, onBack = { openSettings(page.parent(!family)) }, modifier = modifier)
                     page is SettingsPage.Bells && settingsChild != null ->
-                        BellsScreen(settingsChild, viewModel, onBack = { openSettings(page.parent()) }, modifier = modifier)
+                        BellsScreen(settingsChild, viewModel, onBack = { openSettings(page.parent(!family)) }, modifier = modifier)
                     page is SettingsPage.Subjects && settingsChild != null ->
-                        SubjectsScreen(settingsChild, viewModel, onBack = { openSettings(page.parent()) }, modifier = modifier)
+                        SubjectsScreen(settingsChild, viewModel, onBack = { openSettings(page.parent(!family)) }, modifier = modifier)
                     page is SettingsPage.Activities && settingsChild != null ->
-                        ActivitiesScreen(settingsChild, viewModel, onBack = { openSettings(page.parent()) }, modifier = modifier)
+                        ActivitiesScreen(settingsChild, viewModel, onBack = { openSettings(page.parent(!family)) }, modifier = modifier)
                     else -> when (screenTab) {
                         Tab.FAMILY -> FamilyScreen(
                             children = data.children,
@@ -326,7 +340,7 @@ fun App(viewModel: AppViewModel = viewModel(), openTodayFor: String? = null, onO
                             onOpenSettings = { openSettings(SettingsPage.Home) },
                             onOpenBells = { openSettings(SettingsPage.Bells(child.id)) },
                             editMode = editingWeek,
-                            onEditModeChange = { editingWeek = it },
+                            onEditModeChange = { if (it) editingWeek = true else finishEditing() },
                             onTimetableChange = { shift, timetable -> viewModel.setTimetable(child.id, shift, timetable) },
                             onSubjectUsed = { viewModel.addSubject(child.id, it) },
                             onSaveActivity = { saveActivity(child.id, it) },

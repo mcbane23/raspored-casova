@@ -79,7 +79,10 @@ sealed interface SettingsPage {
     data class Activities(override val childId: String) : ForChild
 }
 
-/** General settings: the list of children, QR import, theme and the app version. */
+/**
+ * General settings: the list of children, QR import, theme and the app version. With only one child its topics come
+ * first, so every option is one level less deep; [onOpen] and [onEditTimetable] serve those topics.
+ */
 @Composable
 fun SettingsHomeScreen(
     data: AppData,
@@ -87,35 +90,54 @@ fun SettingsHomeScreen(
     viewModel: AppViewModel,
     onBack: () -> Unit,
     onOpenChild: (String) -> Unit,
+    onOpen: (SettingsPage) -> Unit,
+    onEditTimetable: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     var addingChild by remember { mutableStateOf(false) }
     val scanQr = rememberQrImport(viewModel, replaceable = selected)
     val today = LocalDate.now()
+    val only = data.children.singleOrNull()
 
-    SettingsPageLayout("Raspored časova", "Podešavanja", onBack, modifier) {
-        SettingsGroup("Deca") {
-            data.children.forEach { c ->
-                val shift = c.shiftOn(today)
-                SettingsRow(
-                    title = c.name.ifBlank { "Bez imena" },
-                    subtitle = listOfNotNull(c.school.ifBlank { null }, "${shift.icon()} ${shift.shortLabel().lowercase()}").joinToString(" · "),
-                    leading = { ChildAvatar(c.name, size = 36.dp) },
-                    chevron = true,
-                    onClick = { onOpenChild(c.id) },
-                )
+    SettingsPageLayout(only?.name?.ifBlank { null } ?: "Raspored časova", "Podešavanja", onBack, modifier) {
+        if (only != null) {
+            ChildTopics(only, onOpen, onEditTimetable = { onEditTimetable(only.id) })
+            SettingsGroup("Deca") {
+                SettingsRow(title = "Dodaj još jedno dete", emoji = "➕", accent = true, onClick = { addingChild = true })
                 RowDivider()
+                SettingsRow(
+                    title = "Uvezi raspored sa QR koda",
+                    subtitle = "Sa telefona drugog roditelja ili deteta",
+                    emoji = "📷",
+                    onClick = scanQr,
+                )
             }
-            SettingsRow(title = "Dodaj dete", emoji = "➕", accent = true, onClick = { addingChild = true })
-            RowDivider()
-            SettingsRow(
-                title = "Uvezi raspored sa QR koda",
-                subtitle = "Sa telefona drugog roditelja ili deteta",
-                emoji = "📷",
-                onClick = scanQr,
-            )
+        } else {
+            SettingsGroup("Deca") {
+                data.children.forEach { c ->
+                    val shift = c.shiftOn(today)
+                    SettingsRow(
+                        title = c.name.ifBlank { "Bez imena" },
+                        subtitle = listOfNotNull(c.school.ifBlank { null }, "${shift.icon()} ${shift.shortLabel().lowercase()}").joinToString(" · "),
+                        leading = { ChildAvatar(c.name, size = 36.dp) },
+                        chevron = true,
+                        onClick = { onOpenChild(c.id) },
+                    )
+                    RowDivider()
+                }
+                SettingsRow(title = "Dodaj dete", emoji = "➕", accent = true, onClick = { addingChild = true })
+                RowDivider()
+                SettingsRow(
+                    title = "Uvezi raspored sa QR koda",
+                    subtitle = "Sa telefona drugog roditelja ili deteta",
+                    emoji = "📷",
+                    onClick = scanQr,
+                )
+            }
         }
-        Hint("Dodirni dete da podesiš smene, zvona, predmete, alarm i kalendar.", Modifier.padding(horizontal = 6.dp))
+        if (only == null) {
+            Hint("Dodirni dete da podesiš smene, zvona, predmete, alarm i kalendar.", Modifier.padding(horizontal = 6.dp))
+        }
         SettingsGroup("Izgled") {
             Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text("Tema", style = MaterialTheme.typography.titleSmall)
@@ -182,95 +204,9 @@ fun ChildSettingsScreen(
     modifier: Modifier = Modifier,
 ) {
     var confirmDelete by remember { mutableStateOf(false) }
-    var showQr by remember { mutableStateOf(false) }
-    val problem = rememberReminderProblem()
-    val today = LocalDate.now()
-    val now = LocalDateTime.now()
-    val shift = child.shiftOn(today)
-    val firstBell = child.timetable(shift).periods.firstOrNull()?.start
 
     SettingsPageLayout("Podešavanja", child.name.ifBlank { "Dete" }, onBack, modifier) {
-        SettingsGroup(null) {
-            SettingsRow(
-                title = "Ime, škola i smena",
-                subtitle = listOfNotNull(child.school.ifBlank { null }, "${shift.icon()} ${shiftSummary(child, today)}").joinToString(" · "),
-                leading = { ChildAvatar(child.name, size = 36.dp) },
-                chevron = true,
-                onClick = { onOpen(SettingsPage.Profile(child.id)) },
-            )
-        }
-
-        SettingsGroup("Raspored") {
-            SettingsRow(
-                title = "Časovi po danima",
-                subtitle = "Upiši ili promeni predmete za svaki dan",
-                emoji = "📅",
-                chevron = true,
-                onClick = onEditTimetable,
-            )
-            RowDivider()
-            SettingsRow(
-                title = "Zvona",
-                subtitle = firstBell?.let { "${shift.icon()} Prvi čas u ${it.label()} · posebno za svaku smenu" } ?: "Kad počinje i završava svaki čas",
-                emoji = "⏰",
-                chevron = true,
-                onClick = { onOpen(SettingsPage.Bells(child.id)) },
-            )
-            RowDivider()
-            SettingsRow(
-                title = "Predmeti i torba",
-                subtitle = "${child.subjects.size} predmeta · šta se nosi za koji",
-                emoji = "📚",
-                chevron = true,
-                onClick = { onOpen(SettingsPage.Subjects(child.id)) },
-            )
-            RowDivider()
-            SettingsRow(
-                title = "Vanškolske aktivnosti",
-                subtitle = when (val count = child.activities.size) {
-                    0 -> "Sport, hor, folklor, izleti… sa podsetnikom"
-                    else -> child.activities.take(3).joinToString(", ") { "${it.kind.emoji()} ${it.title}" } +
-                        if (count > 3) " i još ${count - 3}" else ""
-                },
-                emoji = "🏅",
-                chevron = true,
-                onClick = { onOpen(SettingsPage.Activities(child.id)) },
-            )
-        }
-
-        SettingsGroup("Obaveštenja") {
-            val alarm = child.nextAlarm(now)
-            val pack = child.nextPackReminder(now)
-            val activity = child.nextActivityReminder(now)
-            val anyOn = child.hasReminderOn()
-            SettingsRow(
-                title = "Alarm i podsetnici",
-                subtitle = when {
-                    anyOn && problem != null -> "⚠️ ${problem.title}"
-                    !anyOn -> "Isključeno · dodirni da uključiš"
-                    else -> listOfNotNull(
-                        if (!child.alarmEnabled) null else alarm?.let { "Alarm ${nextTimeLabel(it, today)}" } ?: "Alarm uključen",
-                        if (!child.packReminderEnabled) null else pack?.let { "torba ${nextTimeLabel(it, today)}" } ?: "podsetnik uključen",
-                        activity?.let { "aktivnost ${nextTimeLabel(it, today)}" },
-                    ).joinToString(" · ").replaceFirstChar { it.uppercase() }.ifEmpty { "Uključeno" }
-                },
-                emoji = "🔔",
-                chevron = true,
-                onClick = { onOpen(SettingsPage.Notifications(child.id)) },
-            )
-        }
-
-        SettingsGroup("Škola") {
-            SettingsRow(
-                title = "Školski kalendar",
-                subtitle = child.region.label() + if (child.finalGrade) " · 8. razred" else "",
-                emoji = "🗓️",
-                chevron = true,
-                onClick = { onOpen(SettingsPage.SchoolCalendar(child.id)) },
-            )
-            RowDivider()
-            SettingsRow("Podeli raspored", subtitle = "QR kod za drugi telefon", emoji = "📤", chevron = true, onClick = { showQr = true })
-        }
+        ChildTopics(child, onOpen, onEditTimetable)
 
         if (data.children.size > 1) {
             TextButton(colors = accentTextButton(), onClick = { confirmDelete = true }, modifier = Modifier.fillMaxWidth()) {
@@ -279,7 +215,6 @@ fun ChildSettingsScreen(
         }
     }
 
-    if (showQr) QrCodeDialog(child, onDismiss = { showQr = false })
     if (confirmDelete) {
         AlertDialog(
             onDismissRequest = { confirmDelete = false },
@@ -295,6 +230,104 @@ fun ChildSettingsScreen(
             dismissButton = { TextButton(colors = accentTextButton(), onClick = { confirmDelete = false }) { Text("Odustani") } },
         )
     }
+}
+
+/**
+ * One child's topics, each with a live summary: profile, timetable, bells, subjects, activities, notifications and
+ * the school calendar. Shown on the child's hub, or right on the Settings home when there is only one child.
+ */
+@Composable
+private fun ChildTopics(child: Child, onOpen: (SettingsPage) -> Unit, onEditTimetable: () -> Unit) {
+    var showQr by remember { mutableStateOf(false) }
+    val problem = rememberReminderProblem()
+    val today = LocalDate.now()
+    val now = LocalDateTime.now()
+    val shift = child.shiftOn(today)
+    val firstBell = child.timetable(shift).periods.firstOrNull()?.start
+
+    SettingsGroup(null) {
+        SettingsRow(
+            title = "Ime, škola i smena",
+            subtitle = listOfNotNull(child.school.ifBlank { null }, "${shift.icon()} ${shiftSummary(child, today)}").joinToString(" · "),
+            leading = { ChildAvatar(child.name, size = 36.dp) },
+            chevron = true,
+            onClick = { onOpen(SettingsPage.Profile(child.id)) },
+        )
+    }
+
+    SettingsGroup("Raspored") {
+        SettingsRow(
+            title = "Časovi po danima",
+            subtitle = "Upiši ili promeni predmete za svaki dan",
+            emoji = "📅",
+            chevron = true,
+            onClick = onEditTimetable,
+        )
+        RowDivider()
+        SettingsRow(
+            title = "Zvona",
+            subtitle = firstBell?.let { "${shift.icon()} Prvi čas u ${it.label()} · posebno za svaku smenu" } ?: "Kad počinje i završava svaki čas",
+            emoji = "⏰",
+            chevron = true,
+            onClick = { onOpen(SettingsPage.Bells(child.id)) },
+        )
+        RowDivider()
+        SettingsRow(
+            title = "Predmeti i torba",
+            subtitle = "${child.subjects.size} predmeta · šta se nosi za koji",
+            emoji = "📚",
+            chevron = true,
+            onClick = { onOpen(SettingsPage.Subjects(child.id)) },
+        )
+        RowDivider()
+        SettingsRow(
+            title = "Vanškolske aktivnosti",
+            subtitle = when (val count = child.activities.size) {
+                0 -> "Sport, hor, folklor, izleti… sa podsetnikom"
+                else -> child.activities.take(3).joinToString(", ") { "${it.kind.emoji()} ${it.title}" } +
+                    if (count > 3) " i još ${count - 3}" else ""
+            },
+            emoji = "🏅",
+            chevron = true,
+            onClick = { onOpen(SettingsPage.Activities(child.id)) },
+        )
+    }
+
+    SettingsGroup("Obaveštenja") {
+        val alarm = child.nextAlarm(now)
+        val pack = child.nextPackReminder(now)
+        val activity = child.nextActivityReminder(now)
+        val anyOn = child.hasReminderOn()
+        SettingsRow(
+            title = "Alarm i podsetnici",
+            subtitle = when {
+                anyOn && problem != null -> "⚠️ ${problem.title}"
+                !anyOn -> "Isključeno · dodirni da uključiš"
+                else -> listOfNotNull(
+                    if (!child.alarmEnabled) null else alarm?.let { "Alarm ${nextTimeLabel(it, today)}" } ?: "Alarm uključen",
+                    if (!child.packReminderEnabled) null else pack?.let { "torba ${nextTimeLabel(it, today)}" } ?: "podsetnik uključen",
+                    activity?.let { "aktivnost ${nextTimeLabel(it, today)}" },
+                ).joinToString(" · ").replaceFirstChar { it.uppercase() }.ifEmpty { "Uključeno" }
+            },
+            emoji = "🔔",
+            chevron = true,
+            onClick = { onOpen(SettingsPage.Notifications(child.id)) },
+        )
+    }
+
+    SettingsGroup("Škola") {
+        SettingsRow(
+            title = "Školski kalendar",
+            subtitle = child.region.label() + if (child.finalGrade) " · 8. razred" else "",
+            emoji = "🗓️",
+            chevron = true,
+            onClick = { onOpen(SettingsPage.SchoolCalendar(child.id)) },
+        )
+        RowDivider()
+        SettingsRow("Podeli raspored", subtitle = "QR kod za drugi telefon", emoji = "📤", chevron = true, onClick = { showQr = true })
+    }
+
+    if (showQr) QrCodeDialog(child, onDismiss = { showQr = false })
 }
 
 /** Name, school and shift rotation. */
