@@ -1,6 +1,6 @@
 # Privacy Policy – Raspored časova
 
-_Effective 26 October 2026_
+_Effective 27 October 2026_
 
 Published at https://mcbane23.github.io/privacy/raspored-casova/ (source: the `mcbane23/privacy` repository).
 When this policy changes, update both copies.
@@ -46,7 +46,10 @@ Android settings.
 
 ## Children
 
-The app is meant to be used by parents and their children. It collects no data from anyone, including children.
+The app is made for primary-school children (about 6 to 15 years old) and their parents, and children may use it on
+their own. It collects no personal information from anyone, including children: there are no accounts, no ads, no
+analytics and no internet access, and nothing a child enters ever leaves the device unless a parent or the child
+shows a QR code that another phone scans. The app follows Google Play's Families policy.
 
 ## Contact
 
@@ -62,4 +65,5 @@ tvom telefonu**. Aplikacija nema nalog, server ni analitiku, ne šalje i ne deli
 internet. Dozvola za obaveštenja služi samo za podsetnike o kraju nastave, pakovanju torbe i aktivnostima, a dozvola za pokretanje pri uključivanju
 telefona samo da se podsetnici vrate posle restarta; dozvola za alarme i podsetnike služi da stignu u minut. Kamera se koristi samo dok skeniraš QR kod rasporeda sa
 drugog telefona; slike se ne čuvaju niti šalju. Podaci se brišu deinstalacijom aplikacije ili brisanjem
-njene memorije u podešavanjima telefona.
+njene memorije u podešavanjima telefona. Aplikacija je namenjena deci osnovnoškolskog uzrasta i njihovim roditeljima;
+ni od koga, pa ni od dece, ne prikuplja lične podatke i poštuje pravila Google Play-a za aplikacije za decu (Families).
