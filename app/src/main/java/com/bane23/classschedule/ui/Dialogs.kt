@@ -67,13 +67,32 @@ fun TextInputDialog(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun TimeInputDialog(title: String, initialMinute: Int, onDismiss: () -> Unit, onConfirm: (Int) -> Unit) {
+fun TimeInputDialog(
+    title: String,
+    initialMinute: Int,
+    onDismiss: () -> Unit,
+    onConfirm: (Int) -> Unit,
+    /** Why the picked minute cannot be saved, shown under the picker; null when it can. */
+    error: (Int) -> String? = { null },
+) {
     val state = rememberTimePickerState(initialHour = initialMinute / 60, initialMinute = initialMinute % 60, is24Hour = true)
+    val problem = error(state.hour * 60 + state.minute)
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(title) },
-        text = { TimePicker(state = state) },
-        confirmButton = { TextButton(colors = accentTextButton(), onClick = { onConfirm(state.hour * 60 + state.minute) }) { Text("Sačuvaj") } },
+        text = {
+            Column {
+                TimePicker(state = state)
+                if (problem != null) {
+                    Text(problem, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.error)
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(colors = accentTextButton(), enabled = problem == null, onClick = { onConfirm(state.hour * 60 + state.minute) }) {
+                Text("Sačuvaj")
+            }
+        },
         dismissButton = { TextButton(colors = accentTextButton(), onClick = onDismiss) { Text("Odustani") } },
     )
 }
@@ -123,6 +142,7 @@ fun SubjectPickerSheet(
                 (listOf<ExtraClass?>(null) + ExtraClass.entries).forEach { k ->
                     val selected = kind == k
                     Surface(
+                        selected = selected,
                         onClick = { kind = k },
                         shape = CircleShape,
                         color = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceContainerLowest,

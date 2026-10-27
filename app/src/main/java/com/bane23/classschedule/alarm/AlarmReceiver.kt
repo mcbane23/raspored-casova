@@ -45,12 +45,16 @@ class AlarmReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         val childId = intent.getStringExtra(AlarmScheduler.EXTRA_CHILD_ID) ?: return
         val child = ChildRepository.get(context).data.value.children.find { it.id == childId } ?: return
-        when (intent.action) {
-            AlarmScheduler.ACTION_PACK_BAG -> if (child.packReminderEnabled) showPackReminder(context, child)
-            AlarmScheduler.ACTION_ACTIVITY -> showActivityReminders(context, child, intent.getLongExtra(AlarmScheduler.EXTRA_AT, 0))
-            else -> if (child.alarmEnabled) showClassesOver(context, child)
+        try {
+            when (intent.action) {
+                AlarmScheduler.ACTION_PACK_BAG -> if (child.packReminderEnabled) showPackReminder(context, child)
+                AlarmScheduler.ACTION_ACTIVITY -> showActivityReminders(context, child, intent.getLongExtra(AlarmScheduler.EXTRA_AT, 0))
+                else -> if (child.alarmEnabled) showClassesOver(context, child)
+            }
+        } finally {
+            // Even if a reminder could not be shown, the next ones stay scheduled.
+            AlarmScheduler.schedule(context, child)
         }
-        AlarmScheduler.schedule(context, child)
     }
 
     private fun showClassesOver(context: Context, child: Child) {
@@ -153,7 +157,8 @@ class AlarmReceiver : BroadcastReceiver() {
             "${reminder.activity.id}:${reminder.start}".hashCode()
 
         /**
-         * Posts a notification; returns false when notifications are not allowed. With [alarmSound] it uses the
+         * Posts a notification; returns false when notifications are not allowed, for the app or for the reminder's
+         * channel (then nothing vibrates either). With [alarmSound] it uses the
          * phone's alarm tone at alarm volume and repeats it until the notification is opened or dismissed,
          * with [silent] it makes no sound at all, otherwise it plays the app's school-bell chime once.
          * It always vibrates, also with [silent] and when the phone's sound is off (see [vibrateIfMuted]).
@@ -201,6 +206,12 @@ class AlarmReceiver : BroadcastReceiver() {
                     else -> ACTIVITY_BELL_CHANNEL_ID
                 }
             }
+            val manager = NotificationManagerCompat.from(context)
+            if (!manager.areNotificationsEnabled() ||
+                manager.getNotificationChannel(channel)?.importance == NotificationManager.IMPORTANCE_NONE
+            ) {
+                return false
+            }
             val builder = NotificationCompat.Builder(context, channel)
                 .setSmallIcon(R.drawable.ic_notification)
                 .setContentTitle(title)
@@ -212,7 +223,7 @@ class AlarmReceiver : BroadcastReceiver() {
             if (bigText != null) builder.setStyle(NotificationCompat.BigTextStyle().bigText(bigText))
             val notification = builder.build()
             if (ringing) notification.flags = notification.flags or Notification.FLAG_INSISTENT
-            NotificationManagerCompat.from(context).notify(id, notification)
+            manager.notify(id, notification)
             vibrateIfMuted(context)
             return true
         }

@@ -47,21 +47,41 @@ No account, no ads, all data stays on your phone.
 | Ads | No ads |
 | App access | All functionality available without login |
 | Content rating | Reference/utility app, no objectionable content |
-| Target audience | Parents (18+); not designed primarily for children, so the Families policy does not apply |
+| Target audience | Ages 6–8, 9–12 and 13–15 (primary-school pupils) and 18+ (parents); children are in the target audience, so the Families policy applies (see below) |
 | Data safety | No data collected, no data shared; data is not encrypted in transit because nothing is transmitted |
 | Government app | No |
 | Financial features | None |
 | Health | No |
 
+## Families policy
+
+The app is meant for both children and parents, so its target audience includes children and Google Play's
+[Families policy](https://support.google.com/googleplay/android-developer/answer/9893335) applies. How the app meets it:
+
+- **Ads:** none, and no ad or analytics SDKs, so no Families self-certified ad SDK is needed and the app has no
+  advertising ID.
+- **Data:** nothing is collected or transmitted; all data stays in the app's private storage. The Data safety form
+  answer is "No data collected" and "No data shared".
+- **Privacy policy:** its "Children" section covers use by children (no personal information is collected from
+  anyone, including children).
+- **Permissions:** no location, contacts, accounts or internet. The camera is used only while scanning a timetable
+  QR code and no image is kept.
+- **Content:** no user-generated content shared with others, no links out of the app, no purchases. Answer the
+  content rating questionnaire with "no" to violence, fear, sexuality, language, gambling and user interaction;
+  the expected rating is PEGI 3 / Everyone.
+- **Store listing:** the listing, screenshots and graphics are suitable for children and do not ask children to do
+  anything a parent should decide.
+- Before each release, check that a new library does not bring ads, analytics or the `AD_ID` permission.
+
 ## Permissions declared
 
-- `POST_NOTIFICATIONS` – the optional "classes are over" and "pack the bag" reminders.
-- `RECEIVE_BOOT_COMPLETED` – reschedules that reminder after a restart.
-- `SCHEDULE_EXACT_ALARM` – lets both reminders fire at the exact minute set. On Android 12+ the user grants it under "Alarms & reminders"; the app links there and warns while it is missing.
+- `POST_NOTIFICATIONS` – the optional "classes are over", "pack the bag" and extracurricular activity reminders.
+- `RECEIVE_BOOT_COMPLETED` – reschedules the reminders after a restart, an app update or a time change.
+- `SCHEDULE_EXACT_ALARM` – lets the reminders fire at the exact minute set. On Android 12+ the user grants it under "Alarms & reminders"; the app links there and warns while it is missing.
 - `VIBRATE` – every reminder vibrates; when the ringer is set to silent the app buzzes the phone itself so the reminder is still noticed.
 - `CAMERA` (from the zxing-android-embedded scanner) – scanning a shared timetable QR code.
 
-With exact alarms allowed the app uses `AlarmManager.setAlarmClock`, which fires on time even in Doze; without the permission it falls back to `setAndAllowWhileIdle`, which Android may delay by 10-15 minutes. It uses the user-granted `SCHEDULE_EXACT_ALARM`, not `USE_EXACT_ALARM` (reserved by Play policy for alarm-clock and calendar apps), so no exact-alarm declaration form is needed. It does not request `REQUEST_IGNORE_BATTERY_OPTIMIZATIONS`; Settings only links to the system battery optimization list.
+With exact alarms allowed the app uses `AlarmManager.setAlarmClock`, which fires on time even in Doze; without the permission it falls back to `setAndAllowWhileIdle`, which Android may deliver up to an hour late. It uses the user-granted `SCHEDULE_EXACT_ALARM`, not `USE_EXACT_ALARM` (reserved by Play policy for alarm-clock and calendar apps), so no exact-alarm declaration form is needed. It does not request `REQUEST_IGNORE_BATTERY_OPTIMIZATIONS`; Settings only links to the system battery optimization list.
 
 ## Store listing (Serbian)
 
@@ -84,6 +104,8 @@ sledećeg raspusta. Podržani su centralna Srbija i Vojvodina, kao i raniji kraj
 • Događaji škole – dodajte Dan škole, školsku slavu ili druge slobodne dane.
 • Roditeljski alarm – obaveštenje kad se završi poslednji čas (ili nekoliko minuta ranije).
 • Podsetnik za torbu – uveče pred školski dan podseća dete šta da spakuje za sutra.
+• Vanškolske aktivnosti – trening, hor, škola stranog jezika ili izlet, sa podsetnikom pre početka; jedan termin
+može da se otkaže ili pomeri, a redovan raspored ostaje.
 • Više dece – svako dete ima svoj raspored, smenu i kalendar.
 • Spisak predmeta – izaberite predmet iz liste umesto kucanja, uz dopunsku i dodatnu nastavu iz bilo kog predmeta.
 • Pretčas – za smene koje počinju pretčasom.

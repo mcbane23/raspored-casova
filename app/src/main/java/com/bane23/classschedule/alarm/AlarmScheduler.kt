@@ -21,7 +21,7 @@ import java.time.ZoneId
  * When exact alarms are allowed (always on Android 11 and older; on Android 12+ once the user grants "Alarms &
  * reminders") they are set with [AlarmManager.setAlarmClock]: they fire at the set minute, wake the phone from Doze
  * and are not batched or deferred by battery savers. Without that permission Android only offers inexact alarms,
- * which phones (Samsung in particular) delay by 10-15 minutes, so the settings screen warns and links to the switch.
+ * which Android may deliver up to an hour late, so the settings screen warns and links to the switch.
  */
 object AlarmScheduler {
     const val EXTRA_CHILD_ID = "childId"
@@ -33,31 +33,39 @@ object AlarmScheduler {
     const val EXTRA_AT = "at"
 
     fun scheduleAll(context: Context, data: AppData) {
-        data.children.forEach { schedule(context, it) }
+        // One child's broken data must not leave the other children without their reminders.
+        data.children.forEach { child -> runCatching { schedule(context, child) } }
+    }
+
+    /** Cancels every alarm of a deleted child, so none of them fires or shows as the phone's next alarm. */
+    fun cancel(context: Context, childId: String) {
+        val alarmManager = context.getSystemService(AlarmManager::class.java) ?: return
+        listOf(ACTION_CLASSES_OVER, ACTION_PACK_BAG, ACTION_ACTIVITY).forEach { alarmManager.cancel(pendingIntent(context, it, childId)) }
     }
 
     fun schedule(context: Context, child: Child) {
         val alarmManager = context.getSystemService(AlarmManager::class.java) ?: return
         val now = LocalDateTime.now()
-        set(context, alarmManager, pendingIntent(context, ACTION_CLASSES_OVER, child.id), child.nextAlarm(now))
-        set(context, alarmManager, pendingIntent(context, ACTION_PACK_BAG, child.id), child.nextPackReminder(now))
+        set(context, alarmManager, child.id, pendingIntent(context, ACTION_CLASSES_OVER, child.id), child.nextAlarm(now))
+        set(context, alarmManager, child.id, pendingIntent(context, ACTION_PACK_BAG, child.id), child.nextPackReminder(now))
         val activity = child.nextActivityReminder(now)
-        set(context, alarmManager, pendingIntent(context, ACTION_ACTIVITY, child.id, activity?.let(::epochMillis)), activity)
+        set(context, alarmManager, child.id, pendingIntent(context, ACTION_ACTIVITY, child.id, activity?.let(::epochMillis)), activity)
     }
 
     /** Sets [intent] to fire at [next], or cancels it when [next] is null. */
-    private fun set(context: Context, alarmManager: AlarmManager, intent: PendingIntent, next: LocalDateTime?) {
+    private fun set(context: Context, alarmManager: AlarmManager, childId: String, intent: PendingIntent, next: LocalDateTime?) {
         if (next == null) {
             alarmManager.cancel(intent)
             return
         }
         val triggerAt = epochMillis(next)
         if (canScheduleExact(context)) {
-            // Shown by the system for the upcoming alarm (e.g. on the lock screen); opens the app.
+            // Shown by the system for the upcoming alarm (e.g. on the lock screen); opens the child's Today tab in
+            // the running app instead of starting a second copy of it.
             val show = PendingIntent.getActivity(
                 context,
-                0,
-                Intent(context, MainActivity::class.java),
+                childId.hashCode(),
+                MainActivity.openTodayIntent(context, childId),
                 PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
             )
             try {

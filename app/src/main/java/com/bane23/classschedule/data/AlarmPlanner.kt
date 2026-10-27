@@ -5,7 +5,7 @@ import java.time.LocalDateTime
 import java.time.LocalTime
 
 /** When the last class on [date] ends, or null if there are no classes that day. */
-fun Child.classesEndOn(date: LocalDate): LocalTime? = lessonsOn(date).lastOrNull()?.period?.end
+fun Child.classesEndOn(date: LocalDate): LocalTime? = lessonsOn(date).maxOfOrNull { it.period.end }
 
 /**
  * The next time strictly after [now] the parent should be told that classes are ending, looking up to [daysAhead]

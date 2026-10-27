@@ -34,7 +34,11 @@ Serbian.
   and Today tabs show a warning with a button to the setting that fixes it.
 
 The official calendar lives in `app/src/main/java/com/bane23/classschedule/data/SchoolCalendar.kt` (`SCHOOL_YEARS`).
-Add a new `SchoolYear` there each summer once the ministry publishes the next year's calendar.
+Add a new `SchoolYear` there each summer once the ministry publishes the next year's calendar. Central Serbia and
+Vojvodina have separate rulebooks; a Saturday taught by a weekday's timetable is an event with `timetableDay` set.
+
+- **Bells:** moving the start of a class moves every later class by the same amount, so breaks stay the same; the
+  pre-class moves alone. A time that would overlap the class before or after it cannot be saved.
 
 - **Subjects:** each child has an editable subject list (Serbian primary-school subjects by default); the timetable
   and one-day changes pick subjects from a sheet of tiles, and a subject typed by hand is added to the list. Each

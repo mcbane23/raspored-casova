@@ -41,6 +41,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.bane23.classschedule.data.Child
@@ -51,6 +52,7 @@ import com.bane23.classschedule.data.Shift
 import com.bane23.classschedule.data.ShiftMode
 import com.bane23.classschedule.data.Timetable
 import com.bane23.classschedule.data.other
+import com.bane23.classschedule.data.currentShiftDate
 import com.bane23.classschedule.data.shiftOn
 import com.bane23.classschedule.data.weeklyActivitiesOn
 import java.time.DayOfWeek
@@ -80,7 +82,9 @@ fun WeekScreen(
 ) {
     val today = rememberNow().toLocalDate()
     val offerUndo = LocalUndo.current
-    val currentShift = child.shiftOn(today)
+    // On a weekend the week view shows Monday, so "this week" is the coming one.
+    val shiftDate = child.currentShiftDate(today)
+    val currentShift = child.shiftOn(shiftDate)
     var shift by rememberSaveable(child.id) { mutableStateOf(currentShift) }
     var dayIndex by rememberSaveable { mutableIntStateOf(SCHOOL_DAYS.indexOf(today.dayOfWeek).coerceAtLeast(0)) }
     var wholeWeek by rememberSaveable { mutableStateOf(false) }
@@ -163,7 +167,12 @@ fun WeekScreen(
             item {
                 Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     PillToggle(Shift.entries, shift, { "${it.icon()} ${it.shortLabel()}" }, { shift = it })
-                    val next = if (child.shiftMode == ShiftMode.WEEKLY) "sledeće nedelje" else "sledećeg meseca"
+                    val comingWeek = shiftDate != today
+                    val next = when {
+                        child.shiftMode != ShiftMode.WEEKLY -> "sledećeg meseca"
+                        comingWeek -> "nedelju dana kasnije"
+                        else -> "sledeće nedelje"
+                    }
                     if (shift != currentShift) {
                         // The other shift is easy to mistake for this week's timetable, so it is named plainly.
                         Text(
@@ -174,7 +183,11 @@ fun WeekScreen(
                         )
                     } else {
                         Text(
-                            (if (child.shiftMode == ShiftMode.WEEKLY) "Ove nedelje" else "Ovog meseca") +
+                            when {
+                                child.shiftMode != ShiftMode.WEEKLY -> "Ovog meseca"
+                                comingWeek -> "Od ponedeljka"
+                                else -> "Ove nedelje"
+                            } +
                                 " ${currentShift.shortLabel().lowercase()}, $next ${currentShift.other().shortLabel().lowercase()}",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -279,7 +292,7 @@ fun WeekScreen(
             item {
                 NoteBanner(
                     "💡",
-                    "Dodirni čas da ga promeniš za svaki ${day.label().lowercase()}. Jedan dan menjaš na Danas, a vreme časova u zvonima.",
+                    "Dodirni čas da ga promeniš za ${day.every()}. Jedan dan menjaš na Danas, a vreme časova u zvonima.",
                 ) {
                     TextButton(colors = accentTextButton(), onClick = onOpenBells) { Text("Zvona") }
                 }
@@ -333,6 +346,7 @@ fun WeekScreen(
 private fun DayChip(day: DayOfWeek, count: Int, selected: Boolean, isToday: Boolean, onClick: () -> Unit, modifier: Modifier) {
     val colors = MaterialTheme.colorScheme
     Surface(
+        selected = selected,
         onClick = onClick,
         modifier = modifier.heightIn(min = 56.dp),
         shape = MaterialTheme.shapes.medium,
@@ -383,7 +397,8 @@ private fun LessonRow(
         Row(Modifier.padding(start = 8.dp, end = 12.dp, top = 7.dp, bottom = 7.dp), verticalAlignment = Alignment.CenterVertically) {
             if (free) {
                 Box(Modifier.size(44.dp).border(1.5.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(14.dp)), contentAlignment = Alignment.Center) {
-                    Text("+", fontSize = 20.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    // Only an invitation to add a class while editing; in the plain view the period cannot be tapped.
+                    if (editMode) Text("+", fontSize = 20.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             } else {
                 SubjectBadge(subject, size = 44.dp)
@@ -400,7 +415,12 @@ private fun LessonRow(
                 Text("$label · $time", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
             if (editMode && !free) {
-                Surface(onClick = onClear, shape = CircleShape, color = MaterialTheme.colorScheme.background, modifier = Modifier.size(36.dp)) {
+                Surface(
+                    onClick = onClear,
+                    shape = CircleShape,
+                    color = MaterialTheme.colorScheme.background,
+                    modifier = Modifier.size(36.dp).semantics { contentDescription = "Ukloni čas" },
+                ) {
                     Box(contentAlignment = Alignment.Center) {
                         Text("×", style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
@@ -457,7 +477,7 @@ private fun WeekTable(timetable: Timetable, today: DayOfWeek, onEdit: () -> Unit
                             verticalArrangement = Arrangement.Center,
                         ) {
                             Text(subjectStyle(subject).emoji, fontSize = 18.sp)
-                            Text(shortName(subject), style = MaterialTheme.typography.labelSmall, maxLines = 1)
+                            Text(shortName(subject), style = MaterialTheme.typography.labelSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
                         }
                     }
                 }
