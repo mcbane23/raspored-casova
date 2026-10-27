@@ -17,7 +17,9 @@ Serbian.
   do it by accident. A class can also be added for that day only. Changes for past days are removed automatically.
 - **Nedelja (Week):** the regular Monday–Friday timetable, kept separately for the morning and afternoon shift, shown
   one day at a time (swipe to change the day) or, with the round button at the top, as a whole-week table. "Uredi"
-  switches to editing, where each period opens a sheet of subject tiles.
+  switches to editing, where each period opens a sheet of subject tiles. "Gotovo" keeps the changes; leaving the
+  editor with the back button or another tab asks whether to save or discard them ("Sačuvaj" / "Odbaci" / "Nastavi
+  uređivanje"), while bell times changed on the way from the editor stay either way.
 - **Raspust (Breaks):** the official Serbian primary-school calendar (breaks, days off, swapped days) with a big
   countdown to the next break, plus the school's own events (e.g. Dan škole, school slava) added per child, with
   one-tap chips for common events and a date-range picker. Days without classes show no lessons on the Today tab.

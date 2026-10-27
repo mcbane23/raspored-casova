@@ -52,6 +52,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.bane23.classschedule.data.ThemeMode
+import com.bane23.classschedule.data.TimetableSnapshot
 import com.bane23.classschedule.ui.ActivitiesScreen
 import com.bane23.classschedule.ui.AppViewModel
 import com.bane23.classschedule.ui.BellsScreen
@@ -67,6 +68,7 @@ import com.bane23.classschedule.ui.SettingsHomeScreen
 import com.bane23.classschedule.ui.SettingsPage
 import com.bane23.classschedule.ui.SubjectsScreen
 import com.bane23.classschedule.ui.TodayScreen
+import com.bane23.classschedule.ui.UnsavedTimetableDialog
 import com.bane23.classschedule.ui.WeekScreen
 import com.bane23.classschedule.ui.accentText
 import com.bane23.classschedule.ui.rememberActivitySaver
@@ -186,6 +188,10 @@ fun App(viewModel: AppViewModel = viewModel(), openTodayFor: String? = null, onO
     var returnAfterEdit by rememberSaveable { mutableStateOf<String?>(null) }
     // The bells page was opened from the timetable editor, so going back returns to the editor.
     var bellsFromEditor by rememberSaveable { mutableStateOf(false) }
+    // The timetables when the editor opened (encoded, so they survive rotation), for "Odbaci".
+    var editStart by rememberSaveable { mutableStateOf<String?>(null) }
+    // Where the editor was about to go when it asked whether to keep the changes.
+    var leaveEditor by remember { mutableStateOf<(() -> Unit)?>(null) }
     val child = data.children.find { it.id == data.selectedChildId } ?: data.children.first()
     val shownTab = if (tab == Tab.FAMILY && !family) Tab.TODAY else tab
     val page = settingsPage(settingsRoute)
@@ -210,28 +216,45 @@ fun App(viewModel: AppViewModel = viewModel(), openTodayFor: String? = null, onO
     fun back(from: SettingsPage) {
         if (from is SettingsPage.Bells && bellsFromEditor) openSettings(null) else openSettings(from.parent(!family))
     }
+    fun startEditing() {
+        if (!editingWeek) editStart = TimetableSnapshot.of(data.children).encode()
+        editingWeek = true
+    }
     fun editTimetable(childId: String) {
         viewModel.selectChild(childId)
         returnAfterEdit = settingsRoute
         settingsRoute = null
         tab = Tab.WEEK
-        editingWeek = true
+        startEditing()
     }
     fun finishEditing() {
         editingWeek = false
+        editStart = null
         settingsRoute = returnAfterEdit
         returnAfterEdit = null
     }
+    // Leaving the editor any way but "Gotovo" first asks what to do with the changes, if there are any.
+    fun leaveEditing(then: () -> Unit) {
+        val changed = editStart?.let(TimetableSnapshot::decode)?.hasChanges(data.children) == true
+        if (changed) leaveEditor = then else then()
+    }
+    fun discardEdits() {
+        editStart?.let(TimetableSnapshot::decode)?.changes(data.children)?.forEach { (id, shift, timetable) ->
+            viewModel.setTimetable(id, shift, timetable)
+        }
+    }
 
     BackHandler(enabled = page != null) { page?.let(::back) }
-    BackHandler(enabled = page == null && shownTab == Tab.WEEK && editingWeek) { finishEditing() }
+    BackHandler(enabled = page == null && shownTab == Tab.WEEK && editingWeek) { leaveEditing(::finishEditing) }
 
     LaunchedEffect(openTodayFor) {
         val id = openTodayFor ?: return@LaunchedEffect
         if (data.children.any { it.id == id }) viewModel.selectChild(id)
         tab = Tab.TODAY
         settingsRoute = null
+        // A tapped notification leaves the editor at once; what was edited stays, as with "Gotovo".
         editingWeek = false
+        editStart = null
         returnAfterEdit = null
         bellsFromEditor = false
         onOpenedToday()
@@ -260,9 +283,15 @@ fun App(viewModel: AppViewModel = viewModel(), openTodayFor: String? = null, onO
                             NavigationBarItem(
                                 selected = shownTab == t,
                                 onClick = {
-                                    tab = t
-                                    if (t != Tab.WEEK) editingWeek = false
-                                    returnAfterEdit = null
+                                    val open = {
+                                        tab = t
+                                        if (t != Tab.WEEK) {
+                                            editingWeek = false
+                                            editStart = null
+                                        }
+                                        returnAfterEdit = null
+                                    }
+                                    if (editingWeek && t != Tab.WEEK) leaveEditing(open) else open()
                                 },
                                 icon = { Icon(t.icon, contentDescription = null) },
                                 label = { Text(t.label, style = MaterialTheme.typography.labelLarge) },
@@ -358,7 +387,7 @@ fun App(viewModel: AppViewModel = viewModel(), openTodayFor: String? = null, onO
                                 bellsFromEditor = true
                             },
                             editMode = editingWeek,
-                            onEditModeChange = { if (it) editingWeek = true else finishEditing() },
+                            onEditModeChange = { if (it) startEditing() else finishEditing() },
                             onTimetableChange = { shift, timetable -> viewModel.setTimetable(child.id, shift, timetable) },
                             onSubjectUsed = { viewModel.addSubject(child.id, it) },
                             onSaveActivity = { saveActivity(child.id, it) },
@@ -378,6 +407,21 @@ fun App(viewModel: AppViewModel = viewModel(), openTodayFor: String? = null, onO
                 }
             }
         }
+    }
+
+    leaveEditor?.let { then ->
+        UnsavedTimetableDialog(
+            onSave = {
+                leaveEditor = null
+                then()
+            },
+            onDiscard = {
+                leaveEditor = null
+                discardEdits()
+                then()
+            },
+            onKeepEditing = { leaveEditor = null },
+        )
     }
 }
 

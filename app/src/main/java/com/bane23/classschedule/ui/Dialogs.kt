@@ -225,3 +225,21 @@ private fun SheetButton(text: String, color: Color, modifier: Modifier, onClick:
         }
     }
 }
+
+/** Shown when the timetable editor is left without "Gotovo" while it has changes: save, discard or keep editing. */
+@Composable
+fun UnsavedTimetableDialog(onSave: () -> Unit, onDiscard: () -> Unit, onKeepEditing: () -> Unit) {
+    AlertDialog(
+        onDismissRequest = onKeepEditing,
+        title = { Text("Sačuvati izmene?") },
+        text = { Text("Raspored ima izmene koje nisu sačuvane.") },
+        confirmButton = {
+            // Three choices do not fit side by side, so they are stacked with the main one on top.
+            Column(horizontalAlignment = Alignment.End) {
+                TextButton(colors = accentTextButton(), onClick = onSave) { Text("Sačuvaj") }
+                TextButton(colors = accentTextButton(), onClick = onDiscard) { Text("Odbaci") }
+                TextButton(colors = accentTextButton(), onClick = onKeepEditing) { Text("Nastavi uređivanje") }
+            }
+        },
+    )
+}
