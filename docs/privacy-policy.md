@@ -21,7 +21,7 @@ third-party SDKs that collect data. The app does not request internet access.
 
 ## Permissions
 
-- **Notifications** – used only to show the "classes are over", "pack the bag" and activity reminders you turn on in
+- **Notifications** – used only to show the "classes are over", morning, "pack the bag" and activity reminders you turn on in
   the app.
 - **Alarms & reminders (exact alarms)** – used only so those reminders arrive at the exact minute.
 - **Run at startup** – used only to set the reminders again after the phone restarts or the time changes.
@@ -62,7 +62,7 @@ Questions about this policy: citisdevelopment@gmail.com
 Sve što uneseš u aplikaciju (imena dece, škola, raspored, predmeti, zvona, događaji, vanškolske aktivnosti, alarm i
 podsetnici) čuva se **samo na
 tvom telefonu**. Aplikacija nema nalog, server ni analitiku, ne šalje i ne deli nikakve podatke i ne koristi
-internet. Dozvola za obaveštenja služi samo za podsetnike o kraju nastave, pakovanju torbe i aktivnostima, a dozvola za pokretanje pri uključivanju
+internet. Dozvola za obaveštenja služi samo za podsetnike o kraju nastave, jutarnji podsetnik, pakovanje torbe i aktivnosti, a dozvola za pokretanje pri uključivanju
 telefona samo da se podsetnici vrate posle restarta; dozvola za alarme i podsetnike služi da stignu u minut. Kamera se koristi samo dok skeniraš QR kod rasporeda sa
 drugog telefona; slike se ne čuvaju niti šalju. Podaci se brišu deinstalacijom aplikacije ili brisanjem
 njene memorije u podešavanjima telefona. Aplikacija je namenjena deci osnovnoškolskog uzrasta i njihovim roditeljima;

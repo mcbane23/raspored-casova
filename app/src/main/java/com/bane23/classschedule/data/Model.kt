@@ -258,6 +258,17 @@ data class Child(
     val activityReminderSound: Boolean = false,
     /** Activity reminders without any sound; takes precedence over [activityReminderSound]. */
     val activityReminderSilent: Boolean = false,
+    /**
+     * Remind in the morning, before the first class, to check today's plan, so a class moved or cancelled for that day
+     * only is changed in the app before school starts.
+     */
+    val morningReminderEnabled: Boolean = false,
+    /** How many minutes before the first class of the day the morning reminder comes. */
+    val morningReminderMinutesBefore: Int = DEFAULT_MORNING_REMINDER_MINUTES,
+    /** Ring like an alarm clock for the morning reminder; see [alarmSound]. */
+    val morningReminderSound: Boolean = false,
+    /** A morning reminder without any sound; takes precedence over [morningReminderSound]. */
+    val morningReminderSilent: Boolean = false,
 ) {
     fun timetable(shift: Shift): Timetable = if (shift == Shift.MORNING) morning else afternoon
 
@@ -270,6 +281,9 @@ const val DEFAULT_CHILD_NAME = "Dete"
 
 /** Default time of the packing reminder: 19:00. */
 const val DEFAULT_PACK_REMINDER_MINUTE = 19 * 60
+
+/** Default lead time of the morning reminder: an hour before the first class. */
+const val DEFAULT_MORNING_REMINDER_MINUTES = 60
 
 /** App color theme; [SYSTEM] follows the phone's light or dark setting. Light is the default. */
 @Serializable

@@ -150,6 +150,14 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     fun setPackReminderSound(id: String, alarmSound: Boolean, silent: Boolean) =
         updateChild(id) { it.copy(packReminderSound = alarmSound, packReminderSilent = silent) }
 
+    fun setMorningReminder(id: String, enabled: Boolean) = updateChild(id) { it.copy(morningReminderEnabled = enabled) }
+
+    fun setMorningReminderMinutesBefore(id: String, minutes: Int) =
+        updateChild(id) { it.copy(morningReminderMinutesBefore = minutes) }
+
+    fun setMorningReminderSound(id: String, alarmSound: Boolean, silent: Boolean) =
+        updateChild(id) { it.copy(morningReminderSound = alarmSound, morningReminderSilent = silent) }
+
     fun setPackNote(id: String, subject: String, note: String) = updateChild(id) { it.withPackNote(subject, note) }
 
     /** Ticks a subject on or off in the packing list for the school day [date]. */
@@ -202,6 +210,10 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
                     },
                     activityReminderSound = it.activityReminderSound,
                     activityReminderSilent = it.activityReminderSilent,
+                    morningReminderEnabled = it.morningReminderEnabled,
+                    morningReminderMinutesBefore = it.morningReminderMinutesBefore,
+                    morningReminderSound = it.morningReminderSound,
+                    morningReminderSilent = it.morningReminderSilent,
                 )
             },
         )

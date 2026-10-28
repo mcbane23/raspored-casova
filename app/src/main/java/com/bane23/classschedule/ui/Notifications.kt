@@ -51,6 +51,11 @@ fun rememberAlarmSwitch(viewModel: AppViewModel): (childId: String, enabled: Boo
 fun rememberPackReminderSwitch(viewModel: AppViewModel): (childId: String, enabled: Boolean) -> Unit =
     rememberNotificationSwitch(viewModel::setPackReminder)
 
+/** Turns a child's morning reminder on or off, first asking for the notification permission when it is needed. */
+@Composable
+fun rememberMorningReminderSwitch(viewModel: AppViewModel): (childId: String, enabled: Boolean) -> Unit =
+    rememberNotificationSwitch(viewModel::setMorningReminder)
+
 /**
  * Saves an activity for a child; when its reminder is being turned on (a new activity, or one whose reminder was off),
  * first asks for the notification permission (saving it with the reminder off if refused) and opens the "Alarms &
@@ -135,7 +140,10 @@ fun openExactAlarmSettings(context: Context) {
 /** Sends a test notification for [child]; [blocked] is true when the phone refused to show it. */
 class TestNotification(val send: () -> Unit, val blocked: Boolean)
 
-/** A test of the parent's "classes are over" notification, the child's packing reminder or an activity reminder. */
+/**
+ * A test of the parent's "classes are over" notification, the child's packing reminder, an activity reminder or the
+ * morning reminder.
+ */
 @Composable
 fun rememberTestNotification(child: Child, reminder: AlarmReceiver.Reminder = AlarmReceiver.Reminder.CLASSES_OVER): TestNotification {
     val context = LocalContext.current
@@ -154,6 +162,19 @@ fun rememberTestNotification(child: Child, reminder: AlarmReceiver.Reminder = Al
                 "Probni podsetnik radi.",
                 alarmSound = child.activityReminderSound,
                 silent = child.activityReminderSilent,
+            )
+        } else if (reminder == AlarmReceiver.Reminder.MORNING) {
+            val content = morningReminderContent(child, LocalDate.now())
+            !AlarmReceiver.showNotification(
+                context,
+                AlarmReceiver.Reminder.MORNING,
+                child.id,
+                TEST_NOTIFICATION_ID,
+                content?.title ?: "☀️ Proveri plan za danas",
+                content?.text ?: "Probni podsetnik radi.",
+                alarmSound = child.morningReminderSound,
+                silent = child.morningReminderSilent,
+                bigText = content?.bigText,
             )
         } else if (reminder == AlarmReceiver.Reminder.PACK_BAG) {
             val content = packReminderContent(child, LocalDate.now())
@@ -265,7 +286,8 @@ fun rememberReminderWarning(children: List<Child>): ReminderProblem? {
 }
 
 /** Whether any of the child's alarms or reminders is turned on. */
-fun Child.hasReminderOn(): Boolean = alarmEnabled || packReminderEnabled || activities.any { it.reminderEnabled }
+fun Child.hasReminderOn(): Boolean =
+    alarmEnabled || packReminderEnabled || morningReminderEnabled || activities.any { it.reminderEnabled }
 
 /**
  * Warning on the main tabs that the phone will hold back the reminders, so a parent who switched the alarm on from

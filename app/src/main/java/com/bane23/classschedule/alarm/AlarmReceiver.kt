@@ -29,8 +29,10 @@ import com.bane23.classschedule.data.Child
 import com.bane23.classschedule.data.ChildRepository
 import com.bane23.classschedule.data.activityRemindersDue
 import com.bane23.classschedule.data.classesEndOn
+import com.bane23.classschedule.data.classesStartOn
 import com.bane23.classschedule.ui.activityReminderContent
 import com.bane23.classschedule.ui.label
+import com.bane23.classschedule.ui.morningReminderContent
 import com.bane23.classschedule.ui.packReminderContent
 import java.time.Instant
 import java.time.LocalDate
@@ -38,8 +40,8 @@ import java.time.LocalDateTime
 import java.time.ZoneId
 
 /**
- * Posts a child's reminders when their alarm fires: "classes are over" for the parent, "pack the bag" for the child
- * and "an activity starts soon", then schedules that child's next alarms.
+ * Posts a child's reminders when their alarm fires: "classes are over" for the parent, "pack the bag" for the child,
+ * "an activity starts soon" and the morning "check today's plan", then schedules that child's next alarms.
  */
 class AlarmReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
@@ -49,6 +51,7 @@ class AlarmReceiver : BroadcastReceiver() {
             when (intent.action) {
                 AlarmScheduler.ACTION_PACK_BAG -> if (child.packReminderEnabled) showPackReminder(context, child)
                 AlarmScheduler.ACTION_ACTIVITY -> showActivityReminders(context, child, intent.getLongExtra(AlarmScheduler.EXTRA_AT, 0))
+                AlarmScheduler.ACTION_MORNING -> if (child.morningReminderEnabled) showMorningReminder(context, child)
                 else -> if (child.alarmEnabled) showClassesOver(context, child)
             }
         } finally {
@@ -91,6 +94,25 @@ class AlarmReceiver : BroadcastReceiver() {
         )
     }
 
+    /** Skipped when the alarm comes so late that the first class has already started; the plan is no use by then. */
+    private fun showMorningReminder(context: Context, child: Child) {
+        val today = LocalDate.now()
+        val start = child.classesStartOn(today) ?: return
+        if (!LocalDateTime.now().isBefore(today.atTime(start))) return
+        val content = morningReminderContent(child, today) ?: return
+        showNotification(
+            context,
+            Reminder.MORNING,
+            child.id,
+            morningNotificationId(child.id),
+            content.title,
+            content.text,
+            alarmSound = child.morningReminderSound,
+            silent = child.morningReminderSilent,
+            bigText = content.bigText,
+        )
+    }
+
     /**
      * Posts every activity reminder from the time the alarm was set for ([at], epoch millis) until now, so a late
      * alarm still posts all the reminders it stood for.
@@ -114,7 +136,7 @@ class AlarmReceiver : BroadcastReceiver() {
     }
 
     /** Which reminder a notification is for; each has its own notification channels in the phone's settings. */
-    enum class Reminder { CLASSES_OVER, PACK_BAG, ACTIVITY }
+    enum class Reminder { CLASSES_OVER, PACK_BAG, ACTIVITY, MORNING }
 
     companion object {
         /**
@@ -142,12 +164,18 @@ class AlarmReceiver : BroadcastReceiver() {
         private const val ACTIVITY_BELL_CHANNEL_ID = "activity_bell_vibrate"
         private const val ACTIVITY_ALARM_CHANNEL_ID = "activity_alarm_vibrate"
         private const val ACTIVITY_SILENT_CHANNEL_ID = "activity_silent_vibrate"
+        private const val MORNING_BELL_CHANNEL_ID = "morning_bell_vibrate"
+        private const val MORNING_ALARM_CHANNEL_ID = "morning_alarm_vibrate"
+        private const val MORNING_SILENT_CHANNEL_ID = "morning_silent_vibrate"
 
         /** Off-on pattern in milliseconds (three long buzzes), shared by the channels and the direct vibration. */
         private val VIBRATION_PATTERN = longArrayOf(0, 600, 300, 600, 300, 600)
 
         /** Packing reminders get their own id so they do not replace a child's "classes are over" notification. */
         fun packNotificationId(childId: String): Int = "$childId:pack".hashCode()
+
+        /** The morning reminder's own id, so it does not replace the child's other notifications. */
+        fun morningNotificationId(childId: String): Int = "$childId:morning".hashCode()
 
         /**
          * One notification per activity session, so two activities starting together both show, and so do two
@@ -204,6 +232,11 @@ class AlarmReceiver : BroadcastReceiver() {
                     silent -> ACTIVITY_SILENT_CHANNEL_ID
                     alarmSound -> ACTIVITY_ALARM_CHANNEL_ID
                     else -> ACTIVITY_BELL_CHANNEL_ID
+                }
+                Reminder.MORNING -> when {
+                    silent -> MORNING_SILENT_CHANNEL_ID
+                    alarmSound -> MORNING_ALARM_CHANNEL_ID
+                    else -> MORNING_BELL_CHANNEL_ID
                 }
             }
             val manager = NotificationManagerCompat.from(context)
@@ -311,6 +344,9 @@ class AlarmReceiver : BroadcastReceiver() {
             bellChannel(ACTIVITY_BELL_CHANNEL_ID, "Aktivnosti (zvono)", "Podsetnik sa zvukom školskog zvona pred vanškolsku aktivnost")
             alarmChannel(ACTIVITY_ALARM_CHANNEL_ID, "Aktivnosti (alarm)", "Podsetnik sa glasnim zvukom alarma pred vanškolsku aktivnost")
             silentChannel(ACTIVITY_SILENT_CHANNEL_ID, "Aktivnosti (bez zvuka)", "Podsetnik bez zvuka, samo vibracija, pred vanškolsku aktivnost")
+            bellChannel(MORNING_BELL_CHANNEL_ID, "Jutarnji podsetnik (zvono)", "Podsetnik sa zvukom školskog zvona da se pre škole proveri plan za danas")
+            alarmChannel(MORNING_ALARM_CHANNEL_ID, "Jutarnji podsetnik (alarm)", "Podsetnik sa glasnim zvukom alarma da se pre škole proveri plan za danas")
+            silentChannel(MORNING_SILENT_CHANNEL_ID, "Jutarnji podsetnik (bez zvuka)", "Podsetnik bez zvuka, samo vibracija, da se pre škole proveri plan za danas")
         }
     }
 }

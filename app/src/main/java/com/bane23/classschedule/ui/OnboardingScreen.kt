@@ -160,12 +160,13 @@ fun OnboardingScreen(child: Child, viewModel: AppViewModel, onFinish: (enterTime
     }
 }
 
-/** The parent alarm and the packing reminder as two switches; the details stay in the child's settings. */
+/** The parent alarm, the morning reminder and the packing reminder as switches; the details stay in the child's settings. */
 @Composable
 private fun NotifyStep(child: Child, viewModel: AppViewModel) {
     val setAlarm = rememberAlarmSwitch(viewModel)
     val setPackReminder = rememberPackReminderSwitch(viewModel)
-    StepHeader("🔔", "Podsetnici", "Oba su na ovom telefonu. Vreme i zvuk menjaš kasnije u podešavanjima.")
+    val setMorningReminder = rememberMorningReminderSwitch(viewModel)
+    StepHeader("🔔", "Podsetnici", "Stižu na ovaj telefon. Vreme i zvuk menjaš kasnije u podešavanjima.")
     SettingsGroup(null) {
         SettingsRow(
             title = "Javi mi kad se završe časovi",
@@ -173,6 +174,14 @@ private fun NotifyStep(child: Child, viewModel: AppViewModel) {
             emoji = "🔔",
             checked = child.alarmEnabled,
             onCheckedChange = { setAlarm(child.id, it) },
+        )
+        RowDivider()
+        SettingsRow(
+            title = "Podseti me pre škole",
+            subtitle = "Sat vremena pre prvog časa, da proveriš plan za danas",
+            emoji = "☀️",
+            checked = child.morningReminderEnabled,
+            onCheckedChange = { setMorningReminder(child.id, it) },
         )
         RowDivider()
         SettingsRow(

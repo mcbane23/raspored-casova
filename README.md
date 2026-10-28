@@ -29,7 +29,7 @@ Serbian.
 - **Settings** (the round button at the top right of every tab, meant for parents): children, QR import, theme. Each
   child has a short page of topics, each with a live summary and its own page: name, school and shift; timetable
   (opens the Week tab in edit mode); bell times for each shift; subjects and what to bring; notifications (parent
-  alarm and packing reminder, each with a test button, plus anything that would hold them back); school calendar
+  alarm, morning reminder and packing reminder, each with a test button, plus anything that would hold them back); school calendar
   (Central Serbia or Vojvodina, 8th grade with its earlier end of classes); extracurricular activities; and sharing by
   QR code.
 - When a child has the alarm or any reminder on but the phone blocks notifications or exact alarms, the Family
@@ -62,6 +62,14 @@ Vojvodina have separate rulebooks; a Saturday taught by a weekday's timetable is
   each evening before a school day, listing the next day's subjects not yet ticked off in "Sutra u torbu" with what
   to bring for each; it is skipped when everything is packed. It is scheduled and rescheduled like the parent alarm
   and has the same sound choices, on its own notification channels.
+- **Morning reminder ("Jutarnji podsetnik"):** an optional per-child notification a chosen time before the day's
+  first class (30/45/60/90/120 minutes, an hour by default), so the parent or child checks today's plan and changes a
+  class that was moved or cancelled for that day only before school starts. The first class follows the shift, the
+  school calendar and one-day changes, and days without classes are skipped. The notification names the first class's
+  start time and lists the day's classes (saying so when the day already has a one-day change); tapping it opens the
+  Today tab. It is skipped when the alarm comes after the first class has started. It is scheduled and rescheduled like
+  the parent alarm (a fourth alarm per child) and has the same sound choices and test button, on its own notification
+  channels.
 - **Extracurricular activities ("Vanškolske aktivnosti"):** per child, e.g. sport, choir, folklore, drama, a school
   trip or a school camp (`data/Activities.kt`). Each has a kind (emoji), a title, either a weekly repeat on chosen days
   (optionally paused during school breaks; single days off such as the school day or a holiday do not pause it) or a single date or date range (for a trip or school camp
