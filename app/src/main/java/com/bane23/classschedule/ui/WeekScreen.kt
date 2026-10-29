@@ -52,6 +52,7 @@ import com.bane23.classschedule.data.Shift
 import com.bane23.classschedule.data.ShiftMode
 import com.bane23.classschedule.data.Timetable
 import com.bane23.classschedule.data.other
+import com.bane23.classschedule.data.remindsOf
 import com.bane23.classschedule.data.currentShiftDate
 import com.bane23.classschedule.data.shiftOn
 import com.bane23.classschedule.data.weeklyActivitiesOn
@@ -274,7 +275,7 @@ fun WeekScreen(
                 AppCard(verticalArrangement = Arrangement.spacedBy(2.dp)) {
                     Text("🏅 Aktivnosti", style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(bottom = 4.dp))
                     dayActivities.forEach { activity ->
-                        ActivityRow(activity, "${activity.start.label()}–${activity.end.label()}") { activityEdit = activity }
+                        ActivityRow(activity, "${activity.start.label()}–${activity.end.label()}", reminder = child.remindsOf(activity)) { activityEdit = activity }
                     }
                 }
             }
@@ -501,7 +502,7 @@ private fun WeeklyActivitiesCard(child: Child, onOpen: (Extracurricular) -> Unit
                 modifier = Modifier.padding(top = 6.dp),
             )
             activities.forEach { activity ->
-                ActivityRow(activity, "${activity.start.label()}–${activity.end.label()}") { onOpen(activity) }
+                ActivityRow(activity, "${activity.start.label()}–${activity.end.label()}", reminder = child.remindsOf(activity)) { onOpen(activity) }
             }
         }
         if (child.activities.none { it.weekly }) {

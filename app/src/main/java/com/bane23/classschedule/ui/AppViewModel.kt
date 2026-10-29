@@ -172,6 +172,8 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         child.copy(activities = child.activities.filterNot { it.id == activityId })
     }
 
+    fun setActivityReminders(id: String, enabled: Boolean) = updateChild(id) { it.copy(activityRemindersEnabled = enabled) }
+
     fun setActivityReminderSound(id: String, alarmSound: Boolean, silent: Boolean) =
         updateChild(id) { it.copy(activityReminderSound = alarmSound, activityReminderSilent = silent) }
 
@@ -208,6 +210,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
                             ?.let { own -> a.copy(reminderEnabled = own.reminderEnabled, reminderMinutesBefore = own.reminderMinutesBefore) }
                             ?: a
                     },
+                    activityRemindersEnabled = it.activityRemindersEnabled,
                     activityReminderSound = it.activityReminderSound,
                     activityReminderSilent = it.activityReminderSilent,
                     morningReminderEnabled = it.morningReminderEnabled,

@@ -42,4 +42,11 @@ class MigrationTest {
     fun defaultListHasNoExtraClassSubjects() {
         assertEquals(emptyList<String>(), DEFAULT_SUBJECTS.filter { it.startsWith("Dopunska") || it.startsWith("Dodatna") })
     }
+
+    @Test
+    fun dataSavedBeforeTheActivityRemindersSwitchKeepsReminding() {
+        val json = kotlinx.serialization.json.Json { ignoreUnknownKeys = true; coerceInputValues = true }
+        val old = json.decodeFromString(Child.serializer(), """{"name":"Ana","referenceEpochDay":0}""")
+        assertEquals(true, old.activityRemindersEnabled)
+    }
 }

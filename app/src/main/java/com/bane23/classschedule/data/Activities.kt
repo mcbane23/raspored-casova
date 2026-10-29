@@ -187,9 +187,12 @@ fun Child.weeklyActivitiesOn(day: DayOfWeek): List<Extracurricular> =
 /** One reminder: [activity] starts at [start], and the notification is due at [at]. */
 data class ActivityReminder(val activity: Extracurricular, val start: LocalDateTime, val at: LocalDateTime)
 
+/** Whether [activity] reminds: its own reminder is on and the child's activity reminders are not all turned off. */
+fun Child.remindsOf(activity: Extracurricular): Boolean = activityRemindersEnabled && activity.reminderEnabled
+
 /** Reminders of activities starting on [date] (those with the reminder on). */
 private fun Child.remindersFor(date: LocalDate): List<ActivityReminder> =
-    sessionsOn(date).filter { it.takesPlace && it.startsHere() && it.activity.reminderEnabled }.map {
+    sessionsOn(date).filter { it.takesPlace && it.startsHere() && remindsOf(it.activity) }.map {
         val start = date.atTime(it.activity.start)
         ActivityReminder(it.activity, start, start.minusMinutes(it.activity.reminderMinutesBefore.toLong()))
     }

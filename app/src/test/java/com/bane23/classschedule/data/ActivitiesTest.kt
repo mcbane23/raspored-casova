@@ -220,4 +220,26 @@ class ActivitiesTest {
         val away = camp.copy(noClasses = true)
         assertEquals(listOf(away, choir, football), child.copy(activities = listOf(football, choir, away)).activitiesOn(schoolDay))
     }
+
+    @Test
+    fun turningAllActivityRemindersOffSilencesEveryActivityAndKeepsTheirSettings() {
+        val off = child.copy(activityRemindersEnabled = false)
+        assertNull(off.nextActivityReminder(wednesday.atTime(12, 0)))
+        assertEquals(emptyList<ActivityReminder>(), off.activityRemindersDue(wednesday.atTime(17, 0), wednesday.atTime(17, 14)))
+        assertFalse(off.remindsOf(football))
+        // Each activity keeps its own switch and lead time, so turning the reminders back on restores them.
+        assertEquals(listOf(true, false, true), off.activities.map { it.reminderEnabled })
+        val on = off.copy(activityRemindersEnabled = true)
+        assertEquals(wednesday.atTime(17, 0), on.nextActivityReminder(wednesday.atTime(12, 0)))
+        assertTrue(on.remindsOf(football))
+        assertFalse(on.remindsOf(choir))
+    }
+
+    @Test
+    fun oneActivityCanBeSilencedAlone() {
+        val quietFootball = child.withActivity(football.copy(reminderEnabled = false))
+        // Football no longer reminds; the camp on Monday is the next reminder.
+        assertEquals(LocalDate.of(2026, 10, 19).atTime(7, 0), quietFootball.nextActivityReminder(wednesday.atTime(12, 0)))
+        assertEquals(30, quietFootball.activities.first { it.id == "football" }.reminderMinutesBefore)
+    }
 }
