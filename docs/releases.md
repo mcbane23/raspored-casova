@@ -26,10 +26,15 @@ fails the release: if the PR cannot be found or parsed, the release still gets a
 A direct push to `main` (no PR) falls back the same way. A manual workflow run reuses the note of the PR that the
 current `main` commit came from.
 
-## Google Play "What's new"
+## Google Play texts
 
-Play Console asks for its own release notes (max 500 characters per language) when a new AAB is uploaded. The
-`SR:`/`EN:` lines can be pasted there in this form:
+Every release also has a `raspored-casova-<version>-google-play.txt` file next to the APK and AAB, with everything
+Play Console asks for in plain text, Serbian first:
+
+- the app name, short description and full description from [play-listing/sr/](play-listing/sr/) (each with its
+  character count and Play's limit),
+- "What's new" for this version, built from the same `SR:`/`EN:` lines in the form Play Console accepts (max 500
+  characters per language):
 
 ```
 <sr>
@@ -40,4 +45,6 @@ Play Console asks for its own release notes (max 500 characters per language) wh
 </en-US>
 ```
 
-The text for the first Play release is in [google-play.md](google-play.md#release-notes-first-release).
+The file is built by `.github/scripts/play_texts.py` in the same workflow step as the note. Texts over a Play limit
+only produce a workflow warning. The text for the first Play release is in
+[google-play.md](google-play.md#release-notes-first-release).

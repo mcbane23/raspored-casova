@@ -16,7 +16,8 @@ Checklist and texts for the Google Play Console listing.
 ## Release notes (first release)
 
 Paste into Play Console → the release → **Release notes** (max 500 characters per language; these are 396 and
-403). Later releases can reuse the `SR:`/`EN:` lines from the GitHub release, see [releases.md](releases.md).
+403). For later releases, the "What's new" text is ready in the release's `google-play.txt`, see
+[releases.md](releases.md#google-play-texts).
 
 ```
 <sr>
@@ -87,35 +88,18 @@ With exact alarms allowed the app uses `AlarmManager.setAlarmClock`, which fires
 
 ## Store listing (Serbian)
 
-**App name** (max 30): Raspored časova
+The listing texts live as plain files in [play-listing/sr/](play-listing/sr/), ready to paste into Play Console →
+Main store listing:
 
-**Short description** (max 80):
-Raspored časova, smene, raspusti i podsetnik kad se nastava završi.
+| File | Field | Limit |
+| --- | --- | --- |
+| `title.txt` | App name | 30 |
+| `short-description.txt` | Short description | 80 |
+| `full-description.txt` | Full description (one paragraph or bullet per line, no hard wraps) | 4000 |
 
-**Full description** (max 4000):
-
-Raspored časova je jednostavna aplikacija za roditelje i decu osnovnoškolskog uzrasta. Na jednom mestu vidite
-današnje časove, nedeljni raspored i školski kalendar.
-
-• Danas – časovi za dan sa tačnim vremenom zvona. Zamena predmeta ili otkazan čas? Izmenite samo taj dan, a
-raspored se sutra sam vraća na redovan.
-• Prepodnevna i popodnevna smena – poseban raspored i zvona za svaku smenu; smena se menja nedeljno, mesečno ili je
-stalna.
-• Školski kalendar Srbije – raspusti, neradni dani i dani kada se radi po drugom rasporedu, uz odbrojavanje do
-sledećeg raspusta. Podržani su centralna Srbija i Vojvodina, kao i raniji kraj nastave za osmi razred.
-• Događaji škole – dodajte Dan škole, školsku slavu ili druge slobodne dane.
-• Roditeljski alarm – obaveštenje kad se završi poslednji čas (ili nekoliko minuta ranije).
-• Jutarnji podsetnik – sat vremena pre prvog časa (ili kada izaberete) podseća da proverite da li je neki čas pomeren ili
-otkazan.
-• Podsetnik za torbu – uveče pred školski dan podseća dete šta da spakuje za sutra.
-• Vanškolske aktivnosti – trening, hor, škola stranog jezika ili izlet, sa podsetnikom pre početka; jedan termin
-može da se otkaže ili pomeri, a redovan raspored ostaje.
-• Više dece – svako dete ima svoj raspored, smenu i kalendar.
-• Spisak predmeta – izaberite predmet iz liste umesto kucanja, uz dopunsku i dodatnu nastavu iz bilo kog predmeta.
-• Pretčas – za smene koje počinju pretčasom.
-• Deljenje QR kodom – pošaljite popunjen raspored detetu ili drugom roditelju skeniranjem QR koda.
-
-Bez naloga, bez reklama i bez interneta: svi podaci ostaju samo na vašem telefonu.
+Every GitHub release also carries them as `raspored-casova-<version>-google-play.txt`, together with that version's
+"What's new" text (see [releases.md](releases.md#google-play-texts)). Edit the files here when a feature changes;
+the next release picks them up.
 
 **Category:** Education
 **Tags:** school, timetable, calendar

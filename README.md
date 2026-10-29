@@ -119,7 +119,8 @@ Requires JDK 17 and the Android SDK (API 36).
 Every push/merge to `main` runs `.github/workflows/build-release.yml`, which:
 
 1. builds a debug APK and a signed release AAB (the AAB only when the signing secrets are set, see below),
-2. publishes a GitHub Release `v1.0.<build number>` with those files,
+2. publishes a GitHub Release `v1.0.<build number>` with those files and a `google-play.txt` with the Play listing
+   and "What's new" texts,
 3. deletes older releases (and their tags) so only the latest 3 remain.
 
 Each release starts with a short note in Serbian and English, taken from the "Release notes" section of the merged
