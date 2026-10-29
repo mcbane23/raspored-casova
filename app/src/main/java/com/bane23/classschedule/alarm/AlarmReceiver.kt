@@ -55,8 +55,9 @@ class AlarmReceiver : BroadcastReceiver() {
                 else -> if (child.alarmEnabled) showClassesOver(context, child)
             }
         } finally {
-            // Even if a reminder could not be shown, the next ones stay scheduled.
-            AlarmScheduler.schedule(context, child)
+            // Even if a reminder could not be shown, the next one is scheduled. Only this alarm is set again: another
+            // alarm of the child that is due but not delivered yet would otherwise be moved on and never fire.
+            AlarmScheduler.schedule(context, child, only = AlarmScheduler.actionOf(intent))
         }
     }
 

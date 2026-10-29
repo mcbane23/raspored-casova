@@ -121,7 +121,7 @@ fun SettingsHomeScreen(
         } else {
             SettingsGroup("Deca") {
                 data.children.forEach { c ->
-                    val shift = c.shiftOn(today)
+                    val shift = c.shiftOn(c.currentShiftDate(today))
                     SettingsRow(
                         title = c.name.ifBlank { "Bez imena" },
                         subtitle = listOfNotNull(c.school.ifBlank { null }, "${shift.icon()} ${shift.shortLabel().lowercase()}").joinToString(" · "),
@@ -223,16 +223,6 @@ private fun nextTimeLabel(next: LocalDateTime, today: LocalDate): String =
     if (next.toLocalDate() == today) "danas u ${next.toLocalTime().label()}"
     else "${next.toLocalDate().label().lowercase()} u ${next.toLocalTime().label()}"
 
-/** "ove nedelje pre podne", "uvek popodne", ... */
-private fun shiftSummary(child: Child, today: LocalDate): String {
-    val shift = child.shiftOn(today).shortLabel().lowercase()
-    return when (child.shiftMode) {
-        ShiftMode.WEEKLY -> "ove nedelje $shift"
-        ShiftMode.MONTHLY -> "ovog meseca $shift"
-        else -> "uvek $shift"
-    }
-}
-
 /**
  * One child's settings hub: a short list of topics, each with a live summary, so a parent sees at a glance how the
  * child is set up and where to change it. [onEditTimetable] leaves settings for the Week tab in edit mode.
@@ -286,7 +276,8 @@ private fun ChildTopics(child: Child, onOpen: (SettingsPage) -> Unit, onEditTime
     val problem = rememberReminderProblem()
     val today = LocalDate.now()
     val now = LocalDateTime.now()
-    val shift = child.shiftOn(today)
+    // On a weekend a weekly rotation already shows the coming week, as on the shift and bells pages.
+    val shift = child.shiftOn(child.currentShiftDate(today))
     // The 1st class, not the pre-class before it.
     val firstBell = child.timetable(shift).let { it.periods.getOrNull(if (it.hasPreClass) 1 else 0) }?.start
 

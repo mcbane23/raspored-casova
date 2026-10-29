@@ -46,14 +46,38 @@ object AlarmScheduler {
         listOf(ACTION_CLASSES_OVER, ACTION_PACK_BAG, ACTION_ACTIVITY, ACTION_MORNING).forEach { alarmManager.cancel(pendingIntent(context, it, childId)) }
     }
 
-    fun schedule(context: Context, child: Child) {
+    /**
+     * Sets the child's alarms to their next times, or only the alarm for [only] (one of the ACTION_ constants). An alarm
+     * that just fired passes its own action: the child's other alarms are left as they are, since one of them may be
+     * due already but not delivered yet (inexact alarms can come late), and setting it again from now would skip it.
+     */
+    fun schedule(context: Context, child: Child, only: String? = null) {
         val alarmManager = context.getSystemService(AlarmManager::class.java) ?: return
         val now = LocalDateTime.now()
-        set(context, alarmManager, child.id, pendingIntent(context, ACTION_CLASSES_OVER, child.id), child.nextAlarm(now))
-        set(context, alarmManager, child.id, pendingIntent(context, ACTION_PACK_BAG, child.id), child.nextPackReminder(now))
-        val activity = child.nextActivityReminder(now)
-        set(context, alarmManager, child.id, pendingIntent(context, ACTION_ACTIVITY, child.id, activity?.let(::epochMillis)), activity)
-        set(context, alarmManager, child.id, pendingIntent(context, ACTION_MORNING, child.id), child.nextMorningReminder(now))
+        fun wanted(action: String) = only == null || only == action
+        if (wanted(ACTION_CLASSES_OVER)) {
+            set(context, alarmManager, child.id, pendingIntent(context, ACTION_CLASSES_OVER, child.id), child.nextAlarm(now))
+        }
+        if (wanted(ACTION_PACK_BAG)) {
+            set(context, alarmManager, child.id, pendingIntent(context, ACTION_PACK_BAG, child.id), child.nextPackReminder(now))
+        }
+        if (wanted(ACTION_ACTIVITY)) {
+            val activity = child.nextActivityReminder(now)
+            set(context, alarmManager, child.id, pendingIntent(context, ACTION_ACTIVITY, child.id, activity?.let(::epochMillis)), activity)
+        }
+        if (wanted(ACTION_MORNING)) {
+            set(context, alarmManager, child.id, pendingIntent(context, ACTION_MORNING, child.id), child.nextMorningReminder(now))
+        }
+    }
+
+    /**
+     * Which of the child's alarms [intent] belongs to: its action, or the "classes are over" alarm for alarms set
+     * before they had an action; null for anything else, so every alarm is set again.
+     */
+    fun actionOf(intent: Intent): String? = when (val action = intent.action) {
+        null -> ACTION_CLASSES_OVER
+        ACTION_CLASSES_OVER, ACTION_PACK_BAG, ACTION_ACTIVITY, ACTION_MORNING -> action
+        else -> null
     }
 
     /** Sets [intent] to fire at [next], or cancels it when [next] is null. */

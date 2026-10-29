@@ -28,8 +28,13 @@ fun Child.regularSubjectsOn(date: LocalDate): List<String> = when (val info = da
 
 fun Child.overrideOn(date: LocalDate): DayOverride? = overrides.find { it.epochDay == date.toEpochDay() }
 
-/** The subjects for [date], with any one-off change for that day applied. */
-fun Child.subjectsOn(date: LocalDate): List<String> = overrideOn(date)?.lessons ?: regularSubjectsOn(date)
+/**
+ * The subjects for [date], with any one-off change for that day applied. A day without classes (a break, a holiday, a
+ * day off added later) has none, even if a one-off change was made for it before; the change is kept and counts
+ * again if the day off is removed.
+ */
+fun Child.subjectsOn(date: LocalDate): List<String> =
+    if (dayInfo(date) is DayInfo.NoClasses) emptyList() else overrideOn(date)?.lessons ?: regularSubjectsOn(date)
 
 /** A lesson actually held on a date: its period number (0-based), bell times and subject. */
 data class Lesson(val index: Int, val period: Period, val subject: String)
