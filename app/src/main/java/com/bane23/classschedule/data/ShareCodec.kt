@@ -34,6 +34,10 @@ object ShareCodec {
         activities = activities.map { it.copy(reminderEnabled = false) },
         activityReminderSound = false,
         activityReminderSilent = false,
+        morningReminderEnabled = false,
+        morningReminderMinutesBefore = DEFAULT_MORNING_REMINDER_MINUTES,
+        morningReminderSound = false,
+        morningReminderSilent = false,
     )
 
     fun encode(child: Child): String {

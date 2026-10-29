@@ -24,6 +24,7 @@ Prva verzija aplikacije Raspored časova!
 • Današnji časovi i nedeljni raspored, posebno za prepodnevnu i popodnevnu smenu
 • Školski kalendar Srbije 2026/27 sa raspustima i odbrojavanjem
 • Roditeljski alarm kad se završi poslednji čas
+• Jutarnji podsetnik pre prvog časa da se proveri plan za danas
 • Večernji podsetnik za pakovanje torbe
 • Više dece, deljenje rasporeda QR kodom i widget za početni ekran
 Bez naloga, bez reklama, svi podaci ostaju na telefonu.
@@ -33,6 +34,7 @@ First release of Raspored časova (School Timetable)!
 • Today's classes and the weekly timetable, separate for morning and afternoon shifts
 • Serbian school calendar 2026/27 with breaks and a countdown
 • Parent alarm when the last class ends
+• Morning reminder before the first class to check today's plan
 • Evening reminder to pack the school bag
 • Several children, QR code timetable sharing and a home-screen widget
 No account, no ads, all data stays on your phone.
@@ -75,7 +77,7 @@ The app is meant for both children and parents, so its target audience includes 
 
 ## Permissions declared
 
-- `POST_NOTIFICATIONS` – the optional "classes are over", "pack the bag" and extracurricular activity reminders.
+- `POST_NOTIFICATIONS` – the optional "classes are over", morning "check today's plan", "pack the bag" and extracurricular activity reminders.
 - `RECEIVE_BOOT_COMPLETED` – reschedules the reminders after a restart, an app update or a time change.
 - `SCHEDULE_EXACT_ALARM` – lets the reminders fire at the exact minute set. On Android 12+ the user grants it under "Alarms & reminders"; the app links there and warns while it is missing.
 - `VIBRATE` – every reminder vibrates; when the ringer is set to silent the app buzzes the phone itself so the reminder is still noticed.
@@ -103,6 +105,8 @@ stalna.
 sledećeg raspusta. Podržani su centralna Srbija i Vojvodina, kao i raniji kraj nastave za osmi razred.
 • Događaji škole – dodajte Dan škole, školsku slavu ili druge slobodne dane.
 • Roditeljski alarm – obaveštenje kad se završi poslednji čas (ili nekoliko minuta ranije).
+• Jutarnji podsetnik – sat vremena pre prvog časa (ili kada izaberete) podseća da proverite da li je neki čas pomeren ili
+otkazan.
 • Podsetnik za torbu – uveče pred školski dan podseća dete šta da spakuje za sutra.
 • Vanškolske aktivnosti – trening, hor, škola stranog jezika ili izlet, sa podsetnikom pre početka; jedan termin
 može da se otkaže ili pomeri, a redovan raspored ostaje.

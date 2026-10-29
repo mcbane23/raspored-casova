@@ -56,6 +56,7 @@ import com.bane23.classschedule.data.ThemeMode
 import com.bane23.classschedule.data.Timetable
 import com.bane23.classschedule.data.nextActivityReminder
 import com.bane23.classschedule.data.nextAlarm
+import com.bane23.classschedule.data.nextMorningReminder
 import com.bane23.classschedule.data.nextPackReminder
 import com.bane23.classschedule.data.packNote
 import com.bane23.classschedule.data.currentShiftDate
@@ -171,6 +172,9 @@ private fun appVersion(context: Context): String =
     runCatching { context.packageManager.getPackageInfo(context.packageName, 0).versionName }.getOrNull().orEmpty()
 
 private val ALARM_OFFSETS = listOf(0, 5, 10, 15)
+
+/** Choices for how long before the first class the morning reminder comes, in minutes. */
+private val MORNING_OFFSETS = listOf(30, 45, 60, 90, 120)
 
 private enum class AlarmTone(val emoji: String, val label: String, val hint: String) {
     BELL("🛎️", "Zvono", "Obaveštenje sa kratkim zvukom školskog zvona."),
@@ -336,6 +340,7 @@ private fun ChildTopics(child: Child, onOpen: (SettingsPage) -> Unit, onEditTime
     SettingsGroup("Obaveštenja") {
         val alarm = child.nextAlarm(now)
         val pack = child.nextPackReminder(now)
+        val morning = child.nextMorningReminder(now)
         val activity = child.nextActivityReminder(now)
         val anyOn = child.hasReminderOn()
         SettingsRow(
@@ -345,6 +350,7 @@ private fun ChildTopics(child: Child, onOpen: (SettingsPage) -> Unit, onEditTime
                 !anyOn -> "Isključeno · dodirni da uključiš"
                 else -> listOfNotNull(
                     if (!child.alarmEnabled) null else alarm?.let { "Alarm ${nextTimeLabel(it, today)}" } ?: "Alarm uključen",
+                    if (!child.morningReminderEnabled) null else morning?.let { "jutro ${nextTimeLabel(it, today)}" } ?: "jutarnji podsetnik uključen",
                     if (!child.packReminderEnabled) null else pack?.let { "torba ${nextTimeLabel(it, today)}" } ?: "podsetnik uključen",
                     activity?.let { "aktivnost ${nextTimeLabel(it, today)}" },
                 ).joinToString(" · ").replaceFirstChar { it.uppercase() }.ifEmpty { "Uključeno" }
@@ -455,12 +461,17 @@ fun ShiftPicker(child: Child, viewModel: AppViewModel) {
     )
 }
 
-/** The parent alarm and the packing reminder, each with its test button, and anything that keeps them from arriving. */
+/**
+ * The parent alarm, the morning reminder, the packing reminder and the activity reminders, each with its test button,
+ * and anything that keeps them from arriving.
+ */
 @Composable
 fun NotificationsScreen(child: Child, viewModel: AppViewModel, onBack: () -> Unit, modifier: Modifier = Modifier) {
     val setAlarm = rememberAlarmSwitch(viewModel)
     val setPackReminder = rememberPackReminderSwitch(viewModel)
+    val setMorningReminder = rememberMorningReminderSwitch(viewModel)
     val alarmTest = rememberTestNotification(child)
+    val morningTest = rememberTestNotification(child, AlarmReceiver.Reminder.MORNING)
     val packTest = rememberTestNotification(child, AlarmReceiver.Reminder.PACK_BAG)
     val activityTest = rememberTestNotification(child, AlarmReceiver.Reminder.ACTIVITY)
     var pickingPackTime by remember { mutableStateOf(false) }
@@ -525,6 +536,45 @@ fun NotificationsScreen(child: Child, viewModel: AppViewModel, onBack: () -> Uni
                     subtitle = if (alarmTest.blocked) blockedHint else "Da čuješ kako zvuči",
                     emoji = "🧪",
                     onClick = alarmTest.send,
+                )
+            }
+        }
+
+        SettingsGroup("Jutarnji podsetnik · pre škole") {
+            val next = child.nextMorningReminder(LocalDateTime.now())
+            SettingsRow(
+                title = "Podseti me da proverim plan za danas",
+                subtitle = when {
+                    !child.morningReminderEnabled -> "Pre prvog časa, da na vreme upišeš pomeren ili otkazan čas"
+                    next == null -> "Uključeno"
+                    else -> "Sledeće: ${nextTimeLabel(next, today)}"
+                },
+                emoji = "☀️",
+                checked = child.morningReminderEnabled,
+                onCheckedChange = { setMorningReminder(child.id, it) },
+            )
+            if (child.morningReminderEnabled) {
+                RowDivider()
+                Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("Koliko pre prvog časa", style = MaterialTheme.typography.titleSmall)
+                    PillToggle(
+                        MORNING_OFFSETS,
+                        child.morningReminderMinutesBefore,
+                        { if (it == 90) "1½ h" else durationLabel(it.toLong()) },
+                        { viewModel.setMorningReminderMinutesBefore(child.id, it) },
+                        onCard = true,
+                    )
+                }
+                RowDivider()
+                SoundRow(toneOf(child.morningReminderSound, child.morningReminderSilent)) {
+                    viewModel.setMorningReminderSound(child.id, alarmSound = it == AlarmTone.ALARM, silent = it == AlarmTone.SILENT)
+                }
+                RowDivider()
+                SettingsRow(
+                    title = "Pošalji probni podsetnik",
+                    subtitle = if (morningTest.blocked) blockedHint else "Da vidiš kako izgleda i zvuči",
+                    emoji = "🧪",
+                    onClick = morningTest.send,
                 )
             }
         }

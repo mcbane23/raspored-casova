@@ -10,13 +10,15 @@ import com.bane23.classschedule.data.AppData
 import com.bane23.classschedule.data.Child
 import com.bane23.classschedule.data.nextActivityReminder
 import com.bane23.classschedule.data.nextAlarm
+import com.bane23.classschedule.data.nextMorningReminder
 import com.bane23.classschedule.data.nextPackReminder
 import java.time.LocalDateTime
 import java.time.ZoneId
 
 /**
- * Schedules three alarms per child: "classes are over" for the parent, the evening "pack the bag" reminder and the
- * next extracurricular activity reminder. Alarms survive the app being closed.
+ * Schedules four alarms per child: "classes are over" for the parent, the evening "pack the bag" reminder, the next
+ * extracurricular activity reminder and the morning "check today's plan" reminder before the first class. Alarms
+ * survive the app being closed.
  *
  * When exact alarms are allowed (always on Android 11 and older; on Android 12+ once the user grants "Alarms &
  * reminders") they are set with [AlarmManager.setAlarmClock]: they fire at the set minute, wake the phone from Doze
@@ -28,6 +30,7 @@ object AlarmScheduler {
     const val ACTION_CLASSES_OVER = "com.bane23.classschedule.CLASSES_OVER"
     const val ACTION_PACK_BAG = "com.bane23.classschedule.PACK_BAG"
     const val ACTION_ACTIVITY = "com.bane23.classschedule.ACTIVITY"
+    const val ACTION_MORNING = "com.bane23.classschedule.MORNING"
 
     /** Epoch millis an activity alarm was set for, so the receiver knows which reminders it stands for. */
     const val EXTRA_AT = "at"
@@ -40,7 +43,7 @@ object AlarmScheduler {
     /** Cancels every alarm of a deleted child, so none of them fires or shows as the phone's next alarm. */
     fun cancel(context: Context, childId: String) {
         val alarmManager = context.getSystemService(AlarmManager::class.java) ?: return
-        listOf(ACTION_CLASSES_OVER, ACTION_PACK_BAG, ACTION_ACTIVITY).forEach { alarmManager.cancel(pendingIntent(context, it, childId)) }
+        listOf(ACTION_CLASSES_OVER, ACTION_PACK_BAG, ACTION_ACTIVITY, ACTION_MORNING).forEach { alarmManager.cancel(pendingIntent(context, it, childId)) }
     }
 
     fun schedule(context: Context, child: Child) {
@@ -50,6 +53,7 @@ object AlarmScheduler {
         set(context, alarmManager, child.id, pendingIntent(context, ACTION_PACK_BAG, child.id), child.nextPackReminder(now))
         val activity = child.nextActivityReminder(now)
         set(context, alarmManager, child.id, pendingIntent(context, ACTION_ACTIVITY, child.id, activity?.let(::epochMillis)), activity)
+        set(context, alarmManager, child.id, pendingIntent(context, ACTION_MORNING, child.id), child.nextMorningReminder(now))
     }
 
     /** Sets [intent] to fire at [next], or cancels it when [next] is null. */

@@ -68,4 +68,33 @@ class AlarmPlannerTest {
         assertEquals(wednesday.atTime(20, 30), reminder.nextPackReminder(wednesday.atTime(19, 0)))
         assertNull(child.nextPackReminder(wednesday.atTime(7, 0)))
     }
+
+    @Test
+    fun morningReminderComesAnHourBeforeTheFirstClass() {
+        val reminder = child.copy(alarmEnabled = false, morningReminderEnabled = true)
+        assertEquals(wednesday.atTime(7, 0), reminder.nextMorningReminder(wednesday.atTime(6, 0)))
+        // After this morning's reminder, the next is Thursday's; then the following Wednesday (no classes Fri-Tue).
+        assertEquals(wednesday.plusDays(1).atTime(7, 0), reminder.nextMorningReminder(wednesday.atTime(7, 0)))
+        assertEquals(LocalDate.of(2026, 10, 21).atTime(7, 0), reminder.nextMorningReminder(wednesday.plusDays(1).atTime(7, 0)))
+    }
+
+    @Test
+    fun morningReminderFollowsOffsetShiftAndOneDayChanges() {
+        val reminder = child.copy(morningReminderEnabled = true, morningReminderMinutesBefore = 30)
+        assertEquals(wednesday.atTime(7, 30), reminder.nextMorningReminder(wednesday.atTime(6, 0)))
+        // With the 1st class cancelled, the day starts with the 3rd class at 09:55.
+        val changed = reminder.withDayChange(wednesday, 0, "")
+        assertEquals(wednesday.atTime(9, 25), changed.nextMorningReminder(wednesday.atTime(6, 0)))
+        // Afternoon shift: the 1st class starts at 14:00.
+        val afternoon = reminder.copy(shiftMode = ShiftMode.FIXED_AFTERNOON, afternoon = timetable.copy(periods = Timetable.defaultFor(Shift.AFTERNOON).periods))
+        assertEquals(wednesday.atTime(13, 30), afternoon.nextMorningReminder(wednesday.atTime(6, 0)))
+    }
+
+    @Test
+    fun morningReminderSkipsBreaksAndCanBeOff() {
+        val reminder = child.copy(morningReminderEnabled = true)
+        // Autumn break is 11–13 Nov 2026; the next Wednesday with classes is 18 Nov.
+        assertEquals(LocalDate.of(2026, 11, 18).atTime(7, 0), reminder.nextMorningReminder(LocalDateTime.of(2026, 11, 11, 6, 0)))
+        assertNull(child.nextMorningReminder(wednesday.atTime(6, 0)))
+    }
 }
