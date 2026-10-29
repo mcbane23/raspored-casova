@@ -1,10 +1,13 @@
 package com.bane23.classschedule.ui
 
+import com.bane23.classschedule.data.Child
 import com.bane23.classschedule.data.Period
 import com.bane23.classschedule.data.Region
 import com.bane23.classschedule.data.Shift
 import com.bane23.classschedule.data.ShiftMode
 import com.bane23.classschedule.data.ThemeMode
+import com.bane23.classschedule.data.currentShiftDate
+import com.bane23.classschedule.data.shiftOn
 import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.LocalTime
@@ -113,6 +116,20 @@ fun ShiftMode.label(): String = when (this) {
     ShiftMode.FIXED_AFTERNOON -> "Uvek popodne"
     ShiftMode.WEEKLY -> "Smena se menja svake nedelje"
     ShiftMode.MONTHLY -> "Smena se menja svakog meseca"
+}
+
+/**
+ * "ove nedelje pre podne", "ovog meseca popodne", "uvek popodne"; on a weekend a weekly rotation names the coming
+ * week, "od ponedeljka popodne", like the shift picker.
+ */
+fun shiftSummary(child: Child, today: LocalDate): String {
+    val date = child.currentShiftDate(today)
+    val shift = child.shiftOn(date).shortLabel().lowercase()
+    return when (child.shiftMode) {
+        ShiftMode.WEEKLY -> if (date != today) "od ponedeljka $shift" else "ove nedelje $shift"
+        ShiftMode.MONTHLY -> "ovog meseca $shift"
+        else -> "uvek $shift"
+    }
 }
 
 fun ThemeMode.label(): String = when (this) {

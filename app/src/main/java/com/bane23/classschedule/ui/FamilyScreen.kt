@@ -48,6 +48,7 @@ import com.bane23.classschedule.data.DayStatus
 import com.bane23.classschedule.data.Shift
 import com.bane23.classschedule.data.activitiesOn
 import com.bane23.classschedule.data.calendarEvents
+import com.bane23.classschedule.data.currentShiftDate
 import com.bane23.classschedule.data.dayInfo
 import com.bane23.classschedule.data.dayStatus
 import com.bane23.classschedule.data.lessonsOn
@@ -110,7 +111,8 @@ private fun KidCard(child: Child, now: LocalDateTime, onClick: () -> Unit, onAla
     val lessons = child.lessonsOn(today)
     val status = dayStatus(lessons, clock)
     val info = child.dayInfo(today)
-    val shift = child.shiftOn(today)
+    // On a weekend a weekly rotation shows the coming week's shift, as the Week tab does.
+    val shift = child.shiftOn(child.currentShiftDate(today))
     val colors = MaterialTheme.colorScheme
     val bold = SpanStyle(fontWeight = FontWeight.ExtraBold)
 

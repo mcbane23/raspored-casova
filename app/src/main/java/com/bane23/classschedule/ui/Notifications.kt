@@ -33,6 +33,7 @@ import com.bane23.classschedule.data.Extracurricular
 import com.bane23.classschedule.data.classesEndOn
 import com.bane23.classschedule.data.hasActivityOn
 import com.bane23.classschedule.data.remindsOf
+import kotlinx.serialization.json.Json
 import java.time.LocalDate
 
 /** Fixed id so repeated test notifications replace each other instead of piling up. */
@@ -71,20 +72,28 @@ fun rememberActivityRemindersSwitch(viewModel: AppViewModel): (childId: String, 
  */
 @Composable
 fun rememberActivitySaver(viewModel: AppViewModel): (childId: String, activity: Extracurricular) -> Unit {
-    val pending = remember { mutableMapOf<String, Extracurricular>() }
+    // The activity waiting for the permission answer, kept as JSON so turning the phone or the app being closed while
+    // Android asks does not lose it.
+    var pending by rememberSaveable { mutableStateOf<String?>(null) }
     val ask = rememberNotificationSwitch { childId, granted ->
-        pending.remove(childId)?.let { viewModel.saveActivity(childId, it.copy(reminderEnabled = it.reminderEnabled && granted)) }
+        pending?.let(::decodeActivity)?.let { viewModel.saveActivity(childId, it.copy(reminderEnabled = it.reminderEnabled && granted)) }
+        pending = null
     }
     return { childId, activity ->
         val saved = viewModel.data.value.children.find { it.id == childId }?.activities?.find { it.id == activity.id }
         if (activity.reminderEnabled && saved?.reminderEnabled != true) {
-            pending[childId] = activity
+            pending = activityJson.encodeToString(Extracurricular.serializer(), activity)
             ask(childId, true)
         } else {
             viewModel.saveActivity(childId, activity)
         }
     }
 }
+
+private val activityJson = Json { ignoreUnknownKeys = true }
+
+private fun decodeActivity(text: String): Extracurricular? =
+    runCatching { activityJson.decodeFromString(Extracurricular.serializer(), text) }.getOrNull()
 
 /**
  * Turning a reminder on first asks for the notification permission when it is needed, then opens the "Alarms &

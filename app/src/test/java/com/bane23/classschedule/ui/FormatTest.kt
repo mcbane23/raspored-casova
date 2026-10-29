@@ -1,5 +1,8 @@
 package com.bane23.classschedule.ui
 
+import com.bane23.classschedule.data.Child
+import com.bane23.classschedule.data.Shift
+import com.bane23.classschedule.data.ShiftMode
 import org.junit.Assert.assertEquals
 import org.junit.Test
 import java.time.DayOfWeek
@@ -48,5 +51,19 @@ class FormatTest {
         assertEquals("19 predmeta", subjectsCount(19))
         assertEquals("21 predmet", subjectsCount(21))
         assertEquals("11 predmeta", subjectsCount(11))
+    }
+
+    @Test
+    fun shiftSummaryNamesTheComingWeekOnAWeekend() {
+        // Week of Monday 26 October 2026 is the morning shift.
+        val weekly = Child(name = "Ana", referenceEpochDay = LocalDate.of(2026, 10, 26).toEpochDay(), referenceShift = Shift.MORNING)
+        assertEquals("ove nedelje pre podne", shiftSummary(weekly, thursday))
+        assertEquals("od ponedeljka popodne", shiftSummary(weekly, LocalDate.of(2026, 10, 31)))
+        assertEquals("od ponedeljka popodne", shiftSummary(weekly, LocalDate.of(2026, 11, 1)))
+        assertEquals("ove nedelje popodne", shiftSummary(weekly, LocalDate.of(2026, 11, 2)))
+
+        val monthly = weekly.copy(shiftMode = ShiftMode.MONTHLY)
+        assertEquals("ovog meseca pre podne", shiftSummary(monthly, LocalDate.of(2026, 10, 31)))
+        assertEquals("uvek popodne", shiftSummary(weekly.copy(shiftMode = ShiftMode.FIXED_AFTERNOON), thursday))
     }
 }

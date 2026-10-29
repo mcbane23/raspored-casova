@@ -26,6 +26,7 @@ import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.SelectableDates
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -67,6 +68,17 @@ import java.time.LocalTime
 val ActivityViolet = Color(0xFF8B5CF6)
 
 private const val MILLIS_PER_DAY = 24L * 60 * 60 * 1000
+
+/**
+ * Days from [first] on (the picker reports UTC midnight of each day). A day already past would make an activity or a
+ * moved session vanish at once, since past ones are not shown and are cleared away.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+private fun selectableFrom(first: LocalDate) = object : SelectableDates {
+    override fun isSelectableDate(utcTimeMillis: Long): Boolean = utcTimeMillis / MILLIS_PER_DAY >= first.toEpochDay()
+
+    override fun isSelectableYear(year: Int): Boolean = year >= first.year
+}
 
 /** How long before the start an activity reminder can come. */
 private val REMINDER_OFFSETS = listOf(15, 30, 60, 120)
@@ -456,6 +468,8 @@ fun ActivityEditorSheet(
         val state = rememberDateRangePickerState(
             initialSelectedStartDateMillis = firstDay.toEpochDay() * MILLIS_PER_DAY,
             initialSelectedEndDateMillis = lastDay.toEpochDay() * MILLIS_PER_DAY,
+            // An activity already under way (a camp that started yesterday) can keep its first day.
+            selectableDates = selectableFrom(minOf(firstDay, LocalDate.now())),
         )
         DatePickerDialog(
             onDismissRequest = { pickingDate = false },
@@ -610,7 +624,10 @@ fun ActivitySessionSheet(
     }
 
     if (pickingDate) {
-        val state = rememberDatePickerState(initialSelectedDateMillis = moveDay.toEpochDay() * MILLIS_PER_DAY)
+        val state = rememberDatePickerState(
+            initialSelectedDateMillis = moveDay.toEpochDay() * MILLIS_PER_DAY,
+            selectableDates = selectableFrom(LocalDate.now()),
+        )
         DatePickerDialog(
             onDismissRequest = { pickingDate = false },
             confirmButton = {
