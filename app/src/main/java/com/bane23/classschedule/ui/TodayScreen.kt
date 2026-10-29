@@ -135,7 +135,8 @@ fun TodayScreen(
     val timetable = child.timetable(shift)
     val nextFreeIndex = child.subjectsOn(date).size
     val info = child.dayInfo(date)
-    val noClassesReason = (info as? DayInfo.NoClasses)?.reason?.takeIf { child.overrideOn(date) == null }
+    // A day off wins over a one-day change made for that day before it was added.
+    val noClassesReason = (info as? DayInfo.NoClasses)?.reason
     // Packing is about the real tomorrow; other days would tick the bag for the wrong date and reset today's ticks.
     val packDay = if (isToday) child.nextSchoolDayAfter(date) else null
 

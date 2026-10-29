@@ -100,4 +100,17 @@ class ShiftCalculatorTest {
         assertEquals(14 * 60 + 45 + 5, periods[1].startMinute)
         assertEquals(periods[1].endMinute + 20, periods[2].startMinute)
     }
+
+    @Test
+    fun dayOffAddedLaterWinsOverDayChange() {
+        val changed = childWithWednesday("Engleski", "Matematika").withDayChange(reference, 0, "Srpski jezik")
+        val dayOff = CalendarEvent(reference.toEpochDay(), reference.toEpochDay(), "Dan škole")
+        val withDayOff = changed.copy(customEvents = listOf(dayOff))
+
+        assertEquals(emptyList<Lesson>(), withDayOff.lessonsOn(reference))
+        assertEquals(null, withDayOff.classesEndOn(reference))
+        // The change is kept, so it counts again once the day off is removed.
+        assertEquals(1, withDayOff.overrides.size)
+        assertEquals(listOf("Srpski jezik", "Matematika"), withDayOff.copy(customEvents = emptyList()).lessonsOn(reference).map { it.subject })
+    }
 }

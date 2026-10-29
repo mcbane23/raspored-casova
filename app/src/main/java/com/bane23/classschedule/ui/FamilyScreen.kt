@@ -53,7 +53,6 @@ import com.bane23.classschedule.data.dayInfo
 import com.bane23.classschedule.data.dayStatus
 import com.bane23.classschedule.data.lessonsOn
 import com.bane23.classschedule.data.nextAlarm
-import com.bane23.classschedule.data.overrideOn
 import com.bane23.classschedule.data.shiftOn
 import java.time.LocalDate
 import java.time.LocalDateTime
@@ -118,7 +117,7 @@ private fun KidCard(child: Child, now: LocalDateTime, onClick: () -> Unit, onAla
 
     val line = buildAnnotatedString {
         when {
-            info is DayInfo.NoClasses && child.overrideOn(today) == null -> {
+            info is DayInfo.NoClasses -> {
                 append("${eventEmoji(info.reason)} Nema nastave: ")
                 withStyle(bold) { append(info.reason) }
             }
