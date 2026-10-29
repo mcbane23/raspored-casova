@@ -32,6 +32,7 @@ import com.bane23.classschedule.data.Child
 import com.bane23.classschedule.data.Extracurricular
 import com.bane23.classschedule.data.classesEndOn
 import com.bane23.classschedule.data.hasActivityOn
+import com.bane23.classschedule.data.remindsOf
 import java.time.LocalDate
 
 /** Fixed id so repeated test notifications replace each other instead of piling up. */
@@ -55,6 +56,13 @@ fun rememberPackReminderSwitch(viewModel: AppViewModel): (childId: String, enabl
 @Composable
 fun rememberMorningReminderSwitch(viewModel: AppViewModel): (childId: String, enabled: Boolean) -> Unit =
     rememberNotificationSwitch(viewModel::setMorningReminder)
+
+/**
+ * Turns all of a child's activity reminders on or off, first asking for the notification permission when it is needed.
+ */
+@Composable
+fun rememberActivityRemindersSwitch(viewModel: AppViewModel): (childId: String, enabled: Boolean) -> Unit =
+    rememberNotificationSwitch(viewModel::setActivityReminders)
 
 /**
  * Saves an activity for a child; when its reminder is being turned on (a new activity, or one whose reminder was off),
@@ -287,7 +295,7 @@ fun rememberReminderWarning(children: List<Child>): ReminderProblem? {
 
 /** Whether any of the child's alarms or reminders is turned on. */
 fun Child.hasReminderOn(): Boolean =
-    alarmEnabled || packReminderEnabled || morningReminderEnabled || activities.any { it.reminderEnabled }
+    alarmEnabled || packReminderEnabled || morningReminderEnabled || activities.any { remindsOf(it) }
 
 /**
  * Warning on the main tabs that the phone will hold back the reminders, so a parent who switched the alarm on from

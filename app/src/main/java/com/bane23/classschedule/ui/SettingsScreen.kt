@@ -59,6 +59,7 @@ import com.bane23.classschedule.data.nextAlarm
 import com.bane23.classschedule.data.nextMorningReminder
 import com.bane23.classschedule.data.nextPackReminder
 import com.bane23.classschedule.data.packNote
+import com.bane23.classschedule.data.remindsOf
 import com.bane23.classschedule.data.currentShiftDate
 import com.bane23.classschedule.data.shiftOn
 import java.time.LocalDate
@@ -470,6 +471,8 @@ fun NotificationsScreen(child: Child, viewModel: AppViewModel, onBack: () -> Uni
     val setAlarm = rememberAlarmSwitch(viewModel)
     val setPackReminder = rememberPackReminderSwitch(viewModel)
     val setMorningReminder = rememberMorningReminderSwitch(viewModel)
+    val setActivityReminders = rememberActivityRemindersSwitch(viewModel)
+    val saveActivity = rememberActivitySaver(viewModel)
     val alarmTest = rememberTestNotification(child)
     val morningTest = rememberTestNotification(child, AlarmReceiver.Reminder.MORNING)
     val packTest = rememberTestNotification(child, AlarmReceiver.Reminder.PACK_BAG)
@@ -616,29 +619,14 @@ fun NotificationsScreen(child: Child, viewModel: AppViewModel, onBack: () -> Uni
         }
 
         SettingsGroup("Podsetnici za aktivnosti") {
-            val withReminder = child.activities.filter { it.reminderEnabled }
-            val next = child.nextActivityReminder(LocalDateTime.now())
-            SettingsRow(
-                title = if (withReminder.isEmpty()) "Nijedna aktivnost nema podsetnik" else "Podsetnik pred aktivnost",
-                subtitle = when {
-                    withReminder.isEmpty() -> "Podsetnik se uključuje za svaku aktivnost u „Vanškolske aktivnosti”"
-                    next == null -> withReminder.joinToString(", ") { it.title }
-                    else -> "Sledeći: ${nextTimeLabel(next, today)}"
-                },
-                emoji = "🏅",
-            )
-            if (withReminder.isNotEmpty()) {
-                RowDivider()
-                SoundRow(toneOf(child.activityReminderSound, child.activityReminderSilent)) {
-                    viewModel.setActivityReminderSound(child.id, alarmSound = it == AlarmTone.ALARM, silent = it == AlarmTone.SILENT)
-                }
-                RowDivider()
+            if (child.activities.isEmpty()) {
                 SettingsRow(
-                    title = "Pošalji probni podsetnik",
-                    subtitle = if (activityTest.blocked) blockedHint else "Da vidiš kako izgleda i zvuči",
-                    emoji = "🧪",
-                    onClick = activityTest.send,
+                    title = "Još nema aktivnosti",
+                    subtitle = "Kad dodaš aktivnost u „Vanškolske aktivnosti”, ovde možeš da uključiš njen podsetnik",
+                    emoji = "🏅",
                 )
+            } else {
+                ActivityReminderRows(child, setActivityReminders, saveActivity, activityTest, blockedHint, viewModel)
             }
         }
     }
@@ -652,6 +640,62 @@ fun NotificationsScreen(child: Child, viewModel: AppViewModel, onBack: () -> Uni
                 viewModel.setPackReminderMinute(child.id, it)
                 pickingPackTime = false
             },
+        )
+    }
+}
+
+/**
+ * The switch for all of a child's activity reminders and, while it is on, one switch per activity. Each activity keeps
+ * its lead time while its reminder is off, so turning it back on restores the reminder as it was.
+ */
+@Composable
+private fun ActivityReminderRows(
+    child: Child,
+    setActivityReminders: (String, Boolean) -> Unit,
+    saveActivity: (String, Extracurricular) -> Unit,
+    activityTest: TestNotification,
+    blockedHint: String,
+    viewModel: AppViewModel,
+) {
+    val next = child.nextActivityReminder(LocalDateTime.now())
+    SettingsRow(
+        title = "Podsetnik pred aktivnost",
+        subtitle = when {
+            !child.activityRemindersEnabled -> "Isključeno za sve aktivnosti; svaka čuva svoje podešavanje"
+            next != null -> "Sledeći: ${nextTimeLabel(next, LocalDate.now())}"
+            child.activities.none { it.reminderEnabled } -> "Uključi podsetnik za aktivnost ispod"
+            else -> "Uključeno"
+        },
+        emoji = "🏅",
+        checked = child.activityRemindersEnabled,
+        onCheckedChange = { setActivityReminders(child.id, it) },
+    )
+    if (!child.activityRemindersEnabled) return
+    child.activities.forEach { activity ->
+        RowDivider()
+        SettingsRow(
+            title = activity.title,
+            subtitle = when {
+                !activity.reminderEnabled -> "Bez podsetnika"
+                activity.reminderMinutesBefore == 0 -> "Na početku"
+                else -> "${reminderOffsetLabel(activity.reminderMinutesBefore)} početka"
+            },
+            leading = { ActivityTile(activity, size = 36.dp) },
+            checked = activity.reminderEnabled,
+            onCheckedChange = { saveActivity(child.id, activity.copy(reminderEnabled = it)) },
+        )
+    }
+    if (child.activities.any { it.reminderEnabled }) {
+        RowDivider()
+        SoundRow(toneOf(child.activityReminderSound, child.activityReminderSilent)) {
+            viewModel.setActivityReminderSound(child.id, alarmSound = it == AlarmTone.ALARM, silent = it == AlarmTone.SILENT)
+        }
+        RowDivider()
+        SettingsRow(
+            title = "Pošalji probni podsetnik",
+            subtitle = if (activityTest.blocked) blockedHint else "Da vidiš kako izgleda i zvuči",
+            emoji = "🧪",
+            onClick = activityTest.send,
         )
     }
 }
@@ -899,7 +943,7 @@ fun ActivitiesScreen(child: Child, viewModel: AppViewModel, onBack: () -> Unit, 
                         title = activity.title,
                         subtitle = listOfNotNull(activity.scheduleLabel(), activity.place.ifBlank { null }).joinToString(" · "),
                         leading = { ActivityTile(activity, size = 36.dp) },
-                        value = if (activity.reminderEnabled) "🔔" else null,
+                        value = if (child.remindsOf(activity)) "🔔" else null,
                         chevron = true,
                         onClick = { editing = activity },
                     )
@@ -918,7 +962,7 @@ fun ActivitiesScreen(child: Child, viewModel: AppViewModel, onBack: () -> Unit, 
                             if (activity.noClasses) "nema nastave" else null,
                         ).joinToString(" · "),
                         leading = { ActivityTile(activity, size = 36.dp) },
-                        value = if (activity.reminderEnabled) "🔔" else null,
+                        value = if (child.remindsOf(activity)) "🔔" else null,
                         chevron = true,
                         onClick = { editing = activity },
                     )

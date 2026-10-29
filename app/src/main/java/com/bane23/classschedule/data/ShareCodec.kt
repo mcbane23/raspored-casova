@@ -32,6 +32,7 @@ object ShareCodec {
         packedForEpochDay = 0,
         packed = emptyList(),
         activities = activities.map { it.copy(reminderEnabled = false) },
+        activityRemindersEnabled = true,
         activityReminderSound = false,
         activityReminderSilent = false,
         morningReminderEnabled = false,

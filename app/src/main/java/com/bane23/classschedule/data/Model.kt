@@ -254,6 +254,12 @@ data class Child(
     val packed: List<String> = emptyList(),
     /** Extracurricular activities (sport, choir, trips, ...) shown next to the classes. */
     val activities: List<Extracurricular> = emptyList(),
+    /**
+     * Turns all of the child's activity reminders on or off at once; each activity keeps its own
+     * [Extracurricular.reminderEnabled] and lead time, so switching this back on restores them as they were. On by
+     * default, so data saved before this switch existed keeps reminding as before.
+     */
+    val activityRemindersEnabled: Boolean = true,
     /** Ring like an alarm clock for activity reminders; see [alarmSound]. */
     val activityReminderSound: Boolean = false,
     /** Activity reminders without any sound; takes precedence over [activityReminderSound]. */

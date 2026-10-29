@@ -56,6 +56,7 @@ import com.bane23.classschedule.data.DEFAULT_ACTIVITY_REMINDER_MINUTES
 import com.bane23.classschedule.data.Extracurricular
 import com.bane23.classschedule.data.SessionChange
 import com.bane23.classschedule.data.activitiesOn
+import com.bane23.classschedule.data.remindsOf
 import com.bane23.classschedule.data.sessionsOn
 import com.bane23.classschedule.data.upcomingRegularDays
 import java.time.DayOfWeek
@@ -86,8 +87,8 @@ fun ActivityTile(activity: Extracurricular, size: Dp = 40.dp, done: Boolean = fa
 }
 
 /**
- * One activity in a list: tile, title, [time], [detail] and place, and the reminder bell when it is on. [tag] marks a
- * session changed this once ("Otkazano", "Pomereno"); [crossed] strikes out one that does not take place here.
+ * One activity in a list: tile, title, [time], [detail] and place, and the reminder bell when [reminder] is on. [tag]
+ * marks a session changed this once ("Otkazano", "Pomereno"); [crossed] strikes out one that does not take place here.
  */
 @Composable
 fun ActivityRow(
@@ -98,6 +99,7 @@ fun ActivityRow(
     tag: String? = null,
     detail: String? = null,
     crossed: Boolean = false,
+    reminder: Boolean = activity.reminderEnabled,
     onClick: () -> Unit,
 ) {
     Surface(onClick = onClick, color = Color.Transparent, shape = MaterialTheme.shapes.small) {
@@ -137,7 +139,7 @@ fun ActivityRow(
             when {
                 tag != null -> Tag(tag, tintOf(HolidayAmber, 0.22f, 0.4f), MaterialTheme.colorScheme.onSurface)
                 now -> Tag("Sada", tintOf(ActivityViolet, 0.25f, 0.45f), MaterialTheme.colorScheme.onSurface)
-                activity.reminderEnabled && !done -> Text("🔔", fontSize = 14.sp)
+                reminder && !done -> Text("🔔", fontSize = 14.sp)
             }
         }
     }
@@ -166,6 +168,7 @@ fun ActivitiesCard(child: Child, date: LocalDate, clock: LocalTime?, onOpen: (Ac
             ActivityRow(
                 activity,
                 activity.timeLabelOn(date),
+                reminder = child.remindsOf(activity),
                 done = done,
                 now = now,
                 tag = session.tag(),
@@ -341,7 +344,11 @@ fun ActivityEditorSheet(
                     }
                     SettingsRow(
                         title = "Podsetnik",
-                        subtitle = if (reminder) "Obaveštenje ${reminderOffsetLabel(reminderMinutes).lowercase()} početka" else "Bez obaveštenja",
+                        subtitle = when {
+                            !reminder -> "Bez obaveštenja"
+                            !child.activityRemindersEnabled -> "Svi podsetnici za aktivnosti su isključeni u „Obaveštenja”"
+                            else -> "Obaveštenje ${reminderOffsetLabel(reminderMinutes).lowercase()} početka"
+                        },
                         emoji = "🔔",
                         checked = reminder,
                         onCheckedChange = { reminder = it },
