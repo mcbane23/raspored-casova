@@ -4,15 +4,15 @@
 Prints plain text to stdout: the store listing (app name, short and full
 description from docs/play-listing/sr/) followed by the "What's new" note for
 this version in the <sr>/<en-US> form Play Console accepts. The note comes from
-the merged PR's "Release notes" section, read from PR_TITLE and PR_BODY like
-release_notes.py does. VERSION_NAME names the version in the header.
+the merged PR's "Release notes" section (lines starting with "SR:" or "EN:"),
+read from PR_TITLE and PR_BODY; a missing language falls back to the PR title.
+VERSION_NAME names the version in the header.
 Limits are only warned about (GitHub Actions ::warning::), never enforced.
 """
 import os
+import re
 import sys
 from pathlib import Path
-
-from release_notes import parse
 
 LISTING = Path(__file__).resolve().parents[2] / "docs" / "play-listing" / "sr"
 # (file, heading, Play Console character limit)
@@ -22,6 +22,26 @@ FIELDS = (
     ("full-description.txt", "Pun opis", 4000),
 )
 WHATS_NEW_LIMIT = 500
+HEADING = re.compile(r"^\s*#{1,6}\s*(.*?)\s*#*\s*$")
+ITEM = re.compile(r"^\s*(?:[-*+]\s+)?(SR|EN)\s*:\s*(.*\S)?\s*$", re.IGNORECASE)
+
+
+def parse(body):
+    """Returns {"SR": [...], "EN": [...]} from the "Release notes" section."""
+    notes = {"SR": [], "EN": []}
+    body = re.sub(r"<!--.*?-->", "", body or "", flags=re.DOTALL)
+    in_section = False
+    for line in body.splitlines():
+        heading = HEADING.match(line)
+        if heading:
+            in_section = heading.group(1).strip().lower() == "release notes"
+            continue
+        if not in_section:
+            continue
+        item = ITEM.match(line)
+        if item and item.group(2):
+            notes[item.group(1).upper()].append(item.group(2))
+    return notes
 
 
 def warn(message):

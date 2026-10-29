@@ -64,19 +64,17 @@ jobs:
         if: always()
         run: rm -f "$RUNNER_TEMP/upload.jks"
 
-      - name: Write release note and Google Play texts
+      - name: Write Google Play texts
         if: env.IS_RELEASE == 'true'
         continue-on-error: true
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          # Bilingual note from the "Release notes" section of the merged PR, plus the Play listing
-          # and "What's new" texts as a .txt release asset (see docs/releases.md).
+          # Play listing plus "What's new" from the "Release notes" section of the merged PR,
+          # attached to the release as a .txt file (see docs/releases.md).
           pr=$(gh api "repos/$GITHUB_REPOSITORY/commits/$GITHUB_SHA/pulls" --jq '.[0] // {}' || echo '{}')
           export PR_TITLE=$(jq -r '.title // ""' <<<"$pr")
           export PR_BODY=$(jq -r '.body // ""' <<<"$pr")
-          python3 .github/scripts/release_notes.py > "$RUNNER_TEMP/release-notes.md"
-          cat "$RUNNER_TEMP/release-notes.md"
           python3 .github/scripts/play_texts.py > "$RUNNER_TEMP/google-play.txt"
           cat "$RUNNER_TEMP/google-play.txt"
 
@@ -85,10 +83,6 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          notes="$RUNNER_TEMP/release-notes.md"
-          if [ ! -s "$notes" ]; then
-            printf '**Srpski**\n- Nova verzija.\n\n**English**\n- New version.\n' > "$notes"
-          fi
           mkdir -p dist
           cp app/build/outputs/apk/debug/app-debug.apk "dist/raspored-casova-$VERSION_NAME-debug.apk"
           if [ -n "$SIGNING_KEYSTORE_PATH" ]; then
@@ -100,7 +94,6 @@ jobs:
           gh release create "v$VERSION_NAME" dist/* \
             --target "$GITHUB_SHA" \
             --title "Raspored časova $VERSION_NAME" \
-            --notes-file "$notes" \
             --generate-notes
 
       - name: Keep only the latest releases

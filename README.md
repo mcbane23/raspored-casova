@@ -123,8 +123,8 @@ Every push/merge to `main` runs `.github/workflows/build-release.yml`, which:
    and "What's new" texts,
 3. deletes older releases (and their tags) so only the latest 3 remain.
 
-Each release starts with a short note in Serbian and English, taken from the "Release notes" section of the merged
-pull request (see [docs/releases.md](docs/releases.md)).
+The "What's new" text in that file comes from the "Release notes" section of the merged pull request (see
+[docs/releases.md](docs/releases.md)).
 
 Pull requests run the same build without signing or publishing. Build outputs are never stored in the repository or
 as Actions artifacts.
