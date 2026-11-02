@@ -207,6 +207,10 @@ data class Timetable(
     }
 }
 
+/** The child goes to the remedial or advanced class in period [index] on [epochDay]; see [Child.attendingExtra]. */
+@Serializable
+data class ExtraClassAnswer(val epochDay: Long, val index: Int)
+
 /** A one-off change to a single day's lessons (a substituted subject or a cancelled class). */
 @Serializable
 data class DayOverride(val epochDay: Long, val lessons: List<String>)
@@ -223,6 +227,11 @@ data class Child(
     val morning: Timetable = Timetable.defaultFor(Shift.MORNING),
     val afternoon: Timetable = Timetable.defaultFor(Shift.AFTERNOON),
     val overrides: List<DayOverride> = emptyList(),
+    /**
+     * Remedial and advanced classes the parent confirmed the child goes to on a date, so Today stops asking. A class
+     * the child skips is cancelled for that day with a one-day change instead, so start and end times follow it.
+     */
+    val attendingExtra: List<ExtraClassAnswer> = emptyList(),
     val region: Region = Region.CENTRAL_SERBIA,
     /** 8th grade finishes classes earlier and has the final exam. */
     val finalGrade: Boolean = false,

@@ -82,9 +82,11 @@ fun Child.withTimetableKeepingChanges(shift: Shift, timetable: Timetable): Child
 fun Child.withoutDayChange(date: LocalDate): Child =
     copy(overrides = overrides.filterNot { it.epochDay == date.toEpochDay() })
 
-/** Drops one-off changes for days before [today]; they no longer affect anything. */
-fun Child.withoutPastChanges(today: LocalDate): Child =
-    copy(overrides = overrides.filter { it.epochDay >= today.toEpochDay() })
+/** Drops one-off changes and answers about optional classes for days before [today]; they no longer affect anything. */
+fun Child.withoutPastChanges(today: LocalDate): Child = copy(
+    overrides = overrides.filter { it.epochDay >= today.toEpochDay() },
+    attendingExtra = attendingExtra.filter { it.epochDay >= today.toEpochDay() },
+)
 
 fun Shift.other(): Shift = if (this == Shift.MORNING) Shift.AFTERNOON else Shift.MORNING
 
