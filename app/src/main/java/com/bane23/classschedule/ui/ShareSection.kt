@@ -21,6 +21,7 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.unit.dp
 import com.bane23.classschedule.data.Child
 import com.bane23.classschedule.data.ShareCodec
+import com.bane23.classschedule.data.tr
 import com.google.zxing.BarcodeFormat
 import com.google.zxing.EncodeHintType
 import com.google.zxing.qrcode.QRCodeWriter
@@ -35,26 +36,34 @@ fun QrCodeDialog(child: Child, onDismiss: () -> Unit) {
     val bitmap = remember(child) { runCatching { qrBitmap(ShareCodec.encode(child), 720) }.getOrNull() }
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Raspored: ${child.name}") },
+        title = { Text(tr("Raspored: ${child.name}", "Timetable: ${child.name}")) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 if (bitmap == null) {
                     Text(
-                        "Raspored ima previše podataka za jedan QR kod. Obriši aktivnosti ili događaje koji više nisu " +
-                            "potrebni pa pokušaj ponovo.",
+                        tr(
+                            "Raspored ima previše podataka za jedan QR kod. Obriši aktivnosti ili događaje koji više nisu " +
+                                "potrebni pa pokušaj ponovo.",
+                            "The timetable has too much data for one QR code. Delete activities or events you no longer " +
+                                "need and try again.",
+                        ),
                         style = MaterialTheme.typography.bodyMedium,
                     )
                 } else {
-                    Image(bitmap.asImageBitmap(), contentDescription = "QR kod rasporeda", Modifier.size(280.dp))
+                    Image(bitmap.asImageBitmap(), contentDescription = tr("QR kod rasporeda", "Timetable QR code"), Modifier.size(280.dp))
                     Text(
-                        "Na drugom telefonu: Podešavanja → Uvezi raspored sa QR koda. Deli se raspored, zvona, smene, " +
-                            "kalendar, predmeti, aktivnosti i šta se nosi; jednodnevne izmene i podsetnici ostaju samo ovde.",
+                        tr(
+                            "Na drugom telefonu: Podešavanja → Uvezi raspored sa QR koda. Deli se raspored, zvona, smene, " +
+                                "kalendar, predmeti, aktivnosti i šta se nosi; jednodnevne izmene i podsetnici ostaju samo ovde.",
+                            "On the other phone: Settings → Import a timetable from a QR code. The timetable, bells, shifts, " +
+                                "calendar, subjects, activities and what to bring are shared; one-day changes and reminders stay here only.",
+                        ),
                         style = MaterialTheme.typography.bodySmall,
                     )
                 }
             }
         },
-        confirmButton = { TextButton(colors = accentTextButton(), onClick = onDismiss) { Text("Zatvori") } },
+        confirmButton = { TextButton(colors = accentTextButton(), onClick = onDismiss) { Text(tr("Zatvori", "Close")) } },
     )
 }
 
@@ -83,12 +92,16 @@ fun rememberQrImport(viewModel: AppViewModel, replaceable: Child?, onImported: (
     scanned?.let { shared ->
         AlertDialog(
             onDismissRequest = { scanned = null },
-            title = { Text("Uvezi raspored: ${shared.name}") },
+            title = { Text(tr("Uvezi raspored: ${shared.name}", "Import timetable: ${shared.name}")) },
             text = {
                 Text(
-                    if (replaceable == null) "Raspored će biti dodat kao novo dete."
-                    else "Možeš ga dodati kao novo dete ili njime zameniti raspored za ${replaceable.name} " +
-                        "(ime, škola, raspored, zvona, smene, kalendar i predmeti).",
+                    if (replaceable == null) tr("Raspored će biti dodat kao novo dete.", "The timetable will be added as a new child.")
+                    else tr(
+                        "Možeš ga dodati kao novo dete ili njime zameniti raspored za ${replaceable.name} " +
+                            "(ime, škola, raspored, zvona, smene, kalendar i predmeti).",
+                        "You can add it as a new child or use it to replace the timetable of ${replaceable.name} " +
+                            "(name, school, timetable, bells, shifts, calendar and subjects).",
+                    ),
                 )
             },
             confirmButton = {
@@ -96,14 +109,14 @@ fun rememberQrImport(viewModel: AppViewModel, replaceable: Child?, onImported: (
                     TextButton(colors = accentTextButton(), onClick = {
                         viewModel.importChild(shared, replaceId = null)
                         scanned = null
-                    }) { Text("Dodaj kao novo dete") }
+                    }) { Text(tr("Dodaj kao novo dete", "Add as a new child")) }
                     if (replaceable != null) {
                         TextButton(colors = accentTextButton(), onClick = {
                             viewModel.importChild(shared, replaceId = replaceable.id)
                             scanned = null
-                        }) { Text("Zameni za ${replaceable.name}") }
+                        }) { Text(tr("Zameni za ${replaceable.name}", "Replace ${replaceable.name}")) }
                     }
-                    TextButton(colors = accentTextButton(), onClick = { scanned = null }) { Text("Odustani") }
+                    TextButton(colors = accentTextButton(), onClick = { scanned = null }) { Text(tr("Odustani", "Cancel")) }
                 }
             },
         )
@@ -112,9 +125,9 @@ fun rememberQrImport(viewModel: AppViewModel, replaceable: Child?, onImported: (
     if (scanFailed) {
         AlertDialog(
             onDismissRequest = { scanFailed = false },
-            title = { Text("Nepoznat QR kod") },
-            text = { Text("Ovaj QR kod nije raspored iz aplikacije Raspored časova.") },
-            confirmButton = { TextButton(colors = accentTextButton(), onClick = { scanFailed = false }) { Text("U redu") } },
+            title = { Text(tr("Nepoznat QR kod", "Unknown QR code")) },
+            text = { Text(tr("Ovaj QR kod nije raspored iz aplikacije Raspored časova.", "This QR code is not a timetable from the Class schedule app.")) },
+            confirmButton = { TextButton(colors = accentTextButton(), onClick = { scanFailed = false }) { Text(tr("U redu", "OK")) } },
         )
     }
 
@@ -122,7 +135,7 @@ fun rememberQrImport(viewModel: AppViewModel, replaceable: Child?, onImported: (
         scanner.launch(
             ScanOptions()
                 .setDesiredBarcodeFormats(ScanOptions.QR_CODE)
-                .setPrompt("Skeniraj QR kod rasporeda")
+                .setPrompt(tr("Skeniraj QR kod rasporeda", "Scan the timetable QR code"))
                 .setBeepEnabled(false)
                 .setOrientationLocked(false),
         )

@@ -103,7 +103,7 @@ data class ActivitySession(
     val takesPlace: Boolean get() = state == SessionState.REGULAR || state == SessionState.MOVED_HERE
 }
 
-/** Shortest day off, in days, that counts as a school break even without "raspust" in its title. */
+/** Shortest day off, in days, that counts as a school break even without "raspust" (or "break") in its title. */
 private const val MIN_BREAK_DAYS = 3
 
 /**
@@ -113,7 +113,7 @@ private const val MIN_BREAK_DAYS = 3
  */
 private fun Child.isBreak(date: LocalDate): Boolean = calendarEvents().any {
     it.noClasses && it.covers(date) && !it.id.startsWith(ACTIVITY_EVENT_PREFIX) &&
-        (it.title.contains("raspust", ignoreCase = true) || it.endEpochDay - it.startEpochDay + 1 >= MIN_BREAK_DAYS)
+        (it.title.contains("raspust", ignoreCase = true) || it.title.contains("break", ignoreCase = true) || it.endEpochDay - it.startEpochDay + 1 >= MIN_BREAK_DAYS)
 }
 
 /** Whether a weekly [activity] regularly has a session on [date] (before any one-time change). */

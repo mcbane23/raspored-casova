@@ -59,6 +59,7 @@ import com.bane23.classschedule.data.SessionChange
 import com.bane23.classschedule.data.activitiesOn
 import com.bane23.classschedule.data.remindsOf
 import com.bane23.classschedule.data.sessionsOn
+import com.bane23.classschedule.data.tr
 import com.bane23.classschedule.data.upcomingRegularDays
 import java.time.DayOfWeek
 import java.time.LocalDate
@@ -124,7 +125,7 @@ fun ActivityRow(
                     contentDescription = listOfNotNull(
                         activity.title,
                         time,
-                        tag ?: if (now) "Sada" else null,
+                        tag ?: if (now) tr("Sada", "Now") else null,
                         detail,
                         activity.place.ifBlank { null },
                     ).joinToString(", ")
@@ -150,7 +151,7 @@ fun ActivityRow(
             }
             when {
                 tag != null -> Tag(tag, tintOf(HolidayAmber, 0.22f, 0.4f), MaterialTheme.colorScheme.onSurface)
-                now -> Tag("Sada", tintOf(ActivityViolet, 0.25f, 0.45f), MaterialTheme.colorScheme.onSurface)
+                now -> Tag(tr("Sada", "Now"), tintOf(ActivityViolet, 0.25f, 0.45f), MaterialTheme.colorScheme.onSurface)
                 reminder && !done -> Text("🔔", fontSize = 14.sp)
             }
         }
@@ -168,8 +169,8 @@ fun ActivitiesCard(child: Child, date: LocalDate, clock: LocalTime?, onOpen: (Ac
     if (sessions.isEmpty()) return
     AppCard(verticalArrangement = Arrangement.spacedBy(2.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(bottom = 4.dp)) {
-            Text("🏅 Aktivnosti", style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
-            Tag("Vanškolske", tintOf(ActivityViolet, 0.18f, 0.35f), MaterialTheme.colorScheme.onSurface)
+            Text(tr("🏅 Aktivnosti", "🏅 Activities"), style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
+            Tag(tr("Vanškolske", "Extracurricular"), tintOf(ActivityViolet, 0.18f, 0.35f), MaterialTheme.colorScheme.onSurface)
         }
         sessions.forEach { session ->
             val activity = session.activity
@@ -188,7 +189,7 @@ fun ActivitiesCard(child: Child, date: LocalDate, clock: LocalTime?, onOpen: (Ac
                 crossed = !session.takesPlace,
             ) { onOpen(session) }
         }
-        TextButton(colors = accentTextButton(), onClick = onAdd, modifier = Modifier.align(Alignment.End)) { Text("+ Dodaj aktivnost") }
+        TextButton(colors = accentTextButton(), onClick = onAdd, modifier = Modifier.align(Alignment.End)) { Text(tr("+ Dodaj aktivnost", "+ Add activity")) }
     }
 }
 
@@ -256,8 +257,8 @@ fun ActivityEditorSheet(
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
             Column {
-                Text("Vanškolska aktivnost", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                Text(if (initial == null) "Nova aktivnost" else "Izmeni aktivnost", style = MaterialTheme.typography.titleLarge)
+                Text(tr("Vanškolska aktivnost", "Extracurricular activity"), style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(if (initial == null) tr("Nova aktivnost", "New activity") else tr("Izmeni aktivnost", "Edit activity"), style = MaterialTheme.typography.titleLarge)
             }
             FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 ActivityKind.entries.forEach { k ->
@@ -279,13 +280,13 @@ fun ActivityEditorSheet(
             OutlinedTextField(
                 value = title,
                 onValueChange = { title = it },
-                label = { Text("Naziv (npr. Fudbal, Hor, Izlet na Avalu)") },
+                label = { Text(tr("Naziv (npr. Fudbal, Hor, Izlet na Avalu)", "Name (e.g. Football, Choir, Trip to Avala)")) },
                 singleLine = true,
                 shape = MaterialTheme.shapes.small,
                 modifier = Modifier.fillMaxWidth(),
             )
 
-            PillToggle(listOf(true, false), weekly, { if (it) "🔁 Svake nedelje" else "📅 Jednom" }, { weekly = it })
+            PillToggle(listOf(true, false), weekly, { if (it) tr("🔁 Svake nedelje", "🔁 Every week") else tr("📅 Jednom", "📅 Once") }, { weekly = it })
             if (weekly) {
                 Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                     DayOfWeek.entries.forEach { d ->
@@ -308,17 +309,17 @@ fun ActivityEditorSheet(
                     }
                 }
             } else {
-                FieldButton("📅", "Datum", dateRangeLabel(firstDay, lastDay)) { pickingDate = true }
+                FieldButton("📅", tr("Datum", "Date"), dateRangeLabel(firstDay, lastDay)) { pickingDate = true }
             }
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                FieldButton("🕔", if (multiDay) "Polazak" else "Počinje", minuteLabel(startMinute), Modifier.weight(1f)) { pickingTime = true }
-                FieldButton("🏁", if (multiDay) "Povratak" else "Završava", minuteLabel(endMinute), Modifier.weight(1f)) { pickingTime = false }
+                FieldButton("🕔", if (multiDay) tr("Polazak", "Departure") else tr("Počinje", "Starts"), minuteLabel(startMinute), Modifier.weight(1f)) { pickingTime = true }
+                FieldButton("🏁", if (multiDay) tr("Povratak", "Return") else tr("Završava", "Ends"), minuteLabel(endMinute), Modifier.weight(1f)) { pickingTime = false }
             }
-            if (!timesOk) Hint("Kraj mora biti posle početka.")
+            if (!timesOk) Hint(tr("Kraj mora biti posle početka.", "The end must be after the start."))
             OutlinedTextField(
                 value = place,
                 onValueChange = { place = it },
-                label = { Text("Mesto (npr. Sportska hala)") },
+                label = { Text(tr("Mesto (npr. Sportska hala)", "Place (e.g. Sports hall)")) },
                 singleLine = true,
                 shape = MaterialTheme.shapes.small,
                 modifier = Modifier.fillMaxWidth(),
@@ -326,7 +327,7 @@ fun ActivityEditorSheet(
             OutlinedTextField(
                 value = note,
                 onValueChange = { note = it },
-                label = { Text("Napomena (npr. patike i flašica vode)") },
+                label = { Text(tr("Napomena (npr. patike i flašica vode)", "Note (e.g. sneakers and a water bottle)")) },
                 singleLine = true,
                 shape = MaterialTheme.shapes.small,
                 modifier = Modifier.fillMaxWidth(),
@@ -336,8 +337,9 @@ fun ActivityEditorSheet(
                 Column {
                     if (!weekly) {
                         SettingsRow(
-                            title = "Nema nastave",
-                            subtitle = if (noClasses) "Tih dana nema časova, kao za raspust" else "Časovi se održavaju po rasporedu",
+                            title = tr("Nema nastave", "No classes"),
+                            subtitle = if (noClasses) tr("Tih dana nema časova, kao za raspust", "No classes on those days, like during a break")
+                            else tr("Časovi se održavaju po rasporedu", "Classes are held as usual"),
                             emoji = "🏫",
                             checked = noClasses,
                             onCheckedChange = { noClasses = it },
@@ -346,8 +348,8 @@ fun ActivityEditorSheet(
                     }
                     if (weekly) {
                         SettingsRow(
-                            title = "Pauza za raspust",
-                            subtitle = "Ne prikazuje se i ne podseća tokom raspusta; na Dan škole i praznike ostaje",
+                            title = tr("Pauza za raspust", "Pause during breaks"),
+                            subtitle = tr("Ne prikazuje se i ne podseća tokom raspusta; na Dan škole i praznike ostaje", "Not shown and no reminder during school breaks; stays on the School Day and holidays"),
                             emoji = "🏖️",
                             checked = paused,
                             onCheckedChange = { paused = it },
@@ -355,11 +357,11 @@ fun ActivityEditorSheet(
                         RowDivider()
                     }
                     SettingsRow(
-                        title = "Podsetnik",
+                        title = tr("Podsetnik", "Reminder"),
                         subtitle = when {
-                            !reminder -> "Bez obaveštenja"
-                            !child.activityRemindersEnabled -> "Svi podsetnici za aktivnosti su isključeni u „Obaveštenja”"
-                            else -> "Obaveštenje ${reminderOffsetLabel(reminderMinutes).lowercase()} početka"
+                            !reminder -> tr("Bez obaveštenja", "No notification")
+                            !child.activityRemindersEnabled -> tr("Svi podsetnici za aktivnosti su isključeni u „Obaveštenja”", "All activity reminders are off under “Notifications”")
+                            else -> tr("Obaveštenje ${reminderOffsetLabel(reminderMinutes).lowercase()} početka", "Notification ${reminderOffsetLabel(reminderMinutes).lowercase()} the start")
                         },
                         emoji = "🔔",
                         checked = reminder,
@@ -380,7 +382,7 @@ fun ActivityEditorSheet(
                 val sessionDays = (child.upcomingRegularDays(draft, today, 4) + changes.map { it.regularDay }.filter { it >= today })
                     .distinct().sorted()
                 if (sessionDays.isNotEmpty()) {
-                    Text("Otkaži ili pomeri jedan termin", style = MaterialTheme.typography.titleSmall, modifier = Modifier.padding(top = 4.dp))
+                    Text(tr("Otkaži ili pomeri jedan termin", "Cancel or move one session"), style = MaterialTheme.typography.titleSmall, modifier = Modifier.padding(top = 4.dp))
                     Surface(shape = MaterialTheme.shapes.large, color = MaterialTheme.colorScheme.surfaceContainerLowest) {
                         Column {
                             sessionDays.forEachIndexed { i, day ->
@@ -401,11 +403,11 @@ fun ActivityEditorSheet(
                             }
                         }
                     }
-                    Hint("Promena važi samo za taj termin; redovan raspored ostaje isti za naredne nedelje.")
+                    Hint(tr("Promena važi samo za taj termin; redovan raspored ostaje isti za naredne nedelje.", "The change applies to that session only; the usual schedule stays the same for the coming weeks."))
                 }
             }
 
-            BigButton("Sačuvaj", Modifier.fillMaxWidth(), enabled = canSave) {
+            BigButton(tr("Sačuvaj", "Save"), Modifier.fillMaxWidth(), enabled = canSave) {
                 onSave(
                     start.copy(
                         title = title.trim(),
@@ -427,7 +429,7 @@ fun ActivityEditorSheet(
             }
             if (onDelete != null) {
                 TextButton(colors = accentTextButton(), onClick = onDelete, modifier = Modifier.fillMaxWidth()) {
-                    Text("Obriši aktivnost", color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.titleSmall)
+                    Text(tr("Obriši aktivnost", "Delete activity"), color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.titleSmall)
                 }
             }
         }
@@ -435,7 +437,7 @@ fun ActivityEditorSheet(
 
     pickingTime?.let { isStart ->
         TimeInputDialog(
-            title = if (isStart) "Početak" else "Kraj",
+            title = if (isStart) tr("Početak", "Start") else tr("Kraj", "End"),
             initialMinute = if (isStart) startMinute else endMinute,
             onDismiss = { pickingTime = null },
             onConfirm = { minute ->
@@ -485,13 +487,13 @@ fun ActivityEditorSheet(
                         }
                         pickingDate = false
                     },
-                ) { Text("U redu") }
+                ) { Text(tr("U redu", "OK")) }
             },
-            dismissButton = { TextButton(colors = accentTextButton(), onClick = { pickingDate = false }) { Text("Odustani") } },
+            dismissButton = { TextButton(colors = accentTextButton(), onClick = { pickingDate = false }) { Text(tr("Odustani", "Cancel")) } },
         ) {
             DateRangePicker(
                 state = state,
-                title = { Text("Izaberi dan ili više dana", Modifier.padding(start = 24.dp, top = 16.dp)) },
+                title = { Text(tr("Izaberi dan ili više dana", "Pick one or more days"), Modifier.padding(start = 24.dp, top = 16.dp)) },
                 showModeToggle = false,
                 modifier = Modifier.height(480.dp),
             )
@@ -534,14 +536,14 @@ fun ActivitySessionSheet(
             Row(verticalAlignment = Alignment.CenterVertically) {
                 ActivityTile(activity, size = 44.dp)
                 Column(Modifier.padding(start = 12.dp)) {
-                    Text("Jedan termin", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(tr("Jedan termin", "One session"), style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     Text(activity.title, style = MaterialTheme.typography.titleLarge)
                     Text("${regularDay.label()} · $regularTime", style = MaterialTheme.typography.bodyMedium)
                 }
             }
             when {
                 change == null -> Unit
-                change.cancelled -> NoteBanner("❌", "Ovaj termin je otkazan.")
+                change.cancelled -> NoteBanner("❌", tr("Ovaj termin je otkazan.", "This session is cancelled."))
                 else -> NoteBanner("➡️", change.label().replaceFirstChar { it.uppercase() } + ".")
             }
 
@@ -550,16 +552,16 @@ fun ActivitySessionSheet(
                     Column {
                         if (change?.cancelled != true) {
                             SettingsRow(
-                                title = "Otkaži ovaj termin",
-                                subtitle = "Bez podsetnika; naredne nedelje ostaju iste",
+                                title = tr("Otkaži ovaj termin", "Cancel this session"),
+                                subtitle = tr("Bez podsetnika; naredne nedelje ostaju iste", "No reminder; the coming weeks stay the same"),
                                 emoji = "❌",
                                 onClick = { onChange(activity.withChange(regularDay, SessionChange(regularDay.toEpochDay()))) },
                             )
                             RowDivider()
                         }
                         SettingsRow(
-                            title = "Pomeri ovaj termin",
-                            subtitle = "Drugi dan ili drugo vreme, samo ovog puta",
+                            title = tr("Pomeri ovaj termin", "Move this session"),
+                            subtitle = tr("Drugi dan ili drugo vreme, samo ovog puta", "Another day or time, this once only"),
                             emoji = "📆",
                             chevron = true,
                             onClick = { moving = true },
@@ -567,7 +569,7 @@ fun ActivitySessionSheet(
                         if (change != null) {
                             RowDivider()
                             SettingsRow(
-                                title = "Vrati redovan termin",
+                                title = tr("Vrati redovan termin", "Restore the usual session"),
                                 subtitle = "${regularDay.label()} · $regularTime",
                                 emoji = "↩️",
                                 onClick = { onChange(activity.withChange(regularDay, null)) },
@@ -576,8 +578,8 @@ fun ActivitySessionSheet(
                         if (onEditAll != null) {
                             RowDivider()
                             SettingsRow(
-                                title = "Izmeni aktivnost",
-                                subtitle = "Dani, vreme i podsetnik za sve nedelje",
+                                title = tr("Izmeni aktivnost", "Edit activity"),
+                                subtitle = tr("Dani, vreme i podsetnik za sve nedelje", "Days, time and reminder for every week"),
                                 emoji = "✏️",
                                 chevron = true,
                                 onClick = onEditAll,
@@ -585,29 +587,29 @@ fun ActivitySessionSheet(
                         }
                     }
                 }
-                Hint("Redovan raspored aktivnosti ostaje isti za naredne nedelje.")
+                Hint(tr("Redovan raspored aktivnosti ostaje isti za naredne nedelje.", "The activity’s usual schedule stays the same for the coming weeks."))
             } else {
-                FieldButton("📅", "Novi dan", moveDay.label()) { pickingDate = true }
+                FieldButton("📅", tr("Novi dan", "New day"), moveDay.label()) { pickingDate = true }
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    FieldButton("🕔", "Počinje", minuteLabel(startMinute), Modifier.weight(1f)) { pickingTime = true }
-                    FieldButton("🏁", "Završava", minuteLabel(endMinute), Modifier.weight(1f)) { pickingTime = false }
+                    FieldButton("🕔", tr("Počinje", "Starts"), minuteLabel(startMinute), Modifier.weight(1f)) { pickingTime = true }
+                    FieldButton("🏁", tr("Završava", "Ends"), minuteLabel(endMinute), Modifier.weight(1f)) { pickingTime = false }
                 }
                 val timesOk = endMinute > startMinute
-                if (!timesOk) Hint("Kraj mora biti posle početka.")
-                Hint("Podsetnik stiže ${reminderOffsetLabel(activity.reminderMinutesBefore).lowercase()} novog početka, ako je uključen.")
-                BigButton("Sačuvaj pomeranje", Modifier.fillMaxWidth(), enabled = timesOk) {
+                if (!timesOk) Hint(tr("Kraj mora biti posle početka.", "The end must be after the start."))
+                Hint(tr("Podsetnik stiže ${reminderOffsetLabel(activity.reminderMinutesBefore).lowercase()} novog početka, ako je uključen.", "The reminder comes ${reminderOffsetLabel(activity.reminderMinutesBefore).lowercase()} the new start, if it is on."))
+                BigButton(tr("Sačuvaj pomeranje", "Save the move"), Modifier.fillMaxWidth(), enabled = timesOk) {
                     val unchanged = moveDay == regularDay && startMinute == activity.startMinute && endMinute == activity.endMinute
                     val moved = SessionChange(regularDay.toEpochDay(), moveDay.toEpochDay(), startMinute, endMinute)
                     onChange(activity.withChange(regularDay, if (unchanged) null else moved))
                 }
-                TextButton(colors = accentTextButton(), onClick = { moving = false }, modifier = Modifier.fillMaxWidth()) { Text("Nazad") }
+                TextButton(colors = accentTextButton(), onClick = { moving = false }, modifier = Modifier.fillMaxWidth()) { Text(tr("Nazad", "Back")) }
             }
         }
     }
 
     pickingTime?.let { isStart ->
         TimeInputDialog(
-            title = if (isStart) "Početak" else "Kraj",
+            title = if (isStart) tr("Početak", "Start") else tr("Kraj", "End"),
             initialMinute = if (isStart) startMinute else endMinute,
             onDismiss = { pickingTime = null },
             onConfirm = { minute ->
@@ -638,9 +640,9 @@ fun ActivitySessionSheet(
                         state.selectedDateMillis?.let { moveDay = LocalDate.ofEpochDay(it / MILLIS_PER_DAY) }
                         pickingDate = false
                     },
-                ) { Text("U redu") }
+                ) { Text(tr("U redu", "OK")) }
             },
-            dismissButton = { TextButton(colors = accentTextButton(), onClick = { pickingDate = false }) { Text("Odustani") } },
+            dismissButton = { TextButton(colors = accentTextButton(), onClick = { pickingDate = false }) { Text(tr("Odustani", "Cancel")) } },
         ) {
             DatePicker(state = state, showModeToggle = false)
         }

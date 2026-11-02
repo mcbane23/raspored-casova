@@ -45,7 +45,9 @@ import com.bane23.classschedule.data.DayInfo
 import com.bane23.classschedule.data.Lesson
 import com.bane23.classschedule.data.dayInfo
 import com.bane23.classschedule.data.hasTimetable
+import com.bane23.classschedule.data.lessonLabel
 import com.bane23.classschedule.data.shiftOn
+import com.bane23.classschedule.data.tr
 import com.bane23.classschedule.data.widgetDay
 import com.bane23.classschedule.ui.childColor
 import com.bane23.classschedule.ui.eventEmoji
@@ -107,10 +109,10 @@ private fun WidgetContent(context: Context, data: AppData) {
         Header(child, day?.date, now.toLocalDate(), day?.lessons.orEmpty())
         Spacer(GlanceModifier.height(8.dp))
         when {
-            !child.hasTimetable() -> Message("🗓️", "Raspored još nije unet", "Dodirni da ga upišeš.")
+            !child.hasTimetable() -> Message("🗓️", tr("Raspored još nije unet", "No timetable yet"), tr("Dodirni da ga upišeš.", "Tap to enter it."))
             day == null -> {
-                val reason = (child.dayInfo(now.toLocalDate()) as? DayInfo.NoClasses)?.reason ?: "Nema nastave"
-                Message(eventEmoji(reason), reason, "Nema časova u naredne dve nedelje.")
+                val reason = (child.dayInfo(now.toLocalDate()) as? DayInfo.NoClasses)?.reason ?: tr("Nema nastave", "No classes")
+                Message(eventEmoji(reason), reason, tr("Nema časova u naredne dve nedelje.", "No classes in the next two weeks."))
             }
             else -> {
                 LazyColumn(GlanceModifier.defaultWeight().fillMaxWidth()) {
@@ -139,14 +141,14 @@ private fun Header(child: Child, date: LocalDate?, today: LocalDate, lessons: Li
         Spacer(GlanceModifier.width(10.dp))
         Column(GlanceModifier.defaultWeight()) {
             Text(
-                child.name.ifBlank { "Raspored časova" },
+                child.name.ifBlank { tr("Raspored časova", "Class schedule") },
                 style = TextStyle(color = colors.onSurface, fontSize = 16.sp, fontWeight = FontWeight.Bold),
                 maxLines = 1,
             )
             if (date != null) {
                 val dayName = when (date) {
-                    today -> "Danas"
-                    today.plusDays(1) -> "Sutra"
+                    today -> tr("Danas", "Today")
+                    today.plusDays(1) -> tr("Sutra", "Tomorrow")
                     else -> date.dayOfWeek.label()
                 }
                 val shift = child.shiftOn(date)
@@ -178,7 +180,7 @@ private fun LessonRow(lesson: Lesson, open: Action) {
         }
         Spacer(GlanceModifier.width(10.dp))
         Text(
-            lesson.subject,
+            lessonLabel(lesson.subject),
             style = TextStyle(color = colors.onSurface, fontSize = 14.sp, fontWeight = FontWeight.Medium),
             maxLines = 1,
             modifier = GlanceModifier.defaultWeight(),
@@ -201,7 +203,8 @@ private fun PackLine(packed: Int, total: Int, forTomorrow: Boolean) {
             .padding(horizontal = 10.dp, vertical = 6.dp),
     ) {
         Text(
-            if (done) "✅ Torba je spremna!" else "🎒 Torba${if (forTomorrow) " za sutra" else ""}: $packed/$total spakovano",
+            if (done) tr("✅ Torba je spremna!", "✅ The bag is ready!")
+            else tr("🎒 Torba${if (forTomorrow) " za sutra" else ""}: $packed/$total spakovano", "🎒 Bag${if (forTomorrow) " for tomorrow" else ""}: $packed/$total packed"),
             style = TextStyle(
                 color = if (done) colors.onTertiaryContainer else colors.onPrimaryContainer,
                 fontSize = 13.sp,

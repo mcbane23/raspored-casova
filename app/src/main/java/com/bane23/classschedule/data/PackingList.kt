@@ -2,11 +2,13 @@ package com.bane23.classschedule.data
 
 import java.time.LocalDate
 
-/** Suggestions used until the parent writes their own note for a subject (matched on part of the name). */
-private val DEFAULT_PACK_NOTES = listOf(
-    "fizičk" to "patike i sportska oprema",
-    "fizick" to "patike i sportska oprema",
-    "likovn" to "pribor za likovno",
+/** Suggestions used until the parent writes their own note for a subject (matched on the start of a word in its name). */
+private val DEFAULT_PACK_NOTES: List<Pair<String, () -> String>> = listOf(
+    "fizičk" to { tr("patike i sportska oprema", "sneakers and sports gear") },
+    "fizick" to { tr("patike i sportska oprema", "sneakers and sports gear") },
+    "physical" to { tr("patike i sportska oprema", "sneakers and sports gear") },
+    "likovn" to { tr("pribor za likovno", "art supplies") },
+    "art" to { tr("pribor za likovno", "art supplies") },
 )
 
 /** The first day after [date] (within two weeks) that has classes, or null. */
@@ -21,7 +23,7 @@ fun Child.packSubjects(date: LocalDate): List<String> =
 fun Child.packNote(subject: String): String {
     packNotes[subject]?.let { return it }
     val name = subject.lowercase()
-    return DEFAULT_PACK_NOTES.firstOrNull { name.contains(it.first) }?.second.orEmpty()
+    return DEFAULT_PACK_NOTES.firstOrNull { name.startsWith(it.first) || name.contains(" ${it.first}") }?.second?.invoke().orEmpty()
 }
 
 fun Child.isPacked(date: LocalDate, subject: String): Boolean =

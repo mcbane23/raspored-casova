@@ -2,10 +2,18 @@
 
 An Android app for following a child's class schedule, the school calendar (holidays and breaks) and a parent
 notification when classes end for the day. It supports separate morning and afternoon shifts. The app's UI is in
-Serbian.
+Serbian (Latin script) and English.
 
 ## Features
 
+- **Language:** the very first launch asks for the language (Srpski or English, the phone's language preselected);
+  Settings → "Jezik · Language" changes it at any time. Texts sit side by side in the code as `tr("srpski", "English")`
+  (`data/Language.kt`) instead of string resources, since many are built from Serbian cases and plurals; the choice is
+  kept by `LanguageStore` in shared preferences, so screens, notifications and the widget all read it. On Android 13+
+  it is also the system per-app language (`res/xml/locales_config.xml`). Saved data stays language-neutral: built-in
+  subjects, "Dopunska"/"Dodatna" lessons and the official calendar keep their Serbian names in the data file and in QR
+  codes and are translated only on screen (`subjectLabel`, `lessonLabel`, `OfficialEvent.englishTitle`), so two
+  phones in different languages can share a timetable.
 - **Porodica (Family):** shown only with two or more children, and then the first tab. Every child's day on one
   screen: shift, current class or break, the day's classes as small dots, when classes end and a switch for the
   parent alarm. Tapping a child opens their Today tab.

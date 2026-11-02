@@ -1,0 +1,16 @@
+Class Schedule is a simple app for parents and primary school children in Serbia. Today's classes, the weekly timetable and the school calendar are all in one place, in English or Serbian.
+
+• Today – the day's classes with exact bell times. A substitute subject or a cancelled class? Change just that day, and the timetable goes back to normal by itself tomorrow.
+• Morning and afternoon shift – separate timetables and bells for each shift; the shift changes weekly, monthly or stays the same.
+• Serbian school calendar – breaks, days off and days taught by another weekday's timetable, with a countdown to the next break. Central Serbia and Vojvodina are supported, as well as the earlier end of classes for the 8th grade.
+• School events – add the School Day, the school's slava or other days off.
+• Parent alarm – a notification when the last class ends (or a few minutes earlier).
+• Morning reminder – an hour before the first class (or when you choose), a reminder to check whether a class was moved or cancelled.
+• School bag reminder – in the evening before a school day, reminds the child what to pack for tomorrow.
+• Extracurricular activities – training, choir, language school or a trip, with a reminder before it starts; a single session can be cancelled or moved while the usual schedule stays.
+• Several children – each child has their own timetable, shift and calendar.
+• Subject list – pick a subject from the list instead of typing, with remedial and advanced classes in any subject. When there is a remedial or advanced class today, the app asks whether the child is going, so the start and end of the school day and the alarm are right.
+• Pre-class – for shifts that start with a pre-class.
+• QR code sharing – send the filled-in timetable to your child or the other parent by scanning a QR code.
+
+No account, no ads and no internet: all data stays on your phone only.

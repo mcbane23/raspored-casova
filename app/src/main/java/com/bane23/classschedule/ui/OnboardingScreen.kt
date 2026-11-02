@@ -33,8 +33,9 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.bane23.classschedule.data.Child
-import com.bane23.classschedule.data.DEFAULT_CHILD_NAME
+import com.bane23.classschedule.data.isDefaultChildName
 import com.bane23.classschedule.data.hasTimetable
+import com.bane23.classschedule.data.tr
 
 /** Steps of the first-run setup; the ones between [WELCOME] and [DONE] show as progress dots. */
 private enum class SetupStep { WELCOME, CHILD, SHIFT, BELLS, NOTIFY, DONE }
@@ -51,7 +52,7 @@ fun OnboardingScreen(child: Child, viewModel: AppViewModel, onFinish: (enterTime
     var step by rememberSaveable { mutableStateOf(SetupStep.WELCOME) }
     val scanQr = rememberQrImport(viewModel, replaceable = child, onImported = { step = SetupStep.NOTIFY })
     // The default name "Dete" reads oddly mid-sentence ("Kada Dete ide u školu?").
-    val name = child.name.takeIf { it.isNotBlank() && it != DEFAULT_CHILD_NAME } ?: "dete"
+    val name = child.name.takeIf { it.isNotBlank() && !isDefaultChildName(it) } ?: tr("dete", "your child")
 
     BackHandler(enabled = step != SetupStep.WELCOME && step != SetupStep.DONE) {
         step = SetupStep.entries[step.ordinal - 1]
@@ -73,7 +74,7 @@ fun OnboardingScreen(child: Child, viewModel: AppViewModel, onFinish: (enterTime
             if (step in DOTTED_STEPS) ProgressDots(DOTTED_STEPS.indexOf(step), DOTTED_STEPS.size)
             Box(Modifier.weight(1f), contentAlignment = Alignment.CenterEnd) {
                 if (step != SetupStep.DONE) {
-                    TextButton(colors = accentTextButton(), onClick = { onFinish(false) }) { Text("Preskoči") }
+                    TextButton(colors = accentTextButton(), onClick = { onFinish(false) }) { Text(tr("Preskoči", "Skip")) }
                 }
             }
         }
@@ -88,19 +89,23 @@ fun OnboardingScreen(child: Child, viewModel: AppViewModel, onFinish: (enterTime
         ) {
             when (step) {
                 SetupStep.WELCOME -> {
-                    StepHeader("🎒", "Raspored časova", "Časovi, zvona, torba i raspust na jednom mestu. Podesi sve za par minuta.")
+                    StepHeader(
+                        "🎒",
+                        tr("Raspored časova", "Class schedule"),
+                        tr("Časovi, zvona, torba i raspust na jednom mestu. Podesi sve za par minuta.", "Classes, bells, the school bag and breaks in one place. Set it all up in a couple of minutes."),
+                    )
                     Spacer(Modifier.height(8.dp))
-                    BigButton("Počni podešavanje", Modifier.fillMaxWidth()) { step = SetupStep.CHILD }
+                    BigButton(tr("Počni podešavanje", "Start setup"), Modifier.fillMaxWidth()) { step = SetupStep.CHILD }
                     OutlinedButton(onClick = scanQr, shape = CircleShape, modifier = Modifier.fillMaxWidth().height(52.dp)) {
-                        Text("📷 Uvezi sa QR koda", style = MaterialTheme.typography.titleMedium)
+                        Text(tr("📷 Uvezi sa QR koda", "📷 Import from a QR code"), style = MaterialTheme.typography.titleMedium)
                     }
                     Hint(
-                        "Drugi roditelj već ima raspored? Na tom telefonu otvori Podešavanja → dete → Podeli raspored.",
+                        tr("Drugi roditelj već ima raspored? Na tom telefonu otvori Podešavanja → dete → Podeli raspored.", "Does the other parent already have the timetable? On that phone open Settings → child → Share timetable."),
                         Modifier.fillMaxWidth().padding(horizontal = 8.dp),
                     )
                 }
                 SetupStep.CHILD -> {
-                    StepHeader("👧", "Ko ide u školu?", "Ime se vidi na svakom ekranu. Kasnije možeš dodati još dece.")
+                    StepHeader("👧", tr("Ko ide u školu?", "Who goes to school?"), tr("Ime se vidi na svakom ekranu. Kasnije možeš dodati još dece.", "The name shows on every screen. You can add more children later."))
                     SettingsGroup(null) {
                         Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                             NameAndSchoolFields(child, viewModel)
@@ -108,7 +113,7 @@ fun OnboardingScreen(child: Child, viewModel: AppViewModel, onFinish: (enterTime
                     }
                 }
                 SetupStep.SHIFT -> {
-                    StepHeader("☀️", "Kada $name ide u školu?", "Kad se smene menjaju, aplikacija sama zna koja je smena koje nedelje.")
+                    StepHeader("☀️", tr("Kada $name ide u školu?", "When does $name go to school?"), tr("Kad se smene menjaju, aplikacija sama zna koja je smena koje nedelje.", "When shifts alternate, the app knows which shift is on each week."))
                     SettingsGroup(null) {
                         Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                             ShiftPicker(child, viewModel)
@@ -116,7 +121,7 @@ fun OnboardingScreen(child: Child, viewModel: AppViewModel, onFinish: (enterTime
                     }
                 }
                 SetupStep.BELLS -> {
-                    StepHeader("⏰", "Kada zvoni?", "Ovo su uobičajena zvona. Ako su u školi drugačija, dodirni vreme i promeni ga.")
+                    StepHeader("⏰", tr("Kada zvoni?", "When does the bell ring?"), tr("Ovo su uobičajena zvona. Ako su u školi drugačija, dodirni vreme i promeni ga.", "These are the usual bell times. If your school differs, tap a time to change it."))
                     BellsEditor(child, viewModel)
                 }
                 SetupStep.NOTIFY -> NotifyStep(child, viewModel)
@@ -124,15 +129,15 @@ fun OnboardingScreen(child: Child, viewModel: AppViewModel, onFinish: (enterTime
                     val imported = child.hasTimetable()
                     StepHeader(
                         "🎉",
-                        "Spremno!",
-                        if (imported) "Raspored za $name je uvezen. Sve možeš promeniti u podešavanjima (⚙️ gore desno)."
-                        else "Još samo upiši koje časove $name ima svakog dana. Sve ostalo menjaš u podešavanjima (⚙️ gore desno).",
+                        tr("Spremno!", "All set!"),
+                        if (imported) tr("Raspored za $name je uvezen. Sve možeš promeniti u podešavanjima (⚙️ gore desno).", "The timetable for $name has been imported. You can change anything in Settings (⚙️ top right).")
+                        else tr("Još samo upiši koje časove $name ima svakog dana. Sve ostalo menjaš u podešavanjima (⚙️ gore desno).", "Now just enter the classes $name has each day. Everything else is in Settings (⚙️ top right)."),
                     )
                     Spacer(Modifier.height(8.dp))
                     if (imported) {
-                        BigButton("Otvori raspored", Modifier.fillMaxWidth()) { onFinish(false) }
+                        BigButton(tr("Otvori raspored", "Open timetable"), Modifier.fillMaxWidth()) { onFinish(false) }
                     } else {
-                        BigButton("✏️ Upiši raspored", Modifier.fillMaxWidth()) { onFinish(true) }
+                        BigButton(tr("✏️ Upiši raspored", "✏️ Enter timetable"), Modifier.fillMaxWidth()) { onFinish(true) }
                     }
                     OutlinedButton(
                         onClick = {
@@ -142,10 +147,10 @@ fun OnboardingScreen(child: Child, viewModel: AppViewModel, onFinish: (enterTime
                         shape = CircleShape,
                         modifier = Modifier.fillMaxWidth().height(52.dp),
                     ) {
-                        Text("➕ Dodaj još jedno dete", style = MaterialTheme.typography.titleMedium)
+                        Text(tr("➕ Dodaj još jedno dete", "➕ Add another child"), style = MaterialTheme.typography.titleMedium)
                     }
                     if (!imported) {
-                        TextButton(colors = accentTextButton(), onClick = { onFinish(false) }, modifier = Modifier.fillMaxWidth()) { Text("Kasnije") }
+                        TextButton(colors = accentTextButton(), onClick = { onFinish(false) }, modifier = Modifier.fillMaxWidth()) { Text(tr("Kasnije", "Later")) }
                     }
                 }
             }
@@ -153,7 +158,7 @@ fun OnboardingScreen(child: Child, viewModel: AppViewModel, onFinish: (enterTime
 
         if (step in DOTTED_STEPS) {
             BigButton(
-                if (step == SetupStep.NOTIFY) "Završi" else "Dalje",
+                if (step == SetupStep.NOTIFY) tr("Završi", "Finish") else tr("Dalje", "Next"),
                 Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp),
             ) { step = SetupStep.entries[step.ordinal + 1] }
         }
@@ -166,27 +171,27 @@ private fun NotifyStep(child: Child, viewModel: AppViewModel) {
     val setAlarm = rememberAlarmSwitch(viewModel)
     val setPackReminder = rememberPackReminderSwitch(viewModel)
     val setMorningReminder = rememberMorningReminderSwitch(viewModel)
-    StepHeader("🔔", "Podsetnici", "Stižu na ovaj telefon. Vreme i zvuk menjaš kasnije u podešavanjima.")
+    StepHeader("🔔", tr("Podsetnici", "Reminders"), tr("Stižu na ovaj telefon. Vreme i zvuk menjaš kasnije u podešavanjima.", "They come to this phone. Change the time and sound later in Settings."))
     SettingsGroup(null) {
         SettingsRow(
-            title = "Javi mi kad se završe časovi",
-            subtitle = "Za roditelja, kad zvoni za kraj poslednjeg časa",
+            title = tr("Javi mi kad se završe časovi", "Tell me when classes are over"),
+            subtitle = tr("Za roditelja, kad zvoni za kraj poslednjeg časa", "For the parent, when the last class of the day ends"),
             emoji = "🔔",
             checked = child.alarmEnabled,
             onCheckedChange = { setAlarm(child.id, it) },
         )
         RowDivider()
         SettingsRow(
-            title = "Podseti me pre škole",
-            subtitle = "Sat vremena pre prvog časa, da proveriš plan za danas",
+            title = tr("Podseti me pre škole", "Remind me before school"),
+            subtitle = tr("Sat vremena pre prvog časa, da proveriš plan za danas", "An hour before the first class, to check today’s plan"),
             emoji = "☀️",
             checked = child.morningReminderEnabled,
             onCheckedChange = { setMorningReminder(child.id, it) },
         )
         RowDivider()
         SettingsRow(
-            title = "Podseti da se spakuje torba",
-            subtitle = "Za dete, uveče u 19:00 pred školski dan",
+            title = tr("Podseti da se spakuje torba", "Remind to pack the school bag"),
+            subtitle = tr("Za dete, uveče u 19:00 pred školski dan", "For the child, at 19:00 the evening before a school day"),
             emoji = "🎒",
             checked = child.packReminderEnabled,
             onCheckedChange = { setPackReminder(child.id, it) },

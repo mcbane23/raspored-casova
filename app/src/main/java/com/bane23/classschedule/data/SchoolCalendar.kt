@@ -27,11 +27,15 @@ data class CalendarEvent(
     fun covers(date: LocalDate): Boolean = date.toEpochDay() in startEpochDay..endEpochDay
 }
 
-/** An entry of the official calendar; [region] or [finalGrade] restrict whom it applies to (null = everyone). */
+/**
+ * An entry of the official calendar; [region] or [finalGrade] restrict whom it applies to (null = everyone).
+ * [event] carries the Serbian title, [englishTitle] is shown instead when the app is in English.
+ */
 data class OfficialEvent(
     val event: CalendarEvent,
     val region: Region? = null,
     val finalGrade: Boolean? = null,
+    val englishTitle: String = event.title,
 )
 
 /** One school year of the official calendar, from September 1 to August 31. */
@@ -46,6 +50,7 @@ private fun official(
     start: LocalDate,
     end: LocalDate,
     title: String,
+    englishTitle: String,
     noClasses: Boolean = true,
     timetableDay: DayOfWeek? = null,
     region: Region? = null,
@@ -54,6 +59,7 @@ private fun official(
     CalendarEvent(start.toEpochDay(), end.toEpochDay(), title, noClasses, timetableDay?.value, id = id),
     region,
     finalGrade,
+    englishTitle,
 )
 
 private fun d(year: Int, month: Int, day: Int): LocalDate = LocalDate.of(year, month, day)
@@ -67,27 +73,27 @@ val SCHOOL_YEARS: List<SchoolYear> = listOf(
         label = "2026/27",
         firstDay = d(2026, 9, 1),
         events = listOf(
-            official("2627-swap-1110", d(2026, 11, 10), d(2026, 11, 10), "Nastava po rasporedu za petak",
+            official("2627-swap-1110", d(2026, 11, 10), d(2026, 11, 10), "Nastava po rasporedu za petak", "Classes follow the Friday timetable",
                 noClasses = false, timetableDay = DayOfWeek.FRIDAY),
-            official("2627-autumn", d(2026, 11, 11), d(2026, 11, 13), "Jesenji raspust"),
-            official("2627-winter", d(2026, 12, 31), d(2027, 1, 15), "Zimski raspust", region = Region.CENTRAL_SERBIA),
-            official("2627-winter-v", d(2026, 12, 24), d(2027, 1, 8), "Zimski raspust", region = Region.VOJVODINA),
-            official("2627-sava", d(2027, 1, 27), d(2027, 1, 27), "Savindan, nema nastave"),
-            official("2627-sretenje", d(2027, 2, 15), d(2027, 2, 19), "Sretenjski raspust"),
-            official("2627-sat-0227-v", d(2027, 2, 27), d(2027, 2, 27), "Nastava po rasporedu za petak",
+            official("2627-autumn", d(2026, 11, 11), d(2026, 11, 13), "Jesenji raspust", "Autumn break"),
+            official("2627-winter", d(2026, 12, 31), d(2027, 1, 15), "Zimski raspust", "Winter break", region = Region.CENTRAL_SERBIA),
+            official("2627-winter-v", d(2026, 12, 24), d(2027, 1, 8), "Zimski raspust", "Winter break", region = Region.VOJVODINA),
+            official("2627-sava", d(2027, 1, 27), d(2027, 1, 27), "Savindan, nema nastave", "Saint Sava Day, no classes"),
+            official("2627-sretenje", d(2027, 2, 15), d(2027, 2, 19), "Sretenjski raspust", "Statehood Day break"),
+            official("2627-sat-0227-v", d(2027, 2, 27), d(2027, 2, 27), "Nastava po rasporedu za petak", "Classes follow the Friday timetable",
                 noClasses = false, timetableDay = DayOfWeek.FRIDAY, region = Region.VOJVODINA),
-            official("2627-mock-exam", d(2027, 3, 19), d(2027, 3, 20), "Probni završni ispit",
+            official("2627-mock-exam", d(2027, 3, 19), d(2027, 3, 20), "Probni završni ispit", "Mock final exam",
                 noClasses = false, finalGrade = true),
-            official("2627-easter-v", d(2027, 3, 26), d(2027, 3, 26), "Nenastavni dan (Vojvodina)", region = Region.VOJVODINA),
-            official("2627-easter-v2", d(2027, 3, 29), d(2027, 3, 29), "Nenastavni dan (Vojvodina)", region = Region.VOJVODINA),
-            official("2627-sat-0403-v", d(2027, 4, 3), d(2027, 4, 3), "Nastava po rasporedu za ponedeljak",
+            official("2627-easter-v", d(2027, 3, 26), d(2027, 3, 26), "Nenastavni dan (Vojvodina)", "No classes (Vojvodina)", region = Region.VOJVODINA),
+            official("2627-easter-v2", d(2027, 3, 29), d(2027, 3, 29), "Nenastavni dan (Vojvodina)", "No classes (Vojvodina)", region = Region.VOJVODINA),
+            official("2627-sat-0403-v", d(2027, 4, 3), d(2027, 4, 3), "Nastava po rasporedu za ponedeljak", "Classes follow the Monday timetable",
                 noClasses = false, timetableDay = DayOfWeek.MONDAY, region = Region.VOJVODINA),
-            official("2627-spring", d(2027, 4, 30), d(2027, 5, 4), "Prolećni raspust"),
-            official("2627-end-8", d(2027, 5, 29), d(2027, 6, 13), "Kraj nastave za osmi razred", finalGrade = true),
-            official("2627-final-exam", d(2027, 6, 14), d(2027, 6, 16), "Završni ispit", finalGrade = true),
+            official("2627-spring", d(2027, 4, 30), d(2027, 5, 4), "Prolećni raspust", "Spring break"),
+            official("2627-end-8", d(2027, 5, 29), d(2027, 6, 13), "Kraj nastave za osmi razred", "End of classes for the 8th grade", finalGrade = true),
+            official("2627-final-exam", d(2027, 6, 14), d(2027, 6, 16), "Završni ispit", "Final exam", finalGrade = true),
             // For the 8th grade the summer break starts once the final exam is over.
-            official("2627-summer-8", d(2027, 6, 17), d(2027, 8, 31), "Letnji raspust", finalGrade = true),
-            official("2627-summer", d(2027, 6, 14), d(2027, 8, 31), "Letnji raspust", finalGrade = false),
+            official("2627-summer-8", d(2027, 6, 17), d(2027, 8, 31), "Letnji raspust", "Summer break", finalGrade = true),
+            official("2627-summer", d(2027, 6, 14), d(2027, 8, 31), "Letnji raspust", "Summer break", finalGrade = false),
         ),
     ),
 )
@@ -112,7 +118,7 @@ sealed interface DayInfo {
 fun Child.calendarEvents(): List<CalendarEvent> {
     val official = SCHOOL_YEARS.flatMap { it.events }
         .filter { (it.region == null || it.region == region) && (it.finalGrade == null || it.finalGrade == finalGrade) }
-        .map { it.event }
+        .map { if (Lang.english) it.event.copy(title = it.englishTitle) else it.event }
     val activityDays = activities.filter { !it.weekly && it.noClasses }.map {
         CalendarEvent(it.startEpochDay, maxOf(it.startEpochDay, it.endEpochDay), it.title, noClasses = true, id = "$ACTIVITY_EVENT_PREFIX${it.id}")
     }
@@ -125,7 +131,7 @@ fun Child.dayInfo(date: LocalDate): DayInfo {
     // Checked before the weekend, since a Saturday can be a school day taught by a weekday's timetable.
     val swap = events.firstOrNull { it.timetableDay != null }
     if (swap != null) return DayInfo.SchoolDay(DayOfWeek.of(swap.timetableDay!!), swap.title)
-    if (date.dayOfWeek !in SCHOOL_DAYS) return DayInfo.NoClasses("Vikend")
+    if (date.dayOfWeek !in SCHOOL_DAYS) return DayInfo.NoClasses(tr("Vikend", "Weekend"))
     return DayInfo.SchoolDay(date.dayOfWeek, events.firstOrNull()?.title)
 }
 

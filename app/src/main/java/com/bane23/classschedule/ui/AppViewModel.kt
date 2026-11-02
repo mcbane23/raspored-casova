@@ -8,8 +8,8 @@ import com.bane23.classschedule.data.AppData
 import com.bane23.classschedule.data.CalendarEvent
 import com.bane23.classschedule.data.Child
 import com.bane23.classschedule.data.ChildRepository
-import com.bane23.classschedule.data.DEFAULT_CHILD_NAME
 import com.bane23.classschedule.data.DEFAULT_SUBJECTS
+import com.bane23.classschedule.data.defaultChildName
 import com.bane23.classschedule.data.ExtraClass
 import com.bane23.classschedule.data.Extracurricular
 import com.bane23.classschedule.data.Region
@@ -75,7 +75,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     fun markLessonHintSeen() = save { it.copy(lessonHintSeen = true) }
 
     fun addChild(name: String) {
-        val child = Child(name = name.trim().ifEmpty { DEFAULT_CHILD_NAME }, referenceEpochDay = LocalDate.now().toEpochDay())
+        val child = Child(name = name.trim().ifEmpty { defaultChildName() }, referenceEpochDay = LocalDate.now().toEpochDay())
         save { it.copy(children = it.children + child, selectedChildId = child.id) }
     }
 

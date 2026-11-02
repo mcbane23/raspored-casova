@@ -37,14 +37,53 @@ val DEFAULT_SUBJECTS: List<String> = listOf(
     "Čas odeljenskog starešine",
 )
 
+/** English names of [DEFAULT_SUBJECTS]; the saved timetable keeps the Serbian name, so it is only translated on screen. */
+private val DEFAULT_SUBJECTS_EN: Map<String, String> = mapOf(
+    "Srpski jezik" to "Serbian Language",
+    "Matematika" to "Mathematics",
+    "Engleski jezik" to "English Language",
+    "Svet oko nas" to "The World Around Us",
+    "Priroda i društvo" to "Nature and Society",
+    "Likovna kultura" to "Art",
+    "Muzička kultura" to "Music",
+    "Fizičko i zdravstveno vaspitanje" to "Physical and Health Education",
+    "Istorija" to "History",
+    "Geografija" to "Geography",
+    "Biologija" to "Biology",
+    "Fizika" to "Physics",
+    "Hemija" to "Chemistry",
+    "Tehnika i tehnologija" to "Technology",
+    "Informatika i računarstvo" to "Computer Science",
+    "Drugi strani jezik" to "Second Foreign Language",
+    "Verska nastava" to "Religious Education",
+    "Građansko vaspitanje" to "Civic Education",
+    "Čas odeljenskog starešine" to "Homeroom",
+)
+
+/**
+ * A subject as shown on screen: one of the built-in subjects is translated into the current language, anything the
+ * parent typed is shown as typed. Saved data (timetables, packing ticks, shared QR codes) always keeps [subject].
+ */
+fun subjectLabel(subject: String): String =
+    if (Lang.english) DEFAULT_SUBJECTS_EN[subject.trim()] ?: subject else subject
+
+/** A lesson as shown on screen: "Dopunska: Matematika" becomes "Remedial: Mathematics" in English. */
+fun lessonLabel(lesson: String): String {
+    val (kind, subject) = ExtraClass.parse(lesson)
+    return if (kind == null) subjectLabel(subject) else "${kind.label}: ${subjectLabel(subject)}"
+}
+
 /**
  * Optional classes held for a single subject. Stored inside the lesson text as "Dopunska: Matematika" so the
  * timetable format stays a plain list of strings.
  */
-enum class ExtraClass(val prefix: String) {
-    REMEDIAL("Dopunska"),
-    ADVANCED("Dodatna"),
+enum class ExtraClass(val prefix: String, private val english: String) {
+    REMEDIAL("Dopunska", "Remedial"),
+    ADVANCED("Dodatna", "Advanced"),
     ;
+
+    /** The kind's name in the current language; [prefix] stays Serbian because it is part of the saved lesson text. */
+    val label: String get() = tr(prefix, english)
 
     fun lesson(subject: String): String = "$prefix: ${subject.trim()}"
 
@@ -101,12 +140,12 @@ data class Timetable(
 ) {
     /** "Pretčas" for the pre-class, otherwise "1. čas", "2. čas", ... */
     fun periodLabel(index: Int): String = when {
-        hasPreClass && index == 0 -> "Pretčas"
-        hasPreClass -> "$index. čas"
-        else -> "${index + 1}. čas"
+        hasPreClass && index == 0 -> tr("Pretčas", "Pre-class")
+        hasPreClass -> tr("$index. čas", "Class $index")
+        else -> tr("${index + 1}. čas", "Class ${index + 1}")
     }
 
-    /** Short form for lists: "P" for the pre-class, otherwise "1.", "2.", ... */
+    /** Short form for lists: "P" for the pre-class (in both languages), otherwise "1.", "2.", ... */
     fun periodNumber(index: Int): String = when {
         hasPreClass && index == 0 -> "P"
         hasPreClass -> "$index."
@@ -293,6 +332,15 @@ data class Child(
 
 /** Name of a child added without one; the setup shows it as an empty field to type into. */
 const val DEFAULT_CHILD_NAME = "Dete"
+
+/** [DEFAULT_CHILD_NAME] in English, used for a child added while the app is in English. */
+const val DEFAULT_CHILD_NAME_EN = "Child"
+
+/** The name for a child added without one, in the current language. */
+fun defaultChildName(): String = tr(DEFAULT_CHILD_NAME, DEFAULT_CHILD_NAME_EN)
+
+/** Whether [name] is the placeholder name in either language rather than one the parent typed. */
+fun isDefaultChildName(name: String): Boolean = name == DEFAULT_CHILD_NAME || name == DEFAULT_CHILD_NAME_EN
 
 /** Default time of the packing reminder: 19:00. */
 const val DEFAULT_PACK_REMINDER_MINUTE = 19 * 60

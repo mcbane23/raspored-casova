@@ -5,6 +5,8 @@ import com.bane23.classschedule.data.isPacked
 import com.bane23.classschedule.data.nextSchoolDayAfter
 import com.bane23.classschedule.data.packNote
 import com.bane23.classschedule.data.packSubjects
+import com.bane23.classschedule.data.subjectLabel
+import com.bane23.classschedule.data.tr
 import java.time.LocalDate
 
 /** Title and text of a packing reminder; [bigText] is shown when the notification is expanded. */
@@ -19,15 +21,15 @@ fun packReminderContent(child: Child, date: LocalDate): PackReminderContent? {
     val subjects = child.packSubjects(day)
     val left = subjects.filterNot { child.isPacked(day, it) }
     if (subjects.isNotEmpty() && left.isEmpty()) return null
-    val title = child.name.ifBlank { null }?.let { "🎒 $it, spakuj torbu" } ?: "🎒 Spakuj torbu"
-    val forDay = if (day == date.plusDays(1)) "Za sutra" else "Za ${day.dayOfWeek.accusative()}"
+    val title = child.name.ifBlank { null }?.let { tr("🎒 $it, spakuj torbu", "🎒 $it, pack your bag") } ?: tr("🎒 Spakuj torbu", "🎒 Pack your bag")
+    val forDay = if (day == date.plusDays(1)) tr("Za sutra", "For tomorrow") else tr("Za ${day.dayOfWeek.accusative()}", "For ${day.dayOfWeek.label()}")
     if (left.isEmpty()) {
-        val text = "Vreme je da spakuješ knjige i pribor ${forDay.lowercase()}."
+        val text = tr("Vreme je da spakuješ knjige i pribor ${forDay.lowercase()}.", "Time to pack your books and supplies ${forDay.replaceFirstChar { it.lowercase() }}.")
         return PackReminderContent(title, text, text)
     }
     val lines = left.map { subject ->
         val note = child.packNote(subject)
-        if (note.isEmpty()) "• $subject" else "• $subject: $note"
+        if (note.isEmpty()) "• ${subjectLabel(subject)}" else "• ${subjectLabel(subject)}: $note"
     }
-    return PackReminderContent(title, "$forDay: ${left.joinToString(", ")}", "$forDay:\n${lines.joinToString("\n")}")
+    return PackReminderContent(title, "$forDay: ${left.joinToString(", ") { subjectLabel(it) }}", "$forDay:\n${lines.joinToString("\n")}")
 }

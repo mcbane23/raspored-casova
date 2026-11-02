@@ -80,6 +80,7 @@ import com.bane23.classschedule.data.dayInfo
 import com.bane23.classschedule.data.dayStatus
 import com.bane23.classschedule.data.extraClassesToAsk
 import com.bane23.classschedule.data.isPacked
+import com.bane23.classschedule.data.lessonLabel
 import com.bane23.classschedule.data.lessonsOn
 import com.bane23.classschedule.data.nextSchoolDayAfter
 import com.bane23.classschedule.data.overrideOn
@@ -88,7 +89,9 @@ import com.bane23.classschedule.data.packSubjects
 import com.bane23.classschedule.data.regularSubjectsOn
 import com.bane23.classschedule.data.sessionsOn
 import com.bane23.classschedule.data.shiftOn
+import com.bane23.classschedule.data.subjectLabel
 import com.bane23.classschedule.data.subjectsOn
+import com.bane23.classschedule.data.tr
 import java.time.LocalDate
 import java.time.LocalTime
 
@@ -153,7 +156,7 @@ fun TodayScreen(
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         item {
-            ChildTopRow(children, child.id, onSelectChild, title = child.name.ifBlank { "Raspored časova" }) {
+            ChildTopRow(children, child.id, onSelectChild, title = child.name.ifBlank { tr("Raspored časova", "Class schedule") }) {
                 SettingsButton(onOpenSettings)
             }
         }
@@ -174,12 +177,12 @@ fun TodayScreen(
             item {
                 HeroCard(
                     color = HolidayAmber,
-                    eyebrow = if (isToday) "Danas" else date.dayOfWeek.label(),
+                    eyebrow = if (isToday) tr("Danas", "Today") else date.dayOfWeek.label(),
                     emoji = if (date.dayOfWeek.value >= 6) "🛝" else eventEmoji(noClassesReason),
-                    title = "Nema nastave",
+                    title = tr("Nema nastave", "No classes"),
                     detail = noClassesReason,
                     footer = child.nextActivityOn(date, if (isToday) clock else LocalTime.MIN)
-                        ?.let { "Zatim ${it.kind.emoji()} ${it.title} u ${it.start.label()}" },
+                        ?.let { tr("Zatim ${it.kind.emoji()} ${it.title} u ${it.start.label()}", "Then ${it.kind.emoji()} ${it.title} at ${it.start.label()}") },
                 )
             }
         } else {
@@ -188,7 +191,7 @@ fun TodayScreen(
                     ExtraClassQuestionCard(child.name, extraToAsk, timetable::periodLabel) { lesson, attends ->
                         onAnswerExtraClass(date, lesson.index, attends)
                         if (!attends) {
-                            offerUndo("${ExtraClass.parse(lesson.subject).second} se danas ne računa") {
+                            offerUndo(tr("${subjectLabel(ExtraClass.parse(lesson.subject).second)} se danas ne računa", "${subjectLabel(ExtraClass.parse(lesson.subject).second)} is not counted today")) {
                                 onChangeDay(date, lesson.index, lesson.subject)
                             }
                         }
@@ -199,13 +202,13 @@ fun TodayScreen(
                 if (lessons.isEmpty()) {
                     AppCard {
                         if (child.regularSubjectsOn(date).any { it.isNotBlank() }) {
-                            EmptyState("🎈", "Svi časovi su otkazani", "Za ovaj dan nema časova.")
+                            EmptyState("🎈", tr("Svi časovi su otkazani", "All classes are cancelled"), tr("Za ovaj dan nema časova.", "There are no classes on this day."))
                         } else {
                             EmptyState(
                                 "🗓️",
-                                "Raspored još nije unet",
-                                "Upiši časove za svaki dan u nedelji.",
-                                action = "✏️ Upiši raspored",
+                                tr("Raspored još nije unet", "No timetable yet"),
+                                tr("Upiši časove za svaki dan u nedelji.", "Enter the classes for each day of the week."),
+                                action = tr("✏️ Upiši raspored", "✏️ Enter timetable"),
                                 onAction = onEditTimetable,
                             )
                         }
@@ -219,8 +222,8 @@ fun TodayScreen(
             }
             if (child.overrideOn(date) != null) {
                 item {
-                    NoteBanner("✏️", "Raspored je izmenjen samo za ovaj dan.") {
-                        TextButton(colors = accentTextButton(), onClick = { onResetDay(date) }) { Text("Vrati redovan") }
+                    NoteBanner("✏️", tr("Raspored je izmenjen samo za ovaj dan.", "The timetable is changed for this day only.")) {
+                        TextButton(colors = accentTextButton(), onClick = { onResetDay(date) }) { Text(tr("Vrati redovan", "Restore usual")) }
                     }
                 }
             }
@@ -228,7 +231,7 @@ fun TodayScreen(
                 item {
                     StopsCard(
                         lessons = lessons,
-                        title = (if (isToday) "Danas " else "") + lessonsCount(lessons.size),
+                        title = (if (isToday) tr("Danas ", "Today ") else "") + lessonsCount(lessons.size),
                         clock = if (isToday) clock else null,
                         canAdd = nextFreeIndex < timetable.periods.size,
                         showHint = showLessonHint,
@@ -266,7 +269,7 @@ fun TodayScreen(
             lesson = lesson,
             periodLabel = timetable.periodLabel(lesson.index),
             note = child.packNote(lesson.subject),
-            dateLabel = if (isToday) "danas" else "za ${date.accusativeLabel()}",
+            dateLabel = if (isToday) tr("danas", "today") else tr("za ${date.accusativeLabel()}", "for ${date.accusativeLabel()}"),
             onDismiss = { details = null },
             onChange = {
                 details = null
@@ -310,7 +313,7 @@ fun TodayScreen(
                 {
                     onDeleteActivity(activity.id)
                     activityEdit = null
-                    offerUndo("Aktivnost „${activity.title}” je obrisana") { onSaveActivity(activity) }
+                    offerUndo(tr("Aktivnost „${activity.title}” je obrisana", "Activity “${activity.title}” deleted")) { onSaveActivity(activity) }
                 }
             },
         )
@@ -319,20 +322,20 @@ fun TodayScreen(
     editing?.let { edit ->
         val isNew = edit.subject.isEmpty()
         SubjectPickerSheet(
-            overline = "${timetable.periodLabel(edit.index)} · ${date.label()} · samo ovaj dan",
+            overline = "${timetable.periodLabel(edit.index)} · ${date.label()} · " + tr("samo ovaj dan", "this day only"),
             initial = edit.subject,
             subjects = child.subjects,
             onDismiss = { editing = null },
             onConfirm = {
                 if (it.isNotEmpty() || !isNew) onChangeDay(date, edit.index, it)
                 if (it.isEmpty() && !isNew) {
-                    offerUndo("${timetable.periodLabel(edit.index)} je otkazan za ${date.accusativeLabel()}") {
+                    offerUndo(tr("${timetable.periodLabel(edit.index)} je otkazan za ${date.accusativeLabel()}", "${timetable.periodLabel(edit.index)} cancelled for ${date.accusativeLabel()}")) {
                         onChangeDay(date, edit.index, edit.subject)
                     }
                 }
                 editing = null
             },
-            clearLabel = if (isNew) null else "Otkaži ovaj čas",
+            clearLabel = if (isNew) null else tr("Otkaži ovaj čas", "Cancel this class"),
         )
     }
 }
@@ -341,7 +344,7 @@ fun TodayScreen(
 private fun DaySwitcher(date: LocalDate, isToday: Boolean, onPrevious: () -> Unit, onNext: () -> Unit, onToday: () -> Unit) {
     Row(verticalAlignment = Alignment.CenterVertically) {
         IconButton(onClick = onPrevious) {
-            Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, contentDescription = "Prethodni dan")
+            Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, contentDescription = tr("Prethodni dan", "Previous day"))
         }
         Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
             // The date slides in from the side the user moved to, so a swipe visibly changes the day.
@@ -359,7 +362,7 @@ private fun DaySwitcher(date: LocalDate, isToday: Boolean, onPrevious: () -> Uni
             if (!isToday) {
                 Surface(onClick = onToday, shape = CircleShape, color = MaterialTheme.colorScheme.primaryContainer) {
                     Text(
-                        "Danas",
+                        tr("Danas", "Today"),
                         style = MaterialTheme.typography.labelLarge,
                         color = MaterialTheme.colorScheme.onPrimaryContainer,
                         modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
@@ -368,7 +371,7 @@ private fun DaySwitcher(date: LocalDate, isToday: Boolean, onPrevious: () -> Uni
             }
         }
         IconButton(onClick = onNext) {
-            Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = "Sledeći dan")
+            Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = tr("Sledeći dan", "Next day"))
         }
     }
 }
@@ -385,46 +388,49 @@ private fun DayHero(child: Child, date: LocalDate, isToday: Boolean, clock: Loca
             color = AccentOrange,
             eyebrow = "${shift.icon()} ${shift.shortLabel()} · ${lessonsCount(lessons.size)}",
             emoji = subjectStyle(first.subject).emoji,
-            title = "Škola u ${first.period.start.label()}",
-            detail = "Prvi čas: ${first.subject} · kraj u ${last.period.end.label()}",
+            title = tr("Škola u ${first.period.start.label()}", "School at ${first.period.start.label()}"),
+            detail = tr("Prvi čas: ${lessonLabel(first.subject)} · kraj u ${last.period.end.label()}", "First class: ${lessonLabel(first.subject)} · ends at ${last.period.end.label()}"),
         )
         return
     }
     when (val status = dayStatus(lessons, clock)) {
         is DayStatus.InClass -> HeroCard(
             color = subjectStyle(status.lesson.subject).color,
-            eyebrow = "Sada · ${periodLabel(status.lesson.index)}",
+            eyebrow = tr("Sada", "Now") + " · ${periodLabel(status.lesson.index)}",
             emoji = subjectStyle(status.lesson.subject).emoji,
-            title = status.lesson.subject,
-            detail = "do ${status.lesson.period.end.label()}",
+            title = lessonLabel(status.lesson.subject),
+            detail = tr("do ${status.lesson.period.end.label()}", "until ${status.lesson.period.end.label()}"),
             ringMinutes = status.minutesLeft,
             ringProgress = status.progress,
-            footer = status.next?.let { "Zatim ${subjectStyle(it.subject).emoji} ${it.subject} u ${it.period.start.label()}" }
-                ?: "🏁 Poslednji čas danas",
+            footer = status.next?.let {
+                tr("Zatim ${subjectStyle(it.subject).emoji} ${lessonLabel(it.subject)} u ${it.period.start.label()}",
+                    "Then ${subjectStyle(it.subject).emoji} ${lessonLabel(it.subject)} at ${it.period.start.label()}")
+            } ?: tr("🏁 Poslednji čas danas", "🏁 Last class today"),
         )
         is DayStatus.Break -> HeroCard(
             color = BreakTeal,
-            eyebrow = "Odmor ☕",
+            eyebrow = tr("Odmor ☕", "Break ☕"),
             emoji = subjectStyle(status.next.subject).emoji,
-            title = status.next.subject,
-            detail = "počinje u ${status.next.period.start.label()}",
+            title = lessonLabel(status.next.subject),
+            detail = tr("počinje u ${status.next.period.start.label()}", "starts at ${status.next.period.start.label()}"),
             ringMinutes = status.minutes,
             ringProgress = status.progress,
         )
         is DayStatus.Before -> HeroCard(
             color = AccentOrange,
-            eyebrow = "${shift.icon()} ${shift.shortLabel()} · danas ${lessonsCount(lessons.size)}",
+            eyebrow = "${shift.icon()} ${shift.shortLabel()} · " + tr("danas ${lessonsCount(lessons.size)}", "${lessonsCount(lessons.size)} today"),
             emoji = "🎒",
-            title = "Škola u ${first.period.start.label()}",
-            detail = "Prvi čas: ${subjectStyle(first.subject).emoji} ${first.subject} · za ${durationLabel(status.minutes)}",
+            title = tr("Škola u ${first.period.start.label()}", "School at ${first.period.start.label()}"),
+            detail = tr("Prvi čas: ${subjectStyle(first.subject).emoji} ${lessonLabel(first.subject)} · za ${durationLabel(status.minutes)}",
+                "First class: ${subjectStyle(first.subject).emoji} ${lessonLabel(first.subject)} · in ${durationLabel(status.minutes)}"),
         )
         DayStatus.Done, null -> HeroCard(
             color = DoneGreen,
-            eyebrow = "🏁 Kraj nastave",
+            eyebrow = tr("🏁 Kraj nastave", "🏁 School is over"),
             emoji = "🏆",
-            title = "Gotovo za danas!",
-            detail = "Završeno: ${lessonsCount(lessons.size)}." + packHint(date, child.nextSchoolDayAfter(date)),
-            footer = child.nextActivityOn(date, clock)?.let { "Zatim ${it.kind.emoji()} ${it.title} u ${it.start.label()}" },
+            title = tr("Gotovo za danas!", "Done for today!"),
+            detail = tr("Završeno: ${lessonsCount(lessons.size)}.", "Finished: ${lessonsCount(lessons.size)}.") + packHint(date, child.nextSchoolDayAfter(date)),
+            footer = child.nextActivityOn(date, clock)?.let { tr("Zatim ${it.kind.emoji()} ${it.title} u ${it.start.label()}", "Then ${it.kind.emoji()} ${it.title} at ${it.start.label()}") },
         )
     }
 }
@@ -482,10 +488,10 @@ private fun StopsCard(
         Row(verticalAlignment = Alignment.CenterVertically) {
             Box(Modifier.weight(1f).padding(start = 6.dp)) {
                 if (showHint) {
-                    Text("Dodirni čas za detalje", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(tr("Dodirni čas za detalje", "Tap a class for details"), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
-            if (canAdd) TextButton(colors = accentTextButton(), onClick = onAdd) { Text("+ Dodaj čas") }
+            if (canAdd) TextButton(colors = accentTextButton(), onClick = onAdd) { Text(tr("+ Dodaj čas", "+ Add class")) }
         }
     }
 }
@@ -495,8 +501,8 @@ private fun StopsCard(
 private fun Stop(lesson: Lesson, width: Dp, done: Boolean, current: Boolean, onClick: () -> Unit) {
     val style = subjectStyle(lesson.subject)
     val state = when {
-        done -> ", završen"
-        current -> ", sada"
+        done -> tr(", završen", ", finished")
+        current -> tr(", sada", ", now")
         else -> ""
     }
     Column(
@@ -504,7 +510,7 @@ private fun Stop(lesson: Lesson, width: Dp, done: Boolean, current: Boolean, onC
             .width(width)
             .clip(MaterialTheme.shapes.small)
             .clearAndSetSemantics {
-                contentDescription = "${lesson.subject}, ${lesson.period.start.label()}$state"
+                contentDescription = "${lessonLabel(lesson.subject)}, ${lesson.period.start.label()}$state"
                 role = Role.Button
                 this.onClick {
                     onClick()
@@ -533,7 +539,7 @@ private fun Stop(lesson: Lesson, width: Dp, done: Boolean, current: Boolean, onC
         Text(shortName(lesson.subject), style = MaterialTheme.typography.labelMedium, maxLines = 1)
         Text(lesson.period.start.label(), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         ExtraClass.parse(lesson.subject).first?.let { kind ->
-            Text(kind.prefix.take(3) + ".", style = MaterialTheme.typography.labelSmall, color = accentText())
+            Text(kind.label.take(3) + ".", style = MaterialTheme.typography.labelSmall, color = accentText())
         }
     }
 }
@@ -551,9 +557,9 @@ private fun ExtraClassQuestionCard(
 ) {
     val haptic = LocalHapticFeedback.current
     AppCard(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        Text("🙋 Ide li ${childName.ifBlank { "dete" }} danas?", style = MaterialTheme.typography.titleMedium)
+        Text(tr("🙋 Ide li ${childName.ifBlank { "dete" }} danas?", "🙋 Is ${childName.ifBlank { "your child" }} going today?"), style = MaterialTheme.typography.titleMedium)
         Text(
-            "Od toga zavisi kada počinje i kada se završava nastava.",
+            tr("Od toga zavisi kada počinje i kada se završava nastava.", "This decides when school starts and ends today."),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
@@ -561,7 +567,7 @@ private fun ExtraClassQuestionCard(
             Row(verticalAlignment = Alignment.CenterVertically) {
                 SubjectBadge(lesson.subject, size = 40.dp)
                 Column(Modifier.weight(1f).padding(horizontal = 12.dp)) {
-                    Text(lesson.subject, style = MaterialTheme.typography.titleSmall)
+                    Text(lessonLabel(lesson.subject), style = MaterialTheme.typography.titleSmall)
                     Text(
                         "${periodLabel(lesson.index)} · ${lesson.period.label()}",
                         style = MaterialTheme.typography.bodySmall,
@@ -577,7 +583,7 @@ private fun ExtraClassQuestionCard(
                     },
                     shape = CircleShape,
                     modifier = Modifier.weight(1f).heightIn(min = 48.dp),
-                ) { Text("Ne ide", style = MaterialTheme.typography.titleSmall) }
+                ) { Text(tr("Ne ide", "Not going"), style = MaterialTheme.typography.titleSmall) }
                 OutlinedButton(
                     onClick = {
                         haptic.performHapticFeedback(HapticFeedbackType.ToggleOn)
@@ -585,7 +591,7 @@ private fun ExtraClassQuestionCard(
                     },
                     shape = CircleShape,
                     modifier = Modifier.weight(1f).heightIn(min = 48.dp),
-                ) { Text("✓ Ide", style = MaterialTheme.typography.titleSmall, color = accentText()) }
+                ) { Text(tr("✓ Ide", "✓ Going"), style = MaterialTheme.typography.titleSmall, color = accentText()) }
             }
         }
     }
@@ -594,7 +600,7 @@ private fun ExtraClassQuestionCard(
 /** "Sutra u torbu": the subjects of the next school day, each with what to bring, ticked off by tapping. */
 @Composable
 private fun PackingCard(child: Child, from: LocalDate, packDay: LocalDate, onPacked: (LocalDate, String, Boolean) -> Unit) {
-    val heading = if (packDay == from.plusDays(1)) "Sutra u torbu" else "Za ${packDay.dayOfWeek.accusative()} u torbu"
+    val heading = if (packDay == from.plusDays(1)) tr("Sutra u torbu", "Pack for tomorrow") else tr("Za ${packDay.dayOfWeek.accusative()} u torbu", "Pack for ${packDay.dayOfWeek.label()}")
     val subjects = child.packSubjects(packDay)
     val packedCount = subjects.count { child.isPacked(packDay, it) }
     val allPacked = packedCount == subjects.size
@@ -604,7 +610,7 @@ private fun PackingCard(child: Child, from: LocalDate, packDay: LocalDate, onPac
             Text("🎒 $heading", style = MaterialTheme.typography.titleMedium)
             Spacer(Modifier.width(6.dp))
             Text(
-                "(${packDay.dayOfWeek.label().lowercase()})",
+                "(${packDay.dayOfWeek.label().inSentence()})",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.weight(1f),
@@ -621,7 +627,7 @@ private fun PackingCard(child: Child, from: LocalDate, packDay: LocalDate, onPac
         }
         AnimatedVisibility(allPacked) {
             Text(
-                "🎉 Torba je spremna!",
+                tr("🎉 Torba je spremna!", "🎉 The bag is ready!"),
                 style = MaterialTheme.typography.titleMedium,
                 color = MaterialTheme.colorScheme.tertiary,
                 modifier = Modifier.padding(bottom = 4.dp),
@@ -660,7 +666,7 @@ private fun PackingCard(child: Child, from: LocalDate, packDay: LocalDate, onPac
                     }
                     Column(Modifier.weight(1f).padding(start = 12.dp).alpha(if (packed) 0.55f else 1f)) {
                         Text(
-                            subject,
+                            subjectLabel(subject),
                             style = MaterialTheme.typography.titleSmall,
                             textDecoration = if (packed) TextDecoration.LineThrough else null,
                         )
@@ -697,9 +703,9 @@ private fun LessonDetailsSheet(
         ) {
             SubjectBadge(lesson.subject, size = 72.dp)
             if (kind != null) {
-                Text(kind.prefix.uppercase(), style = MaterialTheme.typography.labelLarge, color = accentText())
+                Text(kind.label.uppercase(), style = MaterialTheme.typography.labelLarge, color = accentText())
             }
-            Text(name, style = MaterialTheme.typography.headlineSmall, textAlign = TextAlign.Center)
+            Text(subjectLabel(name), style = MaterialTheme.typography.headlineSmall, textAlign = TextAlign.Center)
             Text(
                 "$periodLabel · ${lesson.period.label()}",
                 style = MaterialTheme.typography.bodyLarge,
@@ -707,11 +713,11 @@ private fun LessonDetailsSheet(
             )
             if (note.isNotBlank()) {
                 Spacer(Modifier.height(4.dp))
-                NoteBanner("🎒", "Nosi: $note")
+                NoteBanner("🎒", tr("Nosi: $note", "Bring: $note"))
             }
             Spacer(Modifier.height(8.dp))
             OutlinedButton(onClick = onChange, shape = CircleShape, modifier = Modifier.fillMaxWidth().height(48.dp)) {
-                Text("✏️ Izmeni ili otkaži samo $dateLabel", style = MaterialTheme.typography.titleSmall)
+                Text(tr("✏️ Izmeni ili otkaži samo $dateLabel", "✏️ Change or cancel $dateLabel only"), style = MaterialTheme.typography.titleSmall)
             }
         }
     }

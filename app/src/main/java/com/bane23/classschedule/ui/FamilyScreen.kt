@@ -51,9 +51,11 @@ import com.bane23.classschedule.data.calendarEvents
 import com.bane23.classschedule.data.currentShiftDate
 import com.bane23.classschedule.data.dayInfo
 import com.bane23.classschedule.data.dayStatus
+import com.bane23.classschedule.data.lessonLabel
 import com.bane23.classschedule.data.lessonsOn
 import com.bane23.classschedule.data.nextAlarm
 import com.bane23.classschedule.data.shiftOn
+import com.bane23.classschedule.data.tr
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.temporal.ChronoUnit
@@ -86,7 +88,7 @@ fun FamilyScreen(
     ) {
         item {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                ScreenHeader("Porodica", overline = today.label(), modifier = Modifier.weight(1f))
+                ScreenHeader(tr("Porodica", "Family"), overline = today.label(), modifier = Modifier.weight(1f))
                 SettingsButton(onOpenSettings)
             }
         }
@@ -97,7 +99,7 @@ fun FamilyScreen(
             KidCard(child, now, onClick = { onOpenChild(child.id) }, onAlarmChange = { onAlarmChange(child.id, it) })
         }
         if (upcoming.isNotEmpty()) {
-            item { SectionLabel("Uskoro") }
+            item { SectionLabel(tr("Uskoro", "Coming up")) }
             items(upcoming, key = { "${it.id}-${it.startEpochDay}" }) { EventTicket(it, today) }
         }
     }
@@ -118,26 +120,26 @@ private fun KidCard(child: Child, now: LocalDateTime, onClick: () -> Unit, onAla
     val line = buildAnnotatedString {
         when {
             info is DayInfo.NoClasses -> {
-                append("${eventEmoji(info.reason)} Nema nastave: ")
+                append("${eventEmoji(info.reason)} " + tr("Nema nastave: ", "No classes: "))
                 withStyle(bold) { append(info.reason) }
             }
-            status == null -> append("Danas nema časova")
+            status == null -> append(tr("Danas nema časova", "No classes today"))
             status is DayStatus.InClass -> {
-                append("Sada ")
-                withStyle(bold) { append("${subjectStyle(status.lesson.subject).emoji} ${status.lesson.subject}") }
-                append(", još ${durationLabel(status.minutesLeft)}")
+                append(tr("Sada ", "Now "))
+                withStyle(bold) { append("${subjectStyle(status.lesson.subject).emoji} ${lessonLabel(status.lesson.subject)}") }
+                append(tr(", još ${durationLabel(status.minutesLeft)}", ", ${durationLabel(status.minutesLeft)} left"))
             }
             status is DayStatus.Break -> {
-                append("Odmor, zatim ")
-                withStyle(bold) { append("${subjectStyle(status.next.subject).emoji} ${status.next.subject}") }
-                append(" u ${status.next.period.start.label()}")
+                append(tr("Odmor, zatim ", "Break, then "))
+                withStyle(bold) { append("${subjectStyle(status.next.subject).emoji} ${lessonLabel(status.next.subject)}") }
+                append(tr(" u ${status.next.period.start.label()}", " at ${status.next.period.start.label()}"))
             }
             status is DayStatus.Before -> {
-                append("Škola u ")
+                append(tr("Škola u ", "School at "))
                 withStyle(bold) { append(status.first.period.start.label()) }
-                append(" · za ${durationLabel(status.minutes)}")
+                append(tr(" · za ${durationLabel(status.minutes)}", " · in ${durationLabel(status.minutes)}"))
             }
-            else -> withStyle(bold) { append("Gotovo za danas ✓") }
+            else -> withStyle(bold) { append(tr("Gotovo za danas ✓", "Done for today ✓")) }
         }
     }
     val end = lessons.lastOrNull()?.period?.end
@@ -149,7 +151,7 @@ private fun KidCard(child: Child, now: LocalDateTime, onClick: () -> Unit, onAla
             Row(verticalAlignment = Alignment.CenterVertically) {
                 ChildAvatar(child.name, size = 40.dp)
                 Column(Modifier.weight(1f).padding(horizontal = 10.dp)) {
-                    Text(child.name.ifBlank { "Bez imena" }, style = MaterialTheme.typography.titleLarge)
+                    Text(child.name.ifBlank { tr("Bez imena", "No name") }, style = MaterialTheme.typography.titleLarge)
                     Text(
                         listOfNotNull(child.school.ifBlank { null }, if (lessons.isEmpty()) null else lessonsCount(lessons.size)).joinToString(" · "),
                         style = MaterialTheme.typography.bodySmall,
@@ -191,18 +193,18 @@ private fun KidCard(child: Child, now: LocalDateTime, onClick: () -> Unit, onAla
                 // The texts take the room left by the switch, so with large fonts they wrap instead of pushing it out.
                 Row(Modifier.weight(1f), verticalAlignment = Alignment.CenterVertically) {
                     if (end != null) {
-                        Text("Kraj ", style = MaterialTheme.typography.bodyMedium, color = colors.onSurfaceVariant)
+                        Text(tr("Kraj ", "Ends "), style = MaterialTheme.typography.bodyMedium, color = colors.onSurfaceVariant)
                         Text(end.label(), style = MaterialTheme.typography.titleSmall)
                         Spacer(Modifier.width(14.dp))
                     }
                     Text("Alarm ", style = MaterialTheme.typography.bodyMedium, color = colors.onSurfaceVariant)
                     Text(
                         when {
-                            !child.alarmEnabled -> "isključen"
-                            alarm == null -> "🔔 uključen"
+                            !child.alarmEnabled -> tr("isključen", "off")
+                            alarm == null -> tr("🔔 uključen", "🔔 on")
                             alarm.toLocalDate() == today -> "🔔 ${alarm.toLocalTime().label()}"
-                            alarm.toLocalDate() == today.plusDays(1) -> "🔔 sutra ${alarm.toLocalTime().label()}"
-                            else -> "🔔 ${alarm.dayOfWeek.shortLabel().lowercase()} ${alarm.toLocalTime().label()}"
+                            alarm.toLocalDate() == today.plusDays(1) -> tr("🔔 sutra ${alarm.toLocalTime().label()}", "🔔 tomorrow ${alarm.toLocalTime().label()}")
+                            else -> "🔔 ${alarm.dayOfWeek.shortLabel().inSentence()} ${alarm.toLocalTime().label()}"
                         },
                         style = MaterialTheme.typography.titleSmall,
                         modifier = Modifier.weight(1f, fill = false),
@@ -211,7 +213,7 @@ private fun KidCard(child: Child, now: LocalDateTime, onClick: () -> Unit, onAla
                 Switch(
                     checked = child.alarmEnabled,
                     onCheckedChange = onAlarmChange,
-                    modifier = Modifier.semantics { contentDescription = "Alarm za kraj nastave, ${child.name}" },
+                    modifier = Modifier.semantics { contentDescription = tr("Alarm za kraj nastave, ${child.name}", "Alarm when school ends, ${child.name}") },
                 )
             }
         }
@@ -253,7 +255,7 @@ fun EventTicket(event: CalendarEvent, today: LocalDate, trailing: (@Composable (
             Column(Modifier.weight(1f).padding(horizontal = 12.dp)) {
                 Text(event.title, style = MaterialTheme.typography.titleMedium)
                 Text(
-                    dateRangeLabel(event.start, event.end) + if (event.noClasses) " · nema nastave" else "",
+                    dateRangeLabel(event.start, event.end) + if (event.noClasses) tr(" · nema nastave", " · no classes") else "",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -264,7 +266,7 @@ fun EventTicket(event: CalendarEvent, today: LocalDate, trailing: (@Composable (
                     Text(daysCount(days).removePrefix("$days "), style = MaterialTheme.typography.labelMedium)
                 }
             } else {
-                Tag("Sada", MaterialTheme.colorScheme.primaryContainer, MaterialTheme.colorScheme.onPrimaryContainer)
+                Tag(tr("Sada", "Now"), MaterialTheme.colorScheme.primaryContainer, MaterialTheme.colorScheme.onPrimaryContainer)
             }
             trailing?.invoke()
         }

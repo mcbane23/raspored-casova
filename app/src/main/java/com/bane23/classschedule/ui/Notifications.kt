@@ -22,10 +22,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
-import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.core.app.ActivityCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
+import androidx.lifecycle.compose.LifecycleResumeEffect
 import com.bane23.classschedule.alarm.AlarmReceiver
 import com.bane23.classschedule.alarm.AlarmScheduler
 import com.bane23.classschedule.data.Child
@@ -33,8 +33,9 @@ import com.bane23.classschedule.data.Extracurricular
 import com.bane23.classschedule.data.classesEndOn
 import com.bane23.classschedule.data.hasActivityOn
 import com.bane23.classschedule.data.remindsOf
-import kotlinx.serialization.json.Json
+import com.bane23.classschedule.data.tr
 import java.time.LocalDate
+import kotlinx.serialization.json.Json
 
 /** Fixed id so repeated test notifications replace each other instead of piling up. */
 private const val TEST_NOTIFICATION_ID = 4242
@@ -175,8 +176,9 @@ fun rememberTestNotification(child: Child, reminder: AlarmReceiver.Reminder = Al
                 AlarmReceiver.Reminder.ACTIVITY,
                 child.id,
                 TEST_NOTIFICATION_ID,
-                activity?.let { "${it.kind.emoji()} ${it.title} u ${it.start.label()}" } ?: "🏅 Aktivnost uskoro",
-                "Probni podsetnik radi.",
+                activity?.let { tr("${it.kind.emoji()} ${it.title} u ${it.start.label()}", "${it.kind.emoji()} ${it.title} at ${it.start.label()}") }
+                    ?: tr("🏅 Aktivnost uskoro", "🏅 Activity soon"),
+                tr("Probni podsetnik radi.", "The test reminder works."),
                 alarmSound = child.activityReminderSound,
                 silent = child.activityReminderSilent,
             )
@@ -187,8 +189,8 @@ fun rememberTestNotification(child: Child, reminder: AlarmReceiver.Reminder = Al
                 AlarmReceiver.Reminder.MORNING,
                 child.id,
                 TEST_NOTIFICATION_ID,
-                content?.title ?: "☀️ Proveri plan za danas",
-                content?.text ?: "Probni podsetnik radi.",
+                content?.title ?: tr("☀️ Proveri plan za danas", "☀️ Check today’s plan"),
+                content?.text ?: tr("Probni podsetnik radi.", "The test reminder works."),
                 alarmSound = child.morningReminderSound,
                 silent = child.morningReminderSilent,
                 bigText = content?.bigText,
@@ -200,21 +202,22 @@ fun rememberTestNotification(child: Child, reminder: AlarmReceiver.Reminder = Al
                 AlarmReceiver.Reminder.PACK_BAG,
                 child.id,
                 TEST_NOTIFICATION_ID,
-                content?.title ?: "🎒 Spakuj torbu",
-                content?.text ?: "Probni podsetnik radi.",
+                content?.title ?: tr("🎒 Spakuj torbu", "🎒 Pack your bag"),
+                content?.text ?: tr("Probni podsetnik radi.", "The test reminder works."),
                 alarmSound = child.packReminderSound,
                 silent = child.packReminderSilent,
                 bigText = content?.bigText,
             )
         } else {
             val end = child.classesEndOn(LocalDate.now())
-            val text = if (end != null) "Probno obaveštenje. Danas se časovi završavaju u ${end.label()}." else "Probno obaveštenje radi."
+            val text = if (end != null) tr("Probno obaveštenje. Danas se časovi završavaju u ${end.label()}.", "Test notification. Classes end at ${end.label()} today.")
+            else tr("Probno obaveštenje radi.", "The test notification works.")
             !AlarmReceiver.showNotification(
                 context,
                 AlarmReceiver.Reminder.CLASSES_OVER,
                 child.id,
                 TEST_NOTIFICATION_ID,
-                child.name.ifBlank { "Raspored časova" },
+                child.name.ifBlank { tr("Raspored časova", "Class schedule") },
                 text,
                 alarmSound = child.alarmSound,
                 silent = child.alarmSilent,
@@ -257,9 +260,20 @@ fun openBatterySettings(context: Context) {
 }
 
 /** Something that keeps the alarms and reminders from arriving on time. */
-enum class ReminderProblem(val title: String, val detail: String) {
-    NOTIFICATIONS_OFF("Obaveštenja su isključena", "Alarmi i podsetnici neće stići dok ih ne uključiš."),
-    NOT_EXACT("Alarm može da kasni", "Dozvoli „Alarmi i podsetnici” da obaveštenje stigne tačno na vreme."),
+enum class ReminderProblem {
+    NOTIFICATIONS_OFF,
+    NOT_EXACT,
+    ;
+
+    val title: String get() = when (this) {
+        NOTIFICATIONS_OFF -> tr("Obaveštenja su isključena", "Notifications are off")
+        NOT_EXACT -> tr("Alarm može da kasni", "The alarm may be late")
+    }
+
+    val detail: String get() = when (this) {
+        NOTIFICATIONS_OFF -> tr("Alarmi i podsetnici neće stići dok ih ne uključiš.", "Alarms and reminders won’t arrive until you turn them on.")
+        NOT_EXACT -> tr("Dozvoli „Alarmi i podsetnici” da obaveštenje stigne tačno na vreme.", "Allow “Alarms & reminders” so the notification arrives right on time.")
+    }
 }
 
 /**
@@ -314,6 +328,6 @@ fun Child.hasReminderOn(): Boolean =
 fun ReminderProblemBanner(problem: ReminderProblem) {
     val context = LocalContext.current
     NoteBanner("⚠️", "${problem.title}. ${problem.detail}") {
-        TextButton(colors = accentTextButton(), onClick = { openFix(context, problem) }) { Text("Popravi") }
+        TextButton(colors = accentTextButton(), onClick = { openFix(context, problem) }) { Text(tr("Popravi", "Fix")) }
     }
 }
