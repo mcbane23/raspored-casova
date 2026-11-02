@@ -1,0 +1,5 @@
+<resources>
+    <string name="app_name">Class Schedule</string>
+    <string name="widget_name">Schedule</string>
+    <string name="widget_description">Today\'s classes and what to pack in the school bag</string>
+</resources>

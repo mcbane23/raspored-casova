@@ -8,7 +8,8 @@ automatically generated list of changes.
 
 The .txt file holds everything Play Console asks for in plain text, Serbian first:
 
-- the app name, short description and full description from [play-listing/sr/](play-listing/sr/) (each with its
+- the app name, short description and full description from [play-listing/sr/](play-listing/sr/), then in English
+  from [play-listing/en/](play-listing/en/) (each with its
   character count and Play's limit),
 - "What's new" for this version, in the form Play Console accepts (max 500 characters per language):
 

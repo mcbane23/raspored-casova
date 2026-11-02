@@ -2,7 +2,9 @@
 """Builds the Google Play texts file attached to every GitHub release.
 
 Prints plain text to stdout: the store listing (app name, short and full
-description from docs/play-listing/sr/) followed by the "What's new" note for
+description) in Serbian from docs/play-listing/sr/ and in English from
+docs/play-listing/en/ (Play Console: Store presence > Main store listing, with
+an en-US translation), followed by the "What's new" note for
 this version in the <sr>/<en-US> form Play Console accepts. The note comes from
 the merged PR's "Release notes" section (lines starting with "SR:" or "EN:"),
 read from PR_TITLE and PR_BODY; a missing language falls back to the PR title.
@@ -14,7 +16,9 @@ import re
 import sys
 from pathlib import Path
 
-LISTING = Path(__file__).resolve().parents[2] / "docs" / "play-listing" / "sr"
+LISTINGS = Path(__file__).resolve().parents[2] / "docs" / "play-listing"
+# (folder, heading suffix) for each store listing language, Serbian first.
+LANGUAGES = (("sr", "srpski, sr"), ("en", "engleski, en-US"))
 # (file, heading, Play Console character limit)
 FIELDS = (
     ("title.txt", "Naziv aplikacije", 30),
@@ -66,11 +70,14 @@ def whats_new(title, body):
 def render(version, title, body):
     header = " ".join(filter(None, ["Raspored časova", version]))
     out = [f"{header} – tekstovi za Google Play", ""]
-    for name, heading, limit in FIELDS:
-        text = (LISTING / name).read_text(encoding="utf-8").strip()
-        if len(text) > limit:
-            warn(f"Play listing {name} is {len(text)} characters, the limit is {limit}.")
-        out += [f"=== {heading} (najviše {limit} znakova, ovde {len(text)}) ===", text, ""]
+    for folder, language in LANGUAGES:
+        if not (LISTINGS / folder).is_dir():
+            continue
+        for name, heading, limit in FIELDS:
+            text = (LISTINGS / folder / name).read_text(encoding="utf-8").strip()
+            if len(text) > limit:
+                warn(f"Play listing {folder}/{name} is {len(text)} characters, the limit is {limit}.")
+            out += [f"=== {heading} – {language} (najviše {limit} znakova, ovde {len(text)}) ===", text, ""]
     out += [
         f"=== Šta je novo u ovoj verziji (najviše {WHATS_NEW_LIMIT} znakova po jeziku) ===",
         whats_new(title, body),

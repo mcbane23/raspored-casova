@@ -37,6 +37,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.bane23.classschedule.data.ExtraClass
+import com.bane23.classschedule.data.subjectLabel
+import com.bane23.classschedule.data.tr
 
 /** Asks for a line of text, e.g. a subject or a child's name. [extraAction] adds a red button such as "delete subject". */
 @Composable
@@ -60,8 +62,8 @@ fun TextInputDialog(
                 }
             }
         },
-        confirmButton = { TextButton(colors = accentTextButton(), onClick = { onConfirm(text) }) { Text("Sačuvaj") } },
-        dismissButton = { TextButton(colors = accentTextButton(), onClick = onDismiss) { Text("Odustani") } },
+        confirmButton = { TextButton(colors = accentTextButton(), onClick = { onConfirm(text) }) { Text(tr("Sačuvaj", "Save")) } },
+        dismissButton = { TextButton(colors = accentTextButton(), onClick = onDismiss) { Text(tr("Odustani", "Cancel")) } },
     )
 }
 
@@ -90,10 +92,10 @@ fun TimeInputDialog(
         },
         confirmButton = {
             TextButton(colors = accentTextButton(), enabled = problem == null, onClick = { onConfirm(state.hour * 60 + state.minute) }) {
-                Text("Sačuvaj")
+                Text(tr("Sačuvaj", "Save"))
             }
         },
-        dismissButton = { TextButton(colors = accentTextButton(), onClick = onDismiss) { Text("Odustani") } },
+        dismissButton = { TextButton(colors = accentTextButton(), onClick = onDismiss) { Text(tr("Odustani", "Cancel")) } },
     )
 }
 
@@ -136,7 +138,7 @@ fun SubjectPickerSheet(
         ) {
             Column {
                 Text(overline, style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                Text("Izaberi predmet", style = MaterialTheme.typography.titleLarge)
+                Text(tr("Izaberi predmet", "Choose a subject"), style = MaterialTheme.typography.titleLarge)
             }
             Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 (listOf<ExtraClass?>(null) + ExtraClass.entries).forEach { k ->
@@ -148,7 +150,7 @@ fun SubjectPickerSheet(
                         color = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceContainerLowest,
                     ) {
                         Text(
-                            k?.prefix ?: "Redovan",
+                            k?.label ?: tr("Redovan", "Regular"),
                             style = MaterialTheme.typography.labelLarge,
                             color = if (selected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface,
                             modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp),
@@ -158,7 +160,7 @@ fun SubjectPickerSheet(
             }
             if (kind != null) {
                 Text(
-                    "Neobavezan čas iz izabranog predmeta.",
+                    tr("Neobavezan čas iz izabranog predmeta.", "An optional class in the chosen subject."),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -182,7 +184,7 @@ fun SubjectPickerSheet(
                             ) {
                                 Text(style.emoji, fontSize = 24.sp)
                                 Text(
-                                    subject,
+                                    subjectLabel(subject),
                                     style = MaterialTheme.typography.labelMedium,
                                     textAlign = TextAlign.Center,
                                     maxLines = 2,
@@ -198,15 +200,15 @@ fun SubjectPickerSheet(
                 if (clearLabel != null) {
                     SheetButton(clearLabel, MaterialTheme.colorScheme.error, Modifier.weight(1f)) { onConfirm("") }
                 }
-                SheetButton("+ Novi predmet", MaterialTheme.colorScheme.onSurface, Modifier.weight(1f)) { typing = true }
+                SheetButton(tr("+ Novi predmet", "+ New subject"), MaterialTheme.colorScheme.onSurface, Modifier.weight(1f)) { typing = true }
             }
         }
     }
 
     if (typing) {
         TextInputDialog(
-            title = "Novi predmet",
-            label = "Naziv predmeta",
+            title = tr("Novi predmet", "New subject"),
+            label = tr("Naziv predmeta", "Subject name"),
             initial = "",
             onDismiss = { typing = false },
             onConfirm = {
@@ -231,14 +233,14 @@ private fun SheetButton(text: String, color: Color, modifier: Modifier, onClick:
 fun UnsavedTimetableDialog(onSave: () -> Unit, onDiscard: () -> Unit, onKeepEditing: () -> Unit) {
     AlertDialog(
         onDismissRequest = onKeepEditing,
-        title = { Text("Sačuvati izmene?") },
-        text = { Text("Raspored ima izmene koje nisu sačuvane.") },
+        title = { Text(tr("Sačuvati izmene?", "Save changes?")) },
+        text = { Text(tr("Raspored ima izmene koje nisu sačuvane.", "The timetable has unsaved changes.")) },
         confirmButton = {
             // Three choices do not fit side by side, so they are stacked with the main one on top.
             Column(horizontalAlignment = Alignment.End) {
-                TextButton(colors = accentTextButton(), onClick = onSave) { Text("Sačuvaj") }
-                TextButton(colors = accentTextButton(), onClick = onDiscard) { Text("Odbaci") }
-                TextButton(colors = accentTextButton(), onClick = onKeepEditing) { Text("Nastavi uređivanje") }
+                TextButton(colors = accentTextButton(), onClick = onSave) { Text(tr("Sačuvaj", "Save")) }
+                TextButton(colors = accentTextButton(), onClick = onDiscard) { Text(tr("Odbaci", "Discard")) }
+                TextButton(colors = accentTextButton(), onClick = onKeepEditing) { Text(tr("Nastavi uređivanje", "Keep editing")) }
             }
         },
     )

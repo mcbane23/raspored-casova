@@ -51,10 +51,12 @@ import com.bane23.classschedule.data.SCHOOL_DAYS
 import com.bane23.classschedule.data.Shift
 import com.bane23.classschedule.data.ShiftMode
 import com.bane23.classschedule.data.Timetable
+import com.bane23.classschedule.data.currentShiftDate
 import com.bane23.classschedule.data.other
 import com.bane23.classschedule.data.remindsOf
-import com.bane23.classschedule.data.currentShiftDate
 import com.bane23.classschedule.data.shiftOn
+import com.bane23.classschedule.data.subjectLabel
+import com.bane23.classschedule.data.tr
 import com.bane23.classschedule.data.weeklyActivitiesOn
 import java.time.DayOfWeek
 import java.time.temporal.TemporalAdjusters
@@ -109,7 +111,7 @@ fun WeekScreen(
         verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
         item {
-            ChildTopRow(children, child.id, onSelectChild, title = "Nedelja") {
+            ChildTopRow(children, child.id, onSelectChild, title = tr("Nedelja", "Week")) {
                 if (!editMode) {
                     Surface(
                         onClick = { wholeWeek = !wholeWeek },
@@ -120,7 +122,7 @@ fun WeekScreen(
                         Box(contentAlignment = Alignment.Center) {
                             Icon(
                                 if (wholeWeek) Icons.AutoMirrored.Filled.List else Icons.Filled.DateRange,
-                                contentDescription = if (wholeWeek) "Prikaži po danu" else "Prikaži celu nedelju",
+                                contentDescription = if (wholeWeek) tr("Prikaži po danu", "Show by day") else tr("Prikaži celu nedelju", "Show the whole week"),
                                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
                         }
@@ -138,13 +140,13 @@ fun WeekScreen(
                     Box(contentAlignment = Alignment.Center) {
                         Text(
                             when {
-                                editMode -> "Gotovo"
+                                editMode -> tr("Gotovo", "Done")
                                 compact -> "✏️"
-                                else -> "✏️ Uredi"
+                                else -> tr("✏️ Uredi", "✏️ Edit")
                             },
                             style = MaterialTheme.typography.titleSmall,
                             color = if (editMode) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface,
-                            modifier = if (compact) Modifier.semantics { contentDescription = "Uredi raspored" }
+                            modifier = if (compact) Modifier.semantics { contentDescription = tr("Uredi raspored", "Edit timetable") }
                             else Modifier.padding(horizontal = 16.dp, vertical = 10.dp),
                         )
                     }
@@ -158,7 +160,7 @@ fun WeekScreen(
         if (editMode) {
             item {
                 Text(
-                    "Uređuješ raspored · ${child.name.ifBlank { "dete" }} · ${shift.shortLabel().lowercase()}",
+                    tr("Uređuješ raspored · ${child.name.ifBlank { "dete" }} · ${shift.shortLabel().lowercase()}", "Editing the timetable · ${child.name.ifBlank { "child" }} · ${shift.shortLabel().lowercase()}"),
                     style = MaterialTheme.typography.labelLarge,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -170,14 +172,14 @@ fun WeekScreen(
                     PillToggle(Shift.entries, shift, { "${it.icon()} ${it.shortLabel()}" }, { shift = it })
                     val comingWeek = shiftDate != today
                     val next = when {
-                        child.shiftMode != ShiftMode.WEEKLY -> "sledećeg meseca"
-                        comingWeek -> "nedelju dana kasnije"
-                        else -> "sledeće nedelje"
+                        child.shiftMode != ShiftMode.WEEKLY -> tr("sledećeg meseca", "next month")
+                        comingWeek -> tr("nedelju dana kasnije", "a week later")
+                        else -> tr("sledeće nedelje", "next week")
                     }
                     if (shift != currentShift) {
                         // The other shift is easy to mistake for this week's timetable, so it is named plainly.
                         Text(
-                            "Prikazuješ smenu ${shift.shortLabel().lowercase()}, koja je $next",
+                            tr("Prikazuješ smenu ${shift.shortLabel().lowercase()}, koja je $next", "Showing the ${shift.shortLabel().lowercase()} shift, which is $next"),
                             style = MaterialTheme.typography.labelLarge,
                             color = accentText(),
                             modifier = Modifier.padding(start = 8.dp),
@@ -185,11 +187,13 @@ fun WeekScreen(
                     } else {
                         Text(
                             when {
-                                child.shiftMode != ShiftMode.WEEKLY -> "Ovog meseca"
-                                comingWeek -> "Od ponedeljka"
-                                else -> "Ove nedelje"
-                            } +
+                                child.shiftMode != ShiftMode.WEEKLY -> tr("Ovog meseca", "This month")
+                                comingWeek -> tr("Od ponedeljka", "From Monday")
+                                else -> tr("Ove nedelje", "This week")
+                            } + tr(
                                 " ${currentShift.shortLabel().lowercase()}, $next ${currentShift.other().shortLabel().lowercase()}",
+                                ": ${currentShift.shortLabel().lowercase()}, $next: ${currentShift.other().shortLabel().lowercase()}",
+                            ),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.padding(start = 8.dp),
@@ -228,7 +232,7 @@ fun WeekScreen(
         item {
             Row(Modifier.padding(horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically) {
                 Text(
-                    day.label() + if (day == today.dayOfWeek) " · danas" else "",
+                    day.label() + if (day == today.dayOfWeek) tr(" · danas", " · today") else "",
                     style = MaterialTheme.typography.titleMedium,
                     modifier = Modifier.weight(1f),
                 )
@@ -248,7 +252,7 @@ fun WeekScreen(
         if (shown == 0 && !editMode) {
             item {
                 AppCard {
-                    EmptyState("🗓️", "Nema časova", "Upiši časove za ovaj dan.", action = "✏️ Upiši časove", onAction = { onEditModeChange(true) })
+                    EmptyState("🗓️", tr("Nema časova", "No classes"), tr("Upiši časove za ovaj dan.", "Enter the classes for this day."), action = tr("✏️ Upiši časove", "✏️ Enter classes"), onAction = { onEditModeChange(true) })
                 }
             }
         }
@@ -264,7 +268,7 @@ fun WeekScreen(
                     onClick = { if (editMode) editing = WeekEdit(day, index, subject) },
                     onClear = {
                         onTimetableChange(shift, timetable.withLesson(day, index, ""))
-                        offerUndo("${timetable.periodLabel(index)} je uklonjen iz rasporeda") { onTimetableChange(shift, timetable) }
+                        offerUndo(tr("${timetable.periodLabel(index)} je uklonjen iz rasporeda", "${timetable.periodLabel(index)} removed from the timetable")) { onTimetableChange(shift, timetable) }
                     },
                 )
             }
@@ -273,7 +277,7 @@ fun WeekScreen(
         if (!editMode && dayActivities.isNotEmpty()) {
             item {
                 AppCard(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                    Text("🏅 Aktivnosti", style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(bottom = 4.dp))
+                    Text(tr("🏅 Aktivnosti", "🏅 Activities"), style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(bottom = 4.dp))
                     dayActivities.forEach { activity ->
                         ActivityRow(activity, "${activity.start.label()}–${activity.end.label()}", reminder = child.remindsOf(activity)) { activityEdit = activity }
                     }
@@ -285,7 +289,7 @@ fun WeekScreen(
                 item {
                     val index = subjects.size
                     DashedButton(
-                        "+ Dodaj ${timetable.periodLabel(index)} (${timetable.periods[index].start.label()})",
+                        tr("+ Dodaj ${timetable.periodLabel(index)}", "+ Add ${timetable.periodLabel(index)}") + " (${timetable.periods[index].start.label()})",
                         onClick = { editing = WeekEdit(day, index, "") },
                     )
                 }
@@ -293,9 +297,12 @@ fun WeekScreen(
             item {
                 NoteBanner(
                     "💡",
-                    "Dodirni čas da ga promeniš za ${day.every()}. Jedan dan menjaš na Danas, a vreme časova u zvonima.",
+                    tr(
+                        "Dodirni čas da ga promeniš za ${day.every()}. Jedan dan menjaš na Danas, a vreme časova u zvonima.",
+                        "Tap a class to change it for ${day.every()}. Change a single day on Today, and class times under bells.",
+                    ),
                 ) {
-                    TextButton(colors = accentTextButton(), onClick = onOpenBells) { Text("Zvona") }
+                    TextButton(colors = accentTextButton(), onClick = onOpenBells) { Text(tr("Zvona", "Bells")) }
                 }
             }
         }
@@ -320,7 +327,7 @@ fun WeekScreen(
                 {
                     onDeleteActivity(activity.id)
                     activityEdit = null
-                    offerUndo("Aktivnost „${activity.title}” je obrisana") { onSaveActivity(activity) }
+                    offerUndo(tr("Aktivnost „${activity.title}” je obrisana", "Activity “${activity.title}” deleted")) { onSaveActivity(activity) }
                 }
             },
         )
@@ -337,7 +344,7 @@ fun WeekScreen(
                 if (it.isNotBlank()) onSubjectUsed(it)
                 editing = null
             },
-            clearLabel = if (edit.subject.isEmpty()) null else "Slobodan čas",
+            clearLabel = if (edit.subject.isEmpty()) null else tr("Slobodan čas", "Free period"),
         )
     }
 }
@@ -361,7 +368,7 @@ private fun DayChip(day: DayOfWeek, count: Int, selected: Boolean, isToday: Bool
         ) {
             Text(day.shortLabel(), style = MaterialTheme.typography.titleMedium, color = if (selected) colors.onPrimary else colors.onSurface)
             Text(
-                if (count == 0) "—" else "$count č.",
+                if (count == 0) "—" else tr("$count č.", "$count"),
                 style = MaterialTheme.typography.labelSmall,
                 color = if (selected) colors.onPrimary.copy(alpha = 0.85f) else colors.onSurfaceVariant,
             )
@@ -406,10 +413,10 @@ private fun LessonRow(
             }
             Column(Modifier.weight(1f).padding(horizontal = 12.dp)) {
                 if (kind != null) {
-                    Text(kind.prefix.uppercase(), style = MaterialTheme.typography.labelSmall, color = accentText())
+                    Text(kind.label.uppercase(), style = MaterialTheme.typography.labelSmall, color = accentText())
                 }
                 Text(
-                    if (free) "Slobodan čas" else name,
+                    if (free) tr("Slobodan čas", "Free period") else subjectLabel(name),
                     style = MaterialTheme.typography.titleMedium,
                     color = if (free) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurface,
                 )
@@ -420,7 +427,7 @@ private fun LessonRow(
                     onClick = onClear,
                     shape = CircleShape,
                     color = MaterialTheme.colorScheme.background,
-                    modifier = Modifier.size(36.dp).semantics { contentDescription = "Ukloni čas" },
+                    modifier = Modifier.size(36.dp).semantics { contentDescription = tr("Ukloni čas", "Remove class") },
                 ) {
                     Box(contentAlignment = Alignment.Center) {
                         Text("×", style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -438,7 +445,15 @@ private fun LessonRow(
 private fun WeekTable(timetable: Timetable, today: DayOfWeek, onEdit: () -> Unit, onDay: (DayOfWeek) -> Unit) {
     val rows = SCHOOL_DAYS.maxOf { d -> timetable.lessonsFor(d).indexOfLast { it.isNotBlank() } + 1 }
     if (rows == 0) {
-        AppCard { EmptyState("🗓️", "Raspored još nije unet", "Upiši časove za svaki dan u nedelji.", action = "✏️ Upiši raspored", onAction = onEdit) }
+        AppCard {
+            EmptyState(
+                "🗓️",
+                tr("Raspored još nije unet", "No timetable yet"),
+                tr("Upiši časove za svaki dan u nedelji.", "Enter the classes for each day of the week."),
+                action = tr("✏️ Upiši raspored", "✏️ Enter timetable"),
+                onAction = onEdit,
+            )
+        }
         return
     }
     Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
@@ -491,7 +506,7 @@ private fun WeekTable(timetable: Timetable, today: DayOfWeek, onEdit: () -> Unit
 @Composable
 private fun WeeklyActivitiesCard(child: Child, onOpen: (Extracurricular) -> Unit, onAdd: () -> Unit) {
     AppCard(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-        Text("🏅 Aktivnosti svake nedelje", style = MaterialTheme.typography.titleMedium)
+        Text(tr("🏅 Aktivnosti svake nedelje", "🏅 Weekly activities"), style = MaterialTheme.typography.titleMedium)
         DayOfWeek.entries.forEach { d ->
             val activities = child.weeklyActivitiesOn(d)
             if (activities.isEmpty()) return@forEach
@@ -506,9 +521,9 @@ private fun WeeklyActivitiesCard(child: Child, onOpen: (Extracurricular) -> Unit
             }
         }
         if (child.activities.none { it.weekly }) {
-            Hint("Sport, hor, folklor… Dodaj ih da se vide pored časova, sa podsetnikom pre početka.")
+            Hint(tr("Sport, hor, folklor… Dodaj ih da se vide pored časova, sa podsetnikom pre početka.", "Sport, choir, dance… Add them to see them next to the classes, with a reminder before they start."))
         }
-        TextButton(colors = accentTextButton(), onClick = onAdd, modifier = Modifier.align(Alignment.End)) { Text("+ Dodaj aktivnost") }
+        TextButton(colors = accentTextButton(), onClick = onAdd, modifier = Modifier.align(Alignment.End)) { Text(tr("+ Dodaj aktivnost", "+ Add activity")) }
     }
 }
 

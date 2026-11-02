@@ -62,6 +62,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.bane23.classschedule.data.Child
 import com.bane23.classschedule.data.ExtraClass
+import com.bane23.classschedule.data.tr
 import com.bane23.classschedule.ui.theme.AccentTextLight
 import java.time.LocalDateTime
 import kotlinx.coroutines.delay
@@ -93,6 +94,25 @@ private val SUBJECT_STYLES: List<Pair<String, SubjectStyle>> = listOf(
     "građansk" to SubjectStyle("🤝", Color(0xFF1A9E99)),
     "gradjansk" to SubjectStyle("🤝", Color(0xFF1A9E99)),
     "odeljensk" to SubjectStyle("🏫", Color(0xFF7563D8)),
+    // English names, for subjects typed in English.
+    "serbian" to SubjectStyle("📖", Color(0xFFE5484D)),
+    "math" to SubjectStyle("🔢", Color(0xFF3E7BFA)),
+    "english" to SubjectStyle("🇬🇧", Color(0xFF0E9CC0)),
+    "foreign" to SubjectStyle("🗣️", Color(0xFF0E9CC0)),
+    "world around" to SubjectStyle("🌱", Color(0xFF2FA86A)),
+    "nature" to SubjectStyle("🌍", Color(0xFF2FA86A)),
+    "music" to SubjectStyle("🎵", Color(0xFF8E4EC6)),
+    "physical" to SubjectStyle("⚽", Color(0xFFF07F1A)),
+    "history" to SubjectStyle("🏛️", Color(0xFFC2911A)),
+    "physics" to SubjectStyle("🧲", Color(0xFF6E56CF)),
+    "chemi" to SubjectStyle("🧪", Color(0xFF0B95B5)),
+    "computer" to SubjectStyle("💻", Color(0xFF5B6CF0)),
+    "religio" to SubjectStyle("🕊️", Color(0xFFA9805A)),
+    "civic" to SubjectStyle("🤝", Color(0xFF1A9E99)),
+    "homeroom" to SubjectStyle("🏫", Color(0xFF7563D8)),
+    "geograph" to SubjectStyle("🗺️", Color(0xFF21A0A0)),
+    "techn" to SubjectStyle("🛠️", Color(0xFF6B7A90)),
+    "art" to SubjectStyle("🎨", Color(0xFFD6409F)),
 )
 
 private val FALLBACK_COLORS = listOf(
@@ -105,20 +125,6 @@ val AccentOrange = Color(0xFFE8620C)
 val BreakTeal = Color(0xFF14A38B)
 val DoneGreen = Color(0xFF2FA86A)
 val HolidayAmber = Color(0xFFE98B2A)
-
-/** Short subject names for places where only a few letters fit (the week table, the stops on Today). */
-private val SHORT_NAMES = listOf(
-    "srpski" to "Srp", "matemat" to "Mat", "engleski" to "Eng", "strani" to "Str", "svet oko nas" to "SON",
-    "priroda" to "PiD", "likovn" to "Lik", "muzič" to "Muz", "muzic" to "Muz", "fizičk" to "Fiz", "fizick" to "Fiz",
-    "istorij" to "Ist", "geograf" to "Geo", "biolog" to "Bio", "fizika" to "Fizika", "hemij" to "Hem", "tehni" to "Teh",
-    "informat" to "Inf", "verska" to "Ver", "građansk" to "Građ", "gradjansk" to "Građ", "odeljensk" to "ČOS",
-)
-
-/** "Mat" for "Matematika" or "Dopunska: Matematika"; unknown subjects keep their first four letters. */
-fun shortName(lesson: String): String {
-    val name = ExtraClass.parse(lesson).second.trim()
-    return SHORT_NAMES.firstOrNull { name.lowercase().contains(it.first) }?.second ?: name.take(4)
-}
 
 /**
  * A horizontal swipe on this element calls [onPrevious] (swipe right) or [onNext] (swipe left), e.g. to change the
@@ -156,17 +162,17 @@ fun childColor(name: String): Color = listOf(
 fun eventEmoji(title: String): String {
     val t = title.lowercase()
     return when {
-        "zimski" in t -> "❄️"
-        "letnji" in t -> "☀️"
-        "proleć" in t -> "🌷"
-        "jesenji" in t -> "🍂"
-        "sretenj" in t -> "🇷🇸"
+        "zimski" in t || "winter" in t -> "❄️"
+        "letnji" in t || "summer" in t -> "☀️"
+        "proleć" in t || "spring" in t -> "🌷"
+        "jesenji" in t || "autumn" in t -> "🍂"
+        "sretenj" in t || "statehood" in t -> "🇷🇸"
         "savindan" in t || "sava" in t -> "📜"
-        "ispit" in t -> "✏️"
-        "dan škole" in t -> "🏫"
+        "ispit" in t || "exam" in t -> "✏️"
+        "dan škole" in t || "school day" in t -> "🏫"
         "slava" in t -> "🕯️"
-        "raspust" in t -> "🏖️"
-        "rasporedu" in t -> "🔁"
+        "raspust" in t || "break" in t -> "🏖️"
+        "rasporedu" in t || "timetable" in t -> "🔁"
         else -> "📅"
     }
 }
@@ -386,7 +392,7 @@ fun BigButton(text: String, modifier: Modifier = Modifier, enabled: Boolean = tr
 fun SettingsButton(onClick: () -> Unit) {
     Surface(onClick = onClick, shape = CircleShape, color = MaterialTheme.colorScheme.surfaceContainerLowest, modifier = Modifier.size(44.dp)) {
         Box(contentAlignment = Alignment.Center) {
-            Icon(Icons.Filled.Settings, contentDescription = "Podešavanja", tint = MaterialTheme.colorScheme.onSurfaceVariant)
+            Icon(Icons.Filled.Settings, contentDescription = tr("Podešavanja", "Settings"), tint = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
 }
@@ -396,7 +402,7 @@ fun SettingsButton(onClick: () -> Unit) {
 fun BackButton(onClick: () -> Unit) {
     Surface(onClick = onClick, shape = CircleShape, color = MaterialTheme.colorScheme.surfaceContainerLowest, modifier = Modifier.size(44.dp)) {
         Box(contentAlignment = Alignment.Center) {
-            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Nazad", tint = MaterialTheme.colorScheme.onSurface)
+            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = tr("Nazad", "Back"), tint = MaterialTheme.colorScheme.onSurface)
         }
     }
 }
@@ -431,7 +437,7 @@ fun ChildTopRow(
                             ChildAvatar(c.name, size = 30.dp)
                             Spacer(Modifier.width(6.dp))
                             Text(
-                                c.name.ifBlank { "Bez imena" },
+                                c.name.ifBlank { tr("Bez imena", "No name") },
                                 style = MaterialTheme.typography.labelLarge,
                                 color = if (selected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface,
                             )
@@ -466,7 +472,7 @@ fun HeroCard(
     // Read as one sentence, e.g. "Sada, 2. čas. Matematika, do 09:30, još 12 minuta. Zatim Srpski u 09:35".
     val description = listOfNotNull(
         spoken(eyebrow),
-        listOfNotNull(spoken(title), detail?.let(::spoken), ringMinutes?.let { "još ${durationLabel(it)}" }).joinToString(", "),
+        listOfNotNull(spoken(title), detail?.let(::spoken), ringMinutes?.let { tr("još ${durationLabel(it)}", "${durationLabel(it)} left") }).joinToString(", "),
         footer?.let(::spoken),
     ).filter { it.isNotEmpty() }.joinToString(". ")
     Surface(

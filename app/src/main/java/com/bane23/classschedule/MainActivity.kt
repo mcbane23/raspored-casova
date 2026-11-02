@@ -58,7 +58,9 @@ import com.bane23.classschedule.ui.AppViewModel
 import com.bane23.classschedule.ui.BellsScreen
 import com.bane23.classschedule.ui.CalendarScreen
 import com.bane23.classschedule.ui.ChildSettingsScreen
+import com.bane23.classschedule.data.tr
 import com.bane23.classschedule.ui.FamilyScreen
+import com.bane23.classschedule.ui.LanguageScreen
 import com.bane23.classschedule.ui.LocalUndo
 import com.bane23.classschedule.ui.NotificationsScreen
 import com.bane23.classschedule.ui.OnboardingScreen
@@ -80,8 +82,18 @@ class MainActivity : ComponentActivity() {
     /** Child whose Today tab a tapped notification asked for, until [App] has opened it. */
     private var openTodayFor by mutableStateOf<String?>(null)
 
+    /** False until the user has picked the app's language, which is asked on the very first launch. */
+    private var languageChosen by mutableStateOf(true)
+
+    override fun attachBaseContext(newBase: Context) {
+        super.attachBaseContext(LanguageStore.wrap(newBase))
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
+        // Picks up a language changed in the phone's "App languages" settings while the app was in the background.
+        LanguageStore.load(this)
         super.onCreate(savedInstanceState)
+        languageChosen = LanguageStore.isChosen(this)
         // Only a fresh launch; after rotation, or when reopened from Recents with the old intent, it must not jump back
         // to Today.
         val fromRecents = (intent?.flags ?: 0) and Intent.FLAG_ACTIVITY_LAUNCHED_FROM_HISTORY != 0
@@ -104,7 +116,18 @@ class MainActivity : ComponentActivity() {
                 onDispose {}
             }
             RasporedCasovaTheme(darkTheme = dark) {
-                App(viewModel, openTodayFor = openTodayFor, onOpenedToday = { openTodayFor = null })
+                // The language is asked once, before anything else; choosing it recreates the activity in that language.
+                if (!languageChosen) {
+                    LanguageScreen(
+                        initial = LanguageStore.deviceLanguage(),
+                        onChoose = {
+                            LanguageStore.choose(this, it)
+                            languageChosen = true
+                        },
+                    )
+                } else {
+                    App(viewModel, openTodayFor = openTodayFor, onOpenedToday = { openTodayFor = null })
+                }
             }
         }
     }
@@ -130,11 +153,19 @@ class MainActivity : ComponentActivity() {
 private val LIGHT_SCRIM = AndroidColor.argb(0xe6, 0xFF, 0xFF, 0xFF)
 private val DARK_SCRIM = AndroidColor.argb(0x80, 0x1b, 0x1b, 0x1b)
 
-private enum class Tab(val label: String, val icon: ImageVector) {
-    FAMILY("Porodica", Icons.Rounded.Groups),
-    TODAY("Danas", Icons.Rounded.Today),
-    WEEK("Nedelja", Icons.Rounded.CalendarViewWeek),
-    BREAKS("Raspust", Icons.Rounded.BeachAccess),
+private enum class Tab(val icon: ImageVector) {
+    FAMILY(Icons.Rounded.Groups),
+    TODAY(Icons.Rounded.Today),
+    WEEK(Icons.Rounded.CalendarViewWeek),
+    BREAKS(Icons.Rounded.BeachAccess),
+    ;
+
+    val label: String get() = when (this) {
+        FAMILY -> tr("Porodica", "Family")
+        TODAY -> tr("Danas", "Today")
+        WEEK -> tr("Nedelja", "Week")
+        BREAKS -> tr("Raspust", "Breaks")
+    }
 }
 
 /** Settings pages are kept as short strings ("home", "child:<id>", ...) so they survive rotation. */
@@ -204,7 +235,7 @@ fun App(viewModel: AppViewModel = viewModel(), openTodayFor: String? = null, onO
         { message, undo ->
             scope.launch {
                 snackbar.currentSnackbarData?.dismiss()
-                val result = snackbar.showSnackbar(message, actionLabel = "Poništi", duration = SnackbarDuration.Short)
+                val result = snackbar.showSnackbar(message, actionLabel = tr("Poništi", "Undo"), duration = SnackbarDuration.Short)
                 if (result == SnackbarResult.ActionPerformed) undo()
             }
         }

@@ -37,7 +37,7 @@ class ChildRepository private constructor(context: Context) {
         // A file that exists but cannot be read is kept aside instead of being overwritten by the next save.
         if (text != null) runCatching { File(dir, "data.json.bad").writeText(text) }
         // First launch: start with one child so the app is usable right away.
-        val first = Child(name = DEFAULT_CHILD_NAME, referenceEpochDay = LocalDate.now().toEpochDay())
+        val first = Child(name = defaultChildName(), referenceEpochDay = LocalDate.now().toEpochDay())
         return AppData(children = listOf(first), selectedChildId = first.id, dataVersion = CURRENT_DATA_VERSION)
     }
 

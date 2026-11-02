@@ -50,6 +50,7 @@ import com.bane23.classschedule.data.Child
 import com.bane23.classschedule.data.calendarEvents
 import com.bane23.classschedule.data.nextDayOff
 import com.bane23.classschedule.data.schoolYearOf
+import com.bane23.classschedule.data.tr
 import java.time.LocalDate
 import java.time.temporal.ChronoUnit
 
@@ -83,20 +84,26 @@ fun CalendarScreen(
         verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
         item {
-            ChildTopRow(children, child.id, onSelectChild, title = "Raspust") { SettingsButton(onOpenSettings) }
+            ChildTopRow(children, child.id, onSelectChild, title = tr("Raspust", "Breaks")) { SettingsButton(onOpenSettings) }
         }
         val next = child.nextDayOff(today)
         if (next != null) {
             item { CountdownCard(next, today) }
         }
         if (year == null) {
-            item { NoteBanner("ℹ️", "Kalendar za ovu školsku godinu još nije dodat u aplikaciju.") }
+            item { NoteBanner("ℹ️", tr("Kalendar za ovu školsku godinu još nije dodat u aplikaciju.", "The calendar for this school year has not been added to the app yet.")) }
         }
-        item { SectionLabel("Slobodni dani i događaji") }
+        item { SectionLabel(tr("Slobodni dani i događaji", "Days off and events")) }
         if (upcoming.isEmpty()) {
             item {
                 AppCard {
-                    EmptyState("📅", "Nema predstojećih događaja", "Dodaj Dan škole, školsku slavu ili izlet.", action = "+ Dodaj događaj", onAction = { adding = true })
+                    EmptyState(
+                        "📅",
+                        tr("Nema predstojećih događaja", "No upcoming events"),
+                        tr("Dodaj Dan škole, školsku slavu ili izlet.", "Add the School Day, the school’s slava or a trip."),
+                        action = tr("+ Dodaj događaj", "+ Add event"),
+                        onAction = { adding = true },
+                    )
                 }
             }
         }
@@ -104,25 +111,25 @@ fun CalendarScreen(
             EventTicket(event, today) {
                 if (event.id in customIds) {
                     IconButton(onClick = { deleting = event }) {
-                        Icon(Icons.Filled.Delete, contentDescription = "Obriši događaj", tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Icon(Icons.Filled.Delete, contentDescription = tr("Obriši događaj", "Delete event"), tint = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }
             }
         }
-        item { DashedButton("+ Dodaj događaj škole", onClick = { adding = true }) }
+        item { DashedButton(tr("+ Dodaj događaj škole", "+ Add school event"), onClick = { adding = true }) }
     }
 
     deleting?.let { event ->
         AlertDialog(
             onDismissRequest = { deleting = null },
-            title = { Text("Obrisati „${event.title}”?") },
+            title = { Text(tr("Obrisati „${event.title}”?", "Delete “${event.title}”?")) },
             confirmButton = {
                 TextButton(colors = accentTextButton(), onClick = {
                     onDeleteEvent(event.id)
                     deleting = null
-                }) { Text("Obriši") }
+                }) { Text(tr("Obriši", "Delete")) }
             },
-            dismissButton = { TextButton(colors = accentTextButton(), onClick = { deleting = null }) { Text("Odustani") } },
+            dismissButton = { TextButton(colors = accentTextButton(), onClick = { deleting = null }) { Text(tr("Odustani", "Cancel")) } },
         )
     }
 
@@ -148,12 +155,12 @@ private fun CountdownCard(next: CalendarEvent, today: LocalDate) {
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             if (ongoing) {
-                Text("Sada je", style = MaterialTheme.typography.titleSmall, color = Color.White.copy(alpha = 0.9f))
+                Text(tr("Sada je", "Now it’s"), style = MaterialTheme.typography.titleSmall, color = Color.White.copy(alpha = 0.9f))
                 Text(eventEmoji(next.title), fontSize = 56.sp)
                 Text(next.title, style = MaterialTheme.typography.headlineSmall, color = Color.White, textAlign = TextAlign.Center)
-                Text("Traje do ${next.end.genitiveLabel()} 🎉", style = MaterialTheme.typography.bodyLarge, color = Color.White)
+                Text(tr("Traje do ${next.end.genitiveLabel()} 🎉", "Until ${next.end.genitiveLabel()} 🎉"), style = MaterialTheme.typography.bodyLarge, color = Color.White)
             } else {
-                Text("${eventEmoji(next.title)} ${next.title} za", style = MaterialTheme.typography.titleSmall, color = Color.White.copy(alpha = 0.9f), textAlign = TextAlign.Center)
+                Text(tr("${eventEmoji(next.title)} ${next.title} za", "${eventEmoji(next.title)} ${next.title} in"), style = MaterialTheme.typography.titleSmall, color = Color.White.copy(alpha = 0.9f), textAlign = TextAlign.Center)
                 Text("$days", fontSize = 72.sp, lineHeight = 76.sp, style = MaterialTheme.typography.displaySmall, color = Color.White)
                 Text(daysCount(days).removePrefix("$days "), style = MaterialTheme.typography.titleMedium, color = Color.White)
                 Text(dateRangeLabel(next.start, next.end), style = MaterialTheme.typography.bodyMedium, color = Color.White.copy(alpha = 0.9f))
@@ -163,7 +170,12 @@ private fun CountdownCard(next: CalendarEvent, today: LocalDate) {
 }
 
 /** Common school events offered as one-tap chips: title and whether there are classes that day. */
-private val QUICK_EVENTS = listOf("🏫 Dan škole" to true, "🕯️ Školska slava" to true, "🚌 Izlet" to false, "🎭 Priredba" to false)
+private fun quickEvents(): List<Pair<String, Boolean>> = listOf(
+    tr("🏫 Dan škole", "🏫 School Day") to true,
+    tr("🕯️ Školska slava", "🕯️ School slava") to true,
+    tr("🚌 Izlet", "🚌 Trip") to false,
+    tr("🎭 Priredba", "🎭 School show") to false,
+)
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
@@ -177,11 +189,11 @@ private fun AddEventDialog(onDismiss: () -> Unit, onConfirm: (CalendarEvent) -> 
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Novi događaj") },
+        title = { Text(tr("Novi događaj", "New event")) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    QUICK_EVENTS.forEach { (label, off) ->
+                    quickEvents().forEach { (label, off) ->
                         val name = label.substringAfter(' ')
                         FilterChip(
                             selected = title == name,
@@ -196,7 +208,7 @@ private fun AddEventDialog(onDismiss: () -> Unit, onConfirm: (CalendarEvent) -> 
                 OutlinedTextField(
                     value = title,
                     onValueChange = { title = it },
-                    label = { Text("Naziv") },
+                    label = { Text(tr("Naziv", "Name")) },
                     singleLine = true,
                 )
                 Surface(
@@ -209,15 +221,15 @@ private fun AddEventDialog(onDismiss: () -> Unit, onConfirm: (CalendarEvent) -> 
                         Text("📅", fontSize = 20.sp)
                         Spacer(Modifier.width(10.dp))
                         Column(Modifier.weight(1f)) {
-                            Text("Datum", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text(tr("Datum", "Date"), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             Text(dateRangeLabel(start, end), style = MaterialTheme.typography.titleSmall)
                         }
-                        Text("Promeni", style = MaterialTheme.typography.labelLarge, color = accentText())
+                        Text(tr("Promeni", "Change"), style = MaterialTheme.typography.labelLarge, color = accentText())
                     }
                 }
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Checkbox(checked = noClasses, onCheckedChange = { noClasses = it })
-                    Text("Nema nastave tog dana")
+                    Text(tr("Nema nastave tog dana", "No classes that day"))
                 }
             }
         },
@@ -228,9 +240,9 @@ private fun AddEventDialog(onDismiss: () -> Unit, onConfirm: (CalendarEvent) -> 
                 onClick = {
                     onConfirm(CalendarEvent(start.toEpochDay(), maxOf(start, end).toEpochDay(), title.trim(), noClasses))
                 },
-            ) { Text("Sačuvaj") }
+            ) { Text(tr("Sačuvaj", "Save")) }
         },
-        dismissButton = { TextButton(colors = accentTextButton(), onClick = onDismiss) { Text("Odustani") } },
+        dismissButton = { TextButton(colors = accentTextButton(), onClick = onDismiss) { Text(tr("Odustani", "Cancel")) } },
     )
 
     if (picking) {
@@ -257,13 +269,13 @@ private fun AddEventDialog(onDismiss: () -> Unit, onConfirm: (CalendarEvent) -> 
                         }
                         picking = false
                     },
-                ) { Text("U redu") }
+                ) { Text(tr("U redu", "OK")) }
             },
-            dismissButton = { TextButton(colors = accentTextButton(), onClick = { picking = false }) { Text("Odustani") } },
+            dismissButton = { TextButton(colors = accentTextButton(), onClick = { picking = false }) { Text(tr("Odustani", "Cancel")) } },
         ) {
             DateRangePicker(
                 state = state,
-                title = { Text("Izaberi dan ili više dana", Modifier.padding(start = 24.dp, top = 16.dp)) },
+                title = { Text(tr("Izaberi dan ili više dana", "Pick one or more days"), Modifier.padding(start = 24.dp, top = 16.dp)) },
                 showModeToggle = false,
                 modifier = Modifier.height(480.dp),
             )

@@ -30,6 +30,7 @@ import com.bane23.classschedule.data.ChildRepository
 import com.bane23.classschedule.data.activityRemindersDue
 import com.bane23.classschedule.data.classesEndOn
 import com.bane23.classschedule.data.classesStartOn
+import com.bane23.classschedule.data.tr
 import com.bane23.classschedule.ui.activityReminderContent
 import com.bane23.classschedule.ui.label
 import com.bane23.classschedule.ui.morningReminderContent
@@ -64,9 +65,9 @@ class AlarmReceiver : BroadcastReceiver() {
     private fun showClassesOver(context: Context, child: Child) {
         val end = child.classesEndOn(LocalDate.now()) ?: return
         val text = if (child.alarmMinutesBefore == 0) {
-            "Časovi su završeni u ${end.label()}."
+            tr("Časovi su završeni u ${end.label()}.", "Classes ended at ${end.label()}.")
         } else {
-            "Časovi se završavaju u ${end.label()}."
+            tr("Časovi se završavaju u ${end.label()}.", "Classes end at ${end.label()}.")
         }
         showNotification(
             context,
@@ -336,18 +337,19 @@ class AlarmReceiver : BroadcastReceiver() {
                 },
             )
 
-            bellChannel(BELL_CHANNEL_ID, "Kraj nastave (zvono)", "Obaveštenje sa zvukom školskog zvona kad se završe časovi")
-            alarmChannel(ALARM_CHANNEL_ID, "Kraj nastave (alarm)", "Glasan zvuk alarma kad se završe časovi")
-            silentChannel(SILENT_CHANNEL_ID, "Kraj nastave (bez zvuka)", "Obaveštenje bez zvuka, samo vibracija, kad se završe časovi")
-            bellChannel(PACK_BELL_CHANNEL_ID, "Pakovanje torbe (zvono)", "Podsetnik sa zvukom školskog zvona da se spakuje torba")
-            alarmChannel(PACK_ALARM_CHANNEL_ID, "Pakovanje torbe (alarm)", "Podsetnik sa glasnim zvukom alarma da se spakuje torba")
-            silentChannel(PACK_SILENT_CHANNEL_ID, "Pakovanje torbe (bez zvuka)", "Podsetnik bez zvuka, samo vibracija, da se spakuje torba")
-            bellChannel(ACTIVITY_BELL_CHANNEL_ID, "Aktivnosti (zvono)", "Podsetnik sa zvukom školskog zvona pred vanškolsku aktivnost")
-            alarmChannel(ACTIVITY_ALARM_CHANNEL_ID, "Aktivnosti (alarm)", "Podsetnik sa glasnim zvukom alarma pred vanškolsku aktivnost")
-            silentChannel(ACTIVITY_SILENT_CHANNEL_ID, "Aktivnosti (bez zvuka)", "Podsetnik bez zvuka, samo vibracija, pred vanškolsku aktivnost")
-            bellChannel(MORNING_BELL_CHANNEL_ID, "Jutarnji podsetnik (zvono)", "Podsetnik sa zvukom školskog zvona da se pre škole proveri plan za danas")
-            alarmChannel(MORNING_ALARM_CHANNEL_ID, "Jutarnji podsetnik (alarm)", "Podsetnik sa glasnim zvukom alarma da se pre škole proveri plan za danas")
-            silentChannel(MORNING_SILENT_CHANNEL_ID, "Jutarnji podsetnik (bez zvuka)", "Podsetnik bez zvuka, samo vibracija, da se pre škole proveri plan za danas")
+            // Names and descriptions follow the app's language; creating an existing channel again only renames it.
+            bellChannel(BELL_CHANNEL_ID, tr("Kraj nastave (zvono)", "School is over (bell)"), tr("Obaveštenje sa zvukom školskog zvona kad se završe časovi", "A notification with a school bell sound when classes are over"))
+            alarmChannel(ALARM_CHANNEL_ID, tr("Kraj nastave (alarm)", "School is over (alarm)"), tr("Glasan zvuk alarma kad se završe časovi", "A loud alarm sound when classes are over"))
+            silentChannel(SILENT_CHANNEL_ID, tr("Kraj nastave (bez zvuka)", "School is over (silent)"), tr("Obaveštenje bez zvuka, samo vibracija, kad se završe časovi", "A notification without sound, vibration only, when classes are over"))
+            bellChannel(PACK_BELL_CHANNEL_ID, tr("Pakovanje torbe (zvono)", "Packing the bag (bell)"), tr("Podsetnik sa zvukom školskog zvona da se spakuje torba", "A reminder with a school bell sound to pack the bag"))
+            alarmChannel(PACK_ALARM_CHANNEL_ID, tr("Pakovanje torbe (alarm)", "Packing the bag (alarm)"), tr("Podsetnik sa glasnim zvukom alarma da se spakuje torba", "A reminder with a loud alarm sound to pack the bag"))
+            silentChannel(PACK_SILENT_CHANNEL_ID, tr("Pakovanje torbe (bez zvuka)", "Packing the bag (silent)"), tr("Podsetnik bez zvuka, samo vibracija, da se spakuje torba", "A reminder without sound, vibration only, to pack the bag"))
+            bellChannel(ACTIVITY_BELL_CHANNEL_ID, tr("Aktivnosti (zvono)", "Activities (bell)"), tr("Podsetnik sa zvukom školskog zvona pred vanškolsku aktivnost", "A reminder with a school bell sound before an extracurricular activity"))
+            alarmChannel(ACTIVITY_ALARM_CHANNEL_ID, tr("Aktivnosti (alarm)", "Activities (alarm)"), tr("Podsetnik sa glasnim zvukom alarma pred vanškolsku aktivnost", "A reminder with a loud alarm sound before an extracurricular activity"))
+            silentChannel(ACTIVITY_SILENT_CHANNEL_ID, tr("Aktivnosti (bez zvuka)", "Activities (silent)"), tr("Podsetnik bez zvuka, samo vibracija, pred vanškolsku aktivnost", "A reminder without sound, vibration only, before an extracurricular activity"))
+            bellChannel(MORNING_BELL_CHANNEL_ID, tr("Jutarnji podsetnik (zvono)", "Morning reminder (bell)"), tr("Podsetnik sa zvukom školskog zvona da se pre škole proveri plan za danas", "A reminder with a school bell sound to check today’s plan before school"))
+            alarmChannel(MORNING_ALARM_CHANNEL_ID, tr("Jutarnji podsetnik (alarm)", "Morning reminder (alarm)"), tr("Podsetnik sa glasnim zvukom alarma da se pre škole proveri plan za danas", "A reminder with a loud alarm sound to check today’s plan before school"))
+            silentChannel(MORNING_SILENT_CHANNEL_ID, tr("Jutarnji podsetnik (bez zvuka)", "Morning reminder (silent)"), tr("Podsetnik bez zvuka, samo vibracija, da se pre škole proveri plan za danas", "A reminder without sound, vibration only, to check today’s plan before school"))
         }
     }
 }

@@ -86,10 +86,11 @@ The app is meant for both children and parents, so its target audience includes 
 
 With exact alarms allowed the app uses `AlarmManager.setAlarmClock`, which fires on time even in Doze; without the permission it falls back to `setAndAllowWhileIdle`, which Android may deliver up to an hour late. It uses the user-granted `SCHEDULE_EXACT_ALARM`, not `USE_EXACT_ALARM` (reserved by Play policy for alarm-clock and calendar apps), so no exact-alarm declaration form is needed. It does not request `REQUEST_IGNORE_BATTERY_OPTIMIZATIONS`; Settings only links to the system battery optimization list.
 
-## Store listing (Serbian)
+## Store listing (Serbian and English)
 
-The listing texts live as plain files in [play-listing/sr/](play-listing/sr/), ready to paste into Play Console →
-Main store listing:
+The listing texts live as plain files in [play-listing/sr/](play-listing/sr/) (default language, Serbian) and
+[play-listing/en/](play-listing/en/) (English, added in Play Console → Main store listing → Manage translations →
+English (United States) – en-US), ready to paste into Play Console → Main store listing:
 
 | File | Field | Limit |
 | --- | --- | --- |
