@@ -5,6 +5,7 @@ import com.bane23.classschedule.data.Shift
 import com.bane23.classschedule.data.ShiftMode
 import com.bane23.classschedule.data.Timetable
 import com.bane23.classschedule.data.withDayChange
+import com.bane23.classschedule.data.withExtraClassAnswer
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test
@@ -41,6 +42,17 @@ class MorningReminderTest {
         val content = morningReminderContent(child.withDayChange(wednesday, 0, ""), wednesday)!!
         assertEquals("☀️ Mila, prvi čas u 08:50", content.title)
         assertEquals("Raspored je danas izmenjen. Proveri da li je sve tačno.", content.text)
+    }
+
+    @Test
+    fun asksAboutUnansweredOptionalClasses() {
+        val withExtra = child.copy(morning = timetable.withLesson(DayOfWeek.WEDNESDAY, 2, "Dopunska: Matematika"))
+        assertEquals(
+            "Danas ima dopunske ili dodatne nastave. Označi da li Mila ide.",
+            morningReminderContent(withExtra, wednesday)!!.text,
+        )
+        val answered = withExtra.withExtraClassAnswer(wednesday, 2, attends = true)
+        assertEquals("Da li je neki čas pomeren ili otkazan? Proveri plan za danas.", morningReminderContent(answered, wednesday)!!.text)
     }
 
     @Test

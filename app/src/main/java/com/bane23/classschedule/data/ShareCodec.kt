@@ -21,6 +21,7 @@ object ShareCodec {
     /** The child without what stays on each phone: one-day changes, alarm and reminder settings, packing ticks. */
     private fun Child.withoutPhoneSettings(): Child = copy(
         overrides = emptyList(),
+        attendingExtra = emptyList(),
         alarmEnabled = false,
         alarmMinutesBefore = 0,
         alarmSound = false,

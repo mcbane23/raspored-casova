@@ -23,6 +23,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -77,6 +78,7 @@ import com.bane23.classschedule.data.Extracurricular
 import com.bane23.classschedule.data.Lesson
 import com.bane23.classschedule.data.dayInfo
 import com.bane23.classschedule.data.dayStatus
+import com.bane23.classschedule.data.extraClassesToAsk
 import com.bane23.classschedule.data.isPacked
 import com.bane23.classschedule.data.lessonsOn
 import com.bane23.classschedule.data.nextSchoolDayAfter
@@ -106,6 +108,7 @@ fun TodayScreen(
     onEditTimetable: () -> Unit,
     onChangeDay: (LocalDate, Int, String) -> Unit,
     onResetDay: (LocalDate) -> Unit,
+    onAnswerExtraClass: (LocalDate, Int, Boolean) -> Unit,
     onPacked: (LocalDate, String, Boolean) -> Unit,
     onSaveActivity: (Extracurricular) -> Unit,
     onDeleteActivity: (String) -> Unit,
@@ -134,6 +137,8 @@ fun TodayScreen(
     val shift = child.shiftOn(date)
     val timetable = child.timetable(shift)
     val nextFreeIndex = child.subjectsOn(date).size
+    // Only today's optional classes are asked about, and only until they end; the answer sets the day's start and end.
+    val extraToAsk = if (isToday) child.extraClassesToAsk(date, clock) else emptyList()
     val info = child.dayInfo(date)
     // A day off wins over a one-day change made for that day before it was added.
     val noClassesReason = (info as? DayInfo.NoClasses)?.reason
@@ -178,6 +183,18 @@ fun TodayScreen(
                 )
             }
         } else {
+            if (extraToAsk.isNotEmpty()) {
+                item {
+                    ExtraClassQuestionCard(child.name, extraToAsk, timetable::periodLabel) { lesson, attends ->
+                        onAnswerExtraClass(date, lesson.index, attends)
+                        if (!attends) {
+                            offerUndo("${ExtraClass.parse(lesson.subject).second} se danas ne računa") {
+                                onChangeDay(date, lesson.index, lesson.subject)
+                            }
+                        }
+                    }
+                }
+            }
             item {
                 if (lessons.isEmpty()) {
                     AppCard {
@@ -517,6 +534,59 @@ private fun Stop(lesson: Lesson, width: Dp, done: Boolean, current: Boolean, onC
         Text(lesson.period.start.label(), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         ExtraClass.parse(lesson.subject).first?.let { kind ->
             Text(kind.prefix.take(3) + ".", style = MaterialTheme.typography.labelSmall, color = accentText())
+        }
+    }
+}
+
+/**
+ * Asks whether the child goes to today's remedial ("Dopunska") or advanced ("Dodatna") classes, since that decides
+ * when the school day starts and ends, and so when the parent alarm and the morning reminder come.
+ */
+@Composable
+private fun ExtraClassQuestionCard(
+    childName: String,
+    lessons: List<Lesson>,
+    periodLabel: (Int) -> String,
+    onAnswer: (Lesson, Boolean) -> Unit,
+) {
+    val haptic = LocalHapticFeedback.current
+    AppCard(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        Text("🙋 Ide li ${childName.ifBlank { "dete" }} danas?", style = MaterialTheme.typography.titleMedium)
+        Text(
+            "Od toga zavisi kada počinje i kada se završava nastava.",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        lessons.forEach { lesson ->
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                SubjectBadge(lesson.subject, size = 40.dp)
+                Column(Modifier.weight(1f).padding(horizontal = 12.dp)) {
+                    Text(lesson.subject, style = MaterialTheme.typography.titleSmall)
+                    Text(
+                        "${periodLabel(lesson.index)} · ${lesson.period.label()}",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedButton(
+                    onClick = {
+                        haptic.performHapticFeedback(HapticFeedbackType.ToggleOff)
+                        onAnswer(lesson, false)
+                    },
+                    shape = CircleShape,
+                    modifier = Modifier.weight(1f).heightIn(min = 48.dp),
+                ) { Text("Ne ide", style = MaterialTheme.typography.titleSmall) }
+                OutlinedButton(
+                    onClick = {
+                        haptic.performHapticFeedback(HapticFeedbackType.ToggleOn)
+                        onAnswer(lesson, true)
+                    },
+                    shape = CircleShape,
+                    modifier = Modifier.weight(1f).heightIn(min = 48.dp),
+                ) { Text("✓ Ide", style = MaterialTheme.typography.titleSmall, color = accentText()) }
+            }
         }
     }
 }

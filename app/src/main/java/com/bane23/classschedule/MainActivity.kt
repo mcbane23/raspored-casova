@@ -370,6 +370,7 @@ fun App(viewModel: AppViewModel = viewModel(), openTodayFor: String? = null, onO
                             onEditTimetable = { editTimetable(child.id) },
                             onChangeDay = { date, index, subject -> viewModel.changeDay(child.id, date, index, subject) },
                             onResetDay = { date -> viewModel.resetDay(child.id, date) },
+                            onAnswerExtraClass = { date, index, attends -> viewModel.answerExtraClass(child.id, date, index, attends) },
                             onPacked = { date, subject, packed -> viewModel.setPacked(child.id, date, subject, packed) },
                             onSaveActivity = { saveActivity(child.id, it) },
                             onDeleteActivity = { viewModel.deleteActivity(child.id, it) },

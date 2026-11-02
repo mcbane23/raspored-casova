@@ -21,6 +21,7 @@ import com.bane23.classschedule.data.currentShiftDate
 import com.bane23.classschedule.data.shiftOn
 import com.bane23.classschedule.data.withActivity
 import com.bane23.classschedule.data.withDayChange
+import com.bane23.classschedule.data.withExtraClassAnswer
 import com.bane23.classschedule.data.withPackNote
 import com.bane23.classschedule.data.withPacked
 import com.bane23.classschedule.data.withTimetableKeepingChanges
@@ -122,6 +123,11 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     /** Changes one period on one date only, e.g. a substitute subject, or "" for a cancelled class. */
     fun changeDay(id: String, date: LocalDate, index: Int, subject: String) = updateChild(id) {
         it.withDayChange(date, index, subject).withSubject(subject)
+    }
+
+    /** Whether the child goes to the remedial or advanced class in period [index] on [date]. */
+    fun answerExtraClass(id: String, date: LocalDate, index: Int, attends: Boolean) = updateChild(id) {
+        it.withExtraClassAnswer(date, index, attends)
     }
 
     fun resetDay(id: String, date: LocalDate) = updateChild(id) { it.withoutDayChange(date) }
