@@ -1,16 +1,11 @@
-Raspored časova je jednostavna aplikacija za roditelje i decu osnovnoškolskog uzrasta. Na jednom mestu vidite današnje časove, nedeljni raspored i školski kalendar.
+Raspored časova je jednostavna aplikacija za roditelje i decu osnovnih škola u Srbiji. Na jednom mestu su današnji časovi, nedeljni raspored i školski kalendar, pa i roditelj i dete uvek znaju kad je škola, a kad raspust.
 
-• Danas – časovi za dan sa tačnim vremenom zvona. Zamena predmeta ili otkazan čas? Izmenite samo taj dan, a raspored se sutra sam vraća na redovan.
-• Prepodnevna i popodnevna smena – poseban raspored i zvona za svaku smenu; smena se menja nedeljno, mesečno ili je stalna.
-• Školski kalendar Srbije – raspusti, neradni dani i dani kada se radi po drugom rasporedu, uz odbrojavanje do sledećeg raspusta. Podržani su centralna Srbija i Vojvodina, kao i raniji kraj nastave za osmi razred.
-• Događaji škole – dodajte Dan škole, školsku slavu ili druge slobodne dane.
-• Roditeljski alarm – obaveštenje kad se završi poslednji čas (ili nekoliko minuta ranije).
-• Jutarnji podsetnik – sat vremena pre prvog časa (ili kada izaberete) podseća da proverite da li je neki čas pomeren ili otkazan.
-• Podsetnik za torbu – uveče pred školski dan podseća dete šta da spakuje za sutra.
-• Vanškolske aktivnosti – trening, hor, škola stranog jezika ili izlet, sa podsetnikom pre početka; jedan termin može da se otkaže ili pomeri, a redovan raspored ostaje.
-• Više dece – svako dete ima svoj raspored, smenu i kalendar.
-• Spisak predmeta – izaberite predmet iz liste umesto kucanja, uz dopunsku i dodatnu nastavu iz bilo kog predmeta. Kad je dopunska ili dodatna danas, aplikacija pita da li dete ide, pa početak i kraj nastave i alarm budu tačni.
-• Pretčas – za smene koje počinju pretčasom.
-• Deljenje QR kodom – pošaljite popunjen raspored detetu ili drugom roditelju skeniranjem QR koda.
+• Raspored za prepodnevnu i popodnevnu smenu, sa tačnim vremenom zvona i izmenama za samo jedan dan.
+• Školski kalendar Srbije sa raspustima, praznicima i neradnim danima (centralna Srbija i Vojvodina).
+• Roditeljski alarm kad se završi poslednji čas.
+• Jutarnji podsetnik, podsetnik za torbu i podsetnici za vanškolske aktivnosti.
+• Više dece, svako sa svojim rasporedom i smenom.
+• Deljenje rasporeda QR kodom.
+• Na srpskom i engleskom jeziku.
 
 Bez naloga, bez reklama i bez interneta: svi podaci ostaju samo na vašem telefonu.

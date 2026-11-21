@@ -1,1 +1,1 @@
-Class timetable, shifts, school breaks and an alert when classes end.
+Class timetable, shifts and school breaks for parents and primary school kids.
