@@ -42,6 +42,19 @@ No account, no ads, all data stays on your phone.
 </en-US>
 ```
 
+## Production release
+
+After production access is approved, every new version goes out the same way:
+
+1. Merge the PR to `main` and wait for the GitHub release (`v1.0.<build number>`; the version code is the build
+   number, so it always increases).
+2. Play Console → **Test and release → Production → Create new release**, upload `raspored-casova-<version>.aab`
+   from that release.
+3. Paste the `<sr>`/`<en-US>` "What's new" block from the release's `google-play.txt` into **Release notes**.
+4. If the listing texts changed, paste them from the same file into **Grow users → Store presence → Main store
+   listing** (Serbian) and its English (en-US) translation.
+5. Review the release, choose the rollout percentage and send it for review.
+
 ## App content answers
 
 | Section | Answer |
